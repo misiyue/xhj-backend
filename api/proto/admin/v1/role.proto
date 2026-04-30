@@ -1,0 +1,87 @@
+syntax = "proto3";
+package admin;
+
+option go_package = "admin/v1;admin";
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+service Role{
+  // 角色列表接口
+  rpc List(RoleListRequest) returns (RoleListResponse) {
+    option (google.api.http) = {
+      post: "/backend/role/list",
+      body: "*"
+    };
+  }
+
+  // 创建角色接口
+  rpc Create(RoleCreateRequest) returns (RoleCreateResponse) {
+    option (google.api.http) = {
+      post: "/backend/role/create"
+      body: "*"
+    };
+  }
+
+  // 更新角色接口
+  rpc Update(RoleUpdateRequest) returns (RoleUpdateResponse) {
+    option (google.api.http) = {
+      post: "/backend/role/update"
+      body: "*"
+    };
+  }
+}
+
+message RoleListRequest{
+  // 页码
+  int32 page = 1 [(buf.validate.field).int32.gt = 0];
+  // 每页数量
+  int32 page_size = 2 [(buf.validate.field).int32.gt = 0];
+  // 角色名称
+  string role_name = 3;
+  // 状态
+  int32 status = 4;
+}
+
+message RoleListResponse{
+  message Item{
+    int32 id = 1;
+    string role_name = 2;
+    int32 status = 7;
+    string created_at = 8;
+    string updated_at = 9;
+    string explain = 10;
+  }
+
+  repeated Item items = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 page_total = 5;
+}
+
+
+message RoleCreateRequest{
+  // 角色名称
+  string role_name = 2 [(buf.validate.field).string = {min_len: 1}];
+  // 角色说明
+  string explain = 3 [(buf.validate.field).string = {max_len: 100}];
+}
+
+message RoleCreateResponse{
+  int32 id = 1;
+}
+
+message RoleUpdateRequest{
+  // 角色ID
+  int32 id = 1 [(buf.validate.field).int32.gt = 0];
+  // 角色名称
+  string role_name = 2 [(buf.validate.field).string = {min_len: 1}];
+  // 角色说明
+  string explain = 3 [(buf.validate.field).string = {max_len: 100}];
+}
+
+message RoleUpdateResponse{
+  int32 id = 1;
+}

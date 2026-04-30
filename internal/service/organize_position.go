@@ -1,0 +1,10 @@
+package service
+
+import (
+	"github.com/gzydong/go-chat/internal/repository/repo"
+)
+
+type PositionService struct {
+	*repo.Source
+	Repo *repo.Position
+}

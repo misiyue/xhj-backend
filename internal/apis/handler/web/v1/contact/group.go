@@ -1,0 +1,159 @@
+package contact
+
+import (
+	"context"
+
+	"github.com/gzydong/go-chat/api/pb/web/v1"
+	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
+	"github.com/gzydong/go-chat/internal/repository/model"
+	"github.com/gzydong/go-chat/internal/repository/repo"
+	"github.com/gzydong/go-chat/internal/service"
+	"gorm.io/gorm"
+)
+
+var _ web.IContactGroupHandler = (*Group)(nil)
+
+type Group struct {
+	ContactRepo         *repo.Contact
+	ContactGroupRepo    *repo.ContactGroup
+	ContactGroupService service.IContactGroupService
+	ContactService      service.IContactService
+}
+
+// List 联系人分组列表接口
+//
+//	@Summary		联系人分组列表
+//	@Description	获取联系人分组列表
+//	@Tags			联系人分组
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactGroupListRequest	true	"分组列表请求"
+//	@Success		200		{object}	web.ContactGroupListResponse
+//	@Router			/api/v1/contact-group/list [post]
+//	@Security		Bearer
+func (g *Group) List(ctx context.Context, in *web.ContactGroupListRequest) (*web.ContactGroupListResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+
+	items := make([]*web.ContactGroupListResponse_Item, 0)
+
+	count, err := g.ContactRepo.FindCount(ctx, "user_id = ? and status = ?", uid, model.Yes)
+	if err != nil {
+		return nil, err
+	}
+
+	items = append(items, &web.ContactGroupListResponse_Item{
+		Name:  "全部",
+		Count: int32(count),
+	})
+
+	group, err := g.ContactGroupService.GetUserGroup(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range group {
+		items = append(items, &web.ContactGroupListResponse_Item{
+			Id:    int32(v.Id),
+			Name:  v.Name,
+			Count: int32(v.Num),
+			Sort:  int32(v.Sort),
+		})
+	}
+
+	return &web.ContactGroupListResponse{Items: items}, nil
+}
+
+// Save 保存联系人分组接口
+//
+//	@Summary		保存联系人分组
+//	@Description	创建或更新联系人分组
+//	@Tags			联系人分组
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactGroupSaveRequest	true	"保存分组请求"
+//	@Success		200		{object}	web.ContactGroupSaveResponse
+//	@Router			/api/v1/contact-group/save [post]
+//	@Security		Bearer
+func (g *Group) Save(ctx context.Context, in *web.ContactGroupSaveRequest) (*web.ContactGroupSaveResponse, error) {
+
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+
+	updateItems := make([]*model.ContactGroup, 0)
+	deleteItems := make([]int, 0)
+	insertItems := make([]*model.ContactGroup, 0)
+
+	ids := make(map[int]struct{})
+	for i, item := range in.GetItems() {
+		if item.Id > 0 {
+			ids[int(item.Id)] = struct{}{}
+			updateItems = append(updateItems, &model.ContactGroup{
+				Id:   int(item.Id),
+				Sort: i + 1,
+				Name: item.Name,
+			})
+		} else {
+			insertItems = append(insertItems, &model.ContactGroup{
+				Sort:   i + 1,
+				Name:   item.Name,
+				UserId: uid,
+			})
+		}
+	}
+
+	all, err := g.ContactGroupRepo.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, m := range all {
+		if _, ok := ids[m.Id]; !ok {
+			deleteItems = append(deleteItems, m.Id)
+		}
+	}
+
+	if len(deleteItems) == 0 && len(updateItems) == 0 && len(insertItems) == 0 {
+		return &web.ContactGroupSaveResponse{}, nil
+	}
+
+	err = g.ContactGroupRepo.Txx(ctx, func(tx *gorm.DB) error {
+
+		if len(insertItems) > 0 {
+			if err := tx.Create(insertItems).Error; err != nil {
+				return err
+			}
+		}
+
+		if len(deleteItems) > 0 {
+			err := tx.Delete(model.ContactGroup{}, "id in (?) and user_id = ?", deleteItems, uid).Error
+			if err != nil {
+				return err
+			}
+
+			tx.Model(&model.Contact{}).
+				Where("user_id = ? and group_id in (?)", uid, deleteItems).
+				UpdateColumn("group_id", 0)
+		}
+
+		for _, item := range updateItems {
+			err = tx.Model(&model.ContactGroup{}).
+				Where("id = ? and user_id = ?", item.Id, uid).
+				Updates(map[string]any{
+					"name": item.Name,
+					"sort": item.Sort,
+				}).Error
+
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &web.ContactGroupSaveResponse{}, nil
+}

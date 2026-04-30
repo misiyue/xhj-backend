@@ -1,0 +1,31 @@
+package consume
+
+import (
+	"context"
+	"encoding/json"
+	"log/slog"
+
+	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
+)
+
+// 键盘输入事件消息
+func (h *Handler) onConsumeTalkKeyboard(ctx context.Context, body []byte) {
+	var in entity.SubEventImMessageKeyboardPayload
+
+	if err := json.Unmarshal(body, &in); err != nil {
+		logger.Errorf("[ChatSubscribe] onConsumeTalkKeyboard Unmarshal err: %s", err.Error())
+		return
+	}
+
+	data := Message(entity.PushEventImMessageKeyboard, entity.ImMessageKeyboardPayload{
+		FromId:     in.FromId,
+		ReceiverId: in.ReceiverId,
+	})
+
+	for _, session := range h.serv.SessionManager().GetSessions(int64(in.ReceiverId)) {
+		if err := session.Write(data); err != nil {
+			slog.Error("session write message error", "error", err)
+		}
+	}
+}

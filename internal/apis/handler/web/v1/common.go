@@ -1,0 +1,325 @@
+package v1
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"strconv"
+	"strings"
+
+	"github.com/gzydong/go-chat/api/pb/web/v1"
+	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/pkg/email"
+	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
+	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/repository/model"
+	"github.com/gzydong/go-chat/internal/repository/repo"
+	"github.com/gzydong/go-chat/internal/service"
+	"google.golang.org/protobuf/types/known/structpb"
+)
+
+var _ web.ICommonHandler = (*Common)(nil)
+
+type Common struct {
+	Config          *config.Config
+	UsersRepo       *repo.Users
+	AppVersionRepo  *repo.AppVersion
+	AppExploreRepo  *repo.AppExplore
+	AppDictRepo     *repo.AppDict
+	SmsService      service.ISmsService
+	EmailService    service.IEmailService
+	UserService     service.IUserService
+	EmailClient     *email.Client
+	TemplateService service.ITemplateService
+}
+
+// SendSms 发送短信验证码接口
+//
+//	@Summary		发送短信
+//	@Description	发送用于登录、注册或更换账号的短信验证码
+//	@Tags			公共
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.CommonSendSmsRequest	true	"发送短信请求"
+//	@Success		200		{object}	web.CommonSendSmsResponse
+//	@Router			/api/v1/common/send-sms [post]
+func (c *Common) SendSms(ctx context.Context, in *web.CommonSendSmsRequest) (*web.CommonSendSmsResponse, error) {
+	// 检查手机号注册是否被允许
+	if in.Channel == entity.SmsRegisterChannel && !c.Config.App.AllowPhoneRegistration {
+		return nil, entity.ErrPhoneRegistrationDisabled
+	}
+
+	switch in.Channel {
+	// 需要判断账号是否存在
+	case entity.SmsLoginChannel, entity.SmsForgetAccountChannel:
+		if !c.UsersRepo.IsMobileExist(ctx, in.Mobile) {
+			return nil, entity.ErrAccountOrPassword
+		}
+
+	// 需要判断账号是否存在
+	case entity.SmsRegisterChannel, entity.SmsChangeAccountChannel:
+		if c.UsersRepo.IsMobileExist(ctx, in.Mobile) {
+			return nil, entity.ErrPhoneExist
+		}
+	case entity.SmsOauthBindChannel:
+	default:
+		return nil, entity.ErrSmsChannelInvalid
+	}
+
+	// 发送短信验证码
+	code, err := c.SmsService.Send(ctx, in.Channel, in.Mobile)
+	if err != nil {
+		return nil, err
+	}
+
+	if in.Channel == entity.SmsRegisterChannel || in.Channel == entity.SmsChangeAccountChannel || in.Channel == entity.SmsOauthBindChannel {
+		return &web.CommonSendSmsResponse{
+			SmsCode: code,
+		}, nil
+	}
+
+	return &web.CommonSendSmsResponse{}, nil
+}
+
+// SendEmail 发送邮件验证码接口
+//
+//	@Summary		发送邮件
+//	@Description	发送邮件验证码
+//	@Tags			公共
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.CommonSendEmailRequest	true	"发送邮件请求"
+//	@Success		200		{object}	web.CommonSendEmailResponse
+//	@Router			/api/v1/common/send-email [post]
+func (c *Common) SendEmail(ctx context.Context, req *web.CommonSendEmailRequest) (*web.CommonSendEmailResponse, error) {
+	// Determine the channel based on request
+	channel := entity.EmailVerifyChannel
+	if req.Channel != "" {
+		channel = req.Channel
+	}
+
+	// Send verification code using EmailService
+	code, err := c.EmailService.Send(ctx, channel, req.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare email template data
+	templateData := map[string]string{
+		"code":         code,
+		"service_name": "邮箱验证",
+		"company_name": "小火箭 IM",
+		"domain":       "https://xhj.im",
+	}
+
+	// Render email template
+	body, err := c.TemplateService.CodeTemplate(templateData)
+	if err != nil {
+		return nil, err
+	}
+
+	// Send email
+	if c.EmailClient != nil {
+		err = c.EmailClient.SendMail(&email.Option{
+			To:      []string{req.Email},
+			Subject: "验证码",
+			Body:    body,
+		})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// If email client is not configured, just log the code (for development)
+		logger.Infof("Email verification code for %s: %s", req.Email, code)
+	}
+
+	return &web.CommonSendEmailResponse{}, nil
+}
+
+// Test 发送测试接口
+//
+//	@Summary		测试端点
+//	@Description	内部测试端点
+//	@Tags			公共
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.CommonSendTestRequest	true	"测试请求"
+//	@Success		200		{object}	web.CommonSendTestResponse
+//	@Router			/api/v1/common/send-test [post]
+func (c *Common) Test(ctx context.Context, req *web.CommonSendTestRequest) (*web.CommonSendTestResponse, error) {
+	// This is a test endpoint for internal testing purposes
+	// Log the request for debugging
+	logger.Infof("Test endpoint called with email: %s", req.Email)
+
+	// Return empty response indicating success
+	return &web.CommonSendTestResponse{}, nil
+}
+
+// jsonJSONArrayToListValue 将库中 JSON 数组文本反序列化为 proto ListValue（接口 JSON 输出为 JSON 数组）
+func jsonJSONArrayToListValue(raw string) *structpb.ListValue {
+	s := strings.TrimSpace(raw)
+	if s == "" || s == "null" {
+		return &structpb.ListValue{}
+	}
+	var arr []any
+	if err := json.Unmarshal([]byte(s), &arr); err != nil {
+		logger.Warnf("app_version release_notes/download_urls 期望 JSON 数组，解析失败: %v", err)
+		return &structpb.ListValue{}
+	}
+	lv, err := structpb.NewList(arr)
+	if err != nil {
+		logger.Warnf("app_version JSON 数组转为 ListValue 失败: %v", err)
+		return &structpb.ListValue{}
+	}
+	return lv
+}
+
+// AppVersionLatest 查询当前已发布（published_at <= 现在）的该平台最新版本记录
+func (c *Common) AppVersionLatest(ctx context.Context, in *web.CommonAppVersionLatestRequest) (*web.CommonAppVersionLatestResponse, error) {
+	row, err := c.AppVersionRepo.FindLatestPublished(ctx, strings.TrimSpace(in.GetPlatform()))
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return &web.CommonAppVersionLatestResponse{}, nil
+	}
+	return &web.CommonAppVersionLatestResponse{
+		Id:                int32(row.Id),
+		Platform:          row.Platform,
+		Channel:           row.Channel,
+		LatestVersionName: row.LatestVersionName,
+		UpgradeType:       row.UpgradeType,
+		Title:             row.Title,
+		ReleaseNotes:      jsonJSONArrayToListValue(row.ReleaseNotes),
+		DownloadUrls:      jsonJSONArrayToListValue(row.DownloadUrls),
+		PublishedAt:       timeutil.FormatDatetime(row.PublishedAt),
+	}, nil
+}
+
+// ExploreList 探索位列表（仅 is_open=1）
+func (c *Common) ExploreList(ctx context.Context, _ *web.CommonExploreListRequest) (*web.CommonExploreListResponse, error) {
+	if c.AppExploreRepo == nil {
+		return nil, errors.New("AppExploreRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+	list, err := c.AppExploreRepo.ListOpen(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := &web.CommonExploreListResponse{Items: make([]*web.CommonExploreListResponse_Item, 0, len(list))}
+	for _, row := range list {
+		out.Items = append(out.Items, &web.CommonExploreListResponse_Item{
+			Id:       int32(row.Id),
+			Title:    row.Title,
+			Image:    row.Image,
+			Url:      row.Url,
+			Position: row.Position,
+			Sort:     int32(row.Sort),
+		})
+	}
+	return out, nil
+}
+
+func dedupeAppDictKeys(keys []string) []string {
+	seen := make(map[string]struct{}, len(keys))
+	out := make([]string, 0, len(keys))
+	for _, k := range keys {
+		k = strings.TrimSpace(k)
+		if k == "" {
+			continue
+		}
+		if _, ok := seen[k]; ok {
+			continue
+		}
+		seen[k] = struct{}{}
+		out = append(out, k)
+	}
+	return out
+}
+
+// parseAppDictValue 按字典 type 将库中 value 文本解析为 google.protobuf.Value（JSON 语义）
+func parseAppDictValue(dictType, raw string) (*structpb.Value, error) {
+	t := strings.TrimSpace(strings.ToLower(dictType))
+	switch t {
+	case "text":
+		return structpb.NewStringValue(raw), nil
+	case "num":
+		s := strings.TrimSpace(raw)
+		if s == "" {
+			return structpb.NewNullValue(), nil
+		}
+		f, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			return nil, err
+		}
+		return structpb.NewNumberValue(f), nil
+	case "list":
+		s := strings.TrimSpace(raw)
+		if s == "" || s == "null" {
+			return structpb.NewListValue(&structpb.ListValue{}), nil
+		}
+		var arr []any
+		if err := json.Unmarshal([]byte(s), &arr); err != nil {
+			return nil, err
+		}
+		lv, err := structpb.NewList(arr)
+		if err != nil {
+			return nil, err
+		}
+		return structpb.NewListValue(lv), nil
+	case "object":
+		s := strings.TrimSpace(raw)
+		if s == "" || s == "null" {
+			return structpb.NewStructValue(&structpb.Struct{}), nil
+		}
+		var m map[string]any
+		if err := json.Unmarshal([]byte(s), &m); err != nil {
+			return nil, err
+		}
+		st, err := structpb.NewStruct(m)
+		if err != nil {
+			return nil, err
+		}
+		return structpb.NewStructValue(st), nil
+	default:
+		return structpb.NewStringValue(raw), nil
+	}
+}
+
+// AppDictGet 按 key 批量获取已启用字典项，parsed_value 已按 type 解析
+func (c *Common) AppDictGet(ctx context.Context, in *web.CommonAppDictGetRequest) (*web.CommonAppDictGetResponse, error) {
+	if c.AppDictRepo == nil {
+		return nil, errors.New("AppDictRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+	keys := dedupeAppDictKeys(in.GetKeys())
+	if len(keys) == 0 {
+		return nil, errorx.New(400, "keys 不能为空")
+	}
+	rows, err := c.AppDictRepo.ListEnabledByKeys(ctx, keys)
+	if err != nil {
+		return nil, err
+	}
+	byKey := make(map[string]model.AppDict, len(rows))
+	for _, row := range rows {
+		byKey[row.DictKey] = row
+	}
+	out := &web.CommonAppDictGetResponse{Items: make([]*web.CommonAppDictItem, 0, len(byKey))}
+	for _, k := range keys {
+		row, ok := byKey[k]
+		if !ok {
+			continue
+		}
+		pv, err := parseAppDictValue(row.Type, row.Value)
+		if err != nil {
+			return nil, errorx.New(400, "字典 "+row.DictKey+" 的 value 与 type 不匹配，无法解析")
+		}
+		out.Items = append(out.Items, &web.CommonAppDictItem{
+			Key:         row.DictKey,
+			Title:       row.Title,
+			Type:        row.Type,
+			ParsedValue: pv,
+		})
+	}
+	return out, nil
+}

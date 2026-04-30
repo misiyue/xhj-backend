@@ -1,0 +1,104 @@
+syntax = "proto3";
+package admin;
+
+option go_package = "admin/v1;admin";
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+service Admin{
+  // 创建管理员接口
+  rpc Create(AdminCreateRequest) returns (AdminCreateResponse) {
+    option (google.api.http) = {
+      post: "/backend/admin/create"
+      body: "*"
+    };
+  }
+
+  // 管理员列表接口
+  rpc List(AdminListRequest) returns (AdminListResponse) {
+    option (google.api.http) = {
+      post: "/backend/admin/list",
+      body: "*"
+    };
+  }
+
+  // 更新管理员状态接口
+  rpc UpdateStatus(AdminUpdateStatusRequest) returns (AdminUpdateStatusResponse) {
+    option (google.api.http) = {
+      post: "/backend/admin/update-status"
+      body: "*"
+    };
+  }
+
+  // 重置管理员密码接口
+  rpc ResetPassword(AdminResetPasswordRequest) returns (AdminResetPasswordResponse) {
+    option (google.api.http) = {
+      post: "/backend/admin/reset-password"
+      body: "*"
+    };
+  }
+}
+
+message AdminListRequest{
+  // 页码
+  int32 page = 1 [(buf.validate.field).int32.gt = 0];
+  // 每页数量
+  int32 page_size = 2 [(buf.validate.field).int32.gt = 0];
+  // 用户名
+  string username = 3;
+  // 状态
+  int32 status = 4;
+  // 邮箱
+  string email = 5;
+}
+
+message AdminListResponse{
+  message Item{
+    int32 id = 1;
+    string username = 2;
+    string avatar = 4;
+    string mobile = 5;
+    string email = 6;
+    int32 status = 7;
+    string created_at = 8;
+    string updated_at = 9;
+    string last_login_at = 10;
+    string role_name = 11;
+  }
+
+  repeated Item items = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 page_total = 5;
+}
+
+message AdminCreateRequest{
+  string username = 2 [(buf.validate.field).string = {min_len: 6}];
+  string email = 6 [(buf.validate.field).string = {min_len: 6}];
+  string password = 5 [(buf.validate.field).string = {min_len: 6}];
+}
+
+message AdminCreateResponse{
+  int32 id = 1;
+}
+
+message AdminUpdateStatusRequest{
+  int32 id = 1 [(buf.validate.field).int32.gt = 0];
+  int32 status = 2 [(buf.validate.field).int32 = {in: [1, 2]}];
+}
+
+message AdminUpdateStatusResponse{
+  int32 id = 1;
+}
+
+message AdminResetPasswordRequest{
+  int32 id = 1 [(buf.validate.field).int32.gt = 1];
+  string password = 2 [(buf.validate.field).string = {min_len: 6}];
+}
+
+message AdminResetPasswordResponse{
+  int32 id = 1;
+}

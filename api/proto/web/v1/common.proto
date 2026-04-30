@@ -1,0 +1,130 @@
+syntax = "proto3";
+package web;
+
+option go_package = "web/v1;web";
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+
+// 通用服务
+service Common {
+  // 发送短信验证码接口
+  //    @Summary 发送短信验证码111222
+  rpc SendSms(CommonSendSmsRequest) returns (CommonSendSmsResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/send-sms"
+      body: "*"
+    };
+  }
+
+  // 发送邮件验证码接口
+  rpc SendEmail(CommonSendEmailRequest) returns (CommonSendEmailResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/send-email"
+      body: "*"
+    };
+  }
+
+  //俺们就开始的那
+  rpc Test(CommonSendTestRequest) returns (CommonSendTestResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/send-test"
+      body: "*"
+    };
+  }
+
+  // 探索位列表（仅返回 is_open=1）
+  rpc ExploreList(CommonExploreListRequest) returns (CommonExploreListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/explore-list"
+      body: "*"
+    };
+  }
+
+  // 字典配置：按 key 批量获取（仅 status=启用），按 type 将 value 解析为 JSON 相应类型
+  rpc AppDictGet(CommonAppDictGetRequest) returns (CommonAppDictGetResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/app-dict"
+      body: "*"
+    };
+  }
+}
+
+// 发送短信验证码接口请求参数
+message CommonSendSmsRequest{
+  string mobile = 1 [(buf.validate.field).string.len = 11];
+  string channel = 2 [(buf.validate.field).string = {in: ["login", "register", "forget_account", "change_account", "oauth_bind"]}];
+}
+
+// 发送短信验证码接口响应参数
+message CommonSendSmsResponse{
+  string sms_code = 1;
+}
+
+// 发送邮件验证码接口请求参数
+message CommonSendEmailRequest{
+  string email = 1  [(buf.validate.field).string.min_len = 6];
+  string channel = 2; // 可选的渠道标识：login, register, forget_account, etc.
+}
+
+// 发送邮件验证码接口响应参数
+message CommonSendEmailResponse{}
+
+// 发送邮件验证码接口请求参数
+message CommonSendTestRequest{
+  string email = 1  [(buf.validate.field).string.min_len = 6];
+}
+
+// 发送邮件验证码接口响应参数
+message CommonSendTestResponse{}
+
+// App 版本查询（GET /api/v1/common/app-version?platform=ios|android，路由在 router 单独注册）
+message CommonAppVersionLatestRequest {
+  string platform = 1 [(buf.validate.field).string = {in: ["ios", "android"]}];
+}
+
+message CommonAppVersionLatestResponse {
+  int32 id = 1;
+  string platform = 2;
+  string channel = 3;
+  string latest_version_name = 4;
+  string upgrade_type = 5;
+  string title = 6;
+  // 库中为 JSON 数组，接口返回已解析的 JSON 数组（protojson 下为 JSON array）
+  google.protobuf.ListValue release_notes = 7;
+  google.protobuf.ListValue download_urls = 8;
+  string published_at = 9;
+}
+
+message CommonExploreListRequest {}
+
+message CommonExploreListResponse {
+  message Item {
+    int32 id = 1;
+    string title = 2;
+    string image = 3;
+    string url = 4;
+    // index-首页，tab-选项
+    string position = 5;
+    // 排序权重，越大越靠前（与库 sort 一致）
+    int32 sort = 6;
+  }
+  repeated Item items = 1;
+}
+
+message CommonAppDictGetRequest {
+  // 请求的 key 列表，1～100 个；仅返回库中已启用项，未命中或关闭的 key 不出现在结果中
+  repeated string keys = 1 [(buf.validate.field).repeated = {min_items: 1, max_items: 100}];
+}
+
+message CommonAppDictItem {
+  string key = 1;
+  string title = 2;
+  string type = 3;
+  // 已解析：text→字符串，num→数字，list→JSON 数组，object→JSON 对象
+  google.protobuf.Value parsed_value = 4;
+}
+
+message CommonAppDictGetResponse {
+  repeated CommonAppDictItem items = 1;
+}

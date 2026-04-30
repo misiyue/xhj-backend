@@ -1,0 +1,25 @@
+[Unit]
+Description=Lumen IM %i Service
+Documentation=https://github.com/Cyvadra/opus-0205-xhj-im-v2
+After=network-online.target mysql.service redis.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lumenim
+Group=lumenim
+WorkingDirectory=/opt/lumenim
+EnvironmentFile=-/etc/lumenim/lumenim.env
+Environment="LUMENIM_CONFIG=/opt/lumenim/config.yaml"
+Environment="LUMENIM_EXTRA_ARGS="
+ExecStart=/opt/lumenim/lumenim %i --config=${LUMENIM_CONFIG} ${LUMENIM_EXTRA_ARGS}
+Restart=always
+RestartSec=5s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+LimitNOFILE=1048576
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,336 @@
+package service
+
+import (
+	"context"
+	"errors"
+
+	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/pkg/sliceutil"
+	"github.com/gzydong/go-chat/internal/repository/cache"
+	"github.com/gzydong/go-chat/internal/repository/model"
+	"github.com/gzydong/go-chat/internal/repository/repo"
+	"gorm.io/gorm"
+)
+
+var _ ITalkRecordService = (*TalkRecordService)(nil)
+
+type ITalkRecordService interface {
+	FindAllPrivateRecordByOriMsgId(ctx context.Context, msgId string) ([]*model.TalkUserMessage, error)
+	FindPrivateRecordByMsgId(ctx context.Context, msgId string) (*model.TalkUserMessage, error)
+	FindTalkPrivateRecord(ctx context.Context, uid int, msgId string) (*model.TalkMessageRecord, error)
+	FindTalkGroupRecord(ctx context.Context, msgId string) (*model.TalkMessageRecord, error)
+	FindAllTalkRecords(ctx context.Context, opt *FindAllTalkRecordsOpt) ([]*model.TalkMessageRecord, error)
+	FindForwardRecords(ctx context.Context, uid int, msgIds []string, talkType int) ([]*model.TalkMessageRecord, error)
+}
+
+type TalkRecordService struct {
+	*repo.Source
+	TalkVoteCache         *cache.Vote
+	TalkRecordsVoteRepo   *repo.GroupVote
+	GroupMemberRepo       *repo.GroupMember
+	TalkRecordFriendRepo  *repo.TalkUserMessage
+	TalkRecordGroupRepo   *repo.TalkGroupMessage
+	TalkRecordsDeleteRepo *repo.TalkGroupMessageDel
+	TalkSessionRepo       *repo.TalkSession
+}
+
+func (s *TalkRecordService) FindPrivateRecordByMsgId(ctx context.Context, msgId string) (*model.TalkUserMessage, error) {
+	return s.TalkRecordFriendRepo.FindByMsgId(ctx, msgId)
+}
+
+func (s *TalkRecordService) FindAllPrivateRecordByOriMsgId(ctx context.Context, msgId string) ([]*model.TalkUserMessage, error) {
+	return s.TalkRecordFriendRepo.FindAll(ctx, func(db *gorm.DB) {
+		db.Where("org_msg_id = ?", msgId)
+	})
+}
+
+type FindAllTalkRecordsOpt struct {
+	TalkType   int    // 对话类型
+	UserId     int    // 获取消息的用户
+	ReceiverId int    // 接收者ID
+	MsgType    []int  // 消息类型
+	Keyword    string // 搜索关键字（可选，按内容模糊匹配）
+	Cursor     int64  // 上次查询的游标
+	Limit      int    // 数据行数
+}
+
+func (s *TalkRecordService) FindTalkPrivateRecord(ctx context.Context, uid int, msgId string) (*model.TalkMessageRecord, error) {
+	// 只需要根据 msg_id 查询即可，不再需要 user_id
+	talkRecordFriendInfo, err := s.TalkRecordFriendRepo.FindByWhere(ctx, "msg_id = ?", msgId)
+	if err != nil {
+		return nil, err
+	}
+
+	record := &model.TalkMessageRecord{
+		TalkMode:   entity.ChatPrivateMode,
+		FromId:     talkRecordFriendInfo.FromId,
+		ReceiverId: talkRecordFriendInfo.ReceiverId,
+		MsgId:      talkRecordFriendInfo.MsgId,
+		MsgType:    talkRecordFriendInfo.MsgType,
+		Nickname:   "",
+		Avatar:     "",
+		IsRevoked:  talkRecordFriendInfo.IsRevoked,
+		SendTime:   talkRecordFriendInfo.SendTime,
+		Extra:      talkRecordFriendInfo.Extra,
+		Quote:      talkRecordFriendInfo.Quote,
+	}
+
+	list, err := s.handleTalkRecords(ctx, []*model.TalkMessageRecord{record})
+	if err != nil {
+		return nil, err
+	}
+
+	return list[0], nil
+}
+
+func (s *TalkRecordService) FindTalkGroupRecord(ctx context.Context, msgId string) (*model.TalkMessageRecord, error) {
+	talkRecordGroupInfo, err := s.TalkRecordGroupRepo.FindByMsgId(ctx, msgId)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	if talkRecordGroupInfo == nil {
+		return nil, gorm.ErrRecordNotFound
+	}
+
+	record := &model.TalkMessageRecord{
+		TalkMode:   entity.ChatGroupMode,
+		FromId:     talkRecordGroupInfo.FromId,
+		ReceiverId: talkRecordGroupInfo.GroupId,
+		MsgId:      talkRecordGroupInfo.MsgId,
+		MsgType:    talkRecordGroupInfo.MsgType,
+		Nickname:   "",
+		Avatar:     "",
+		IsRevoked:  talkRecordGroupInfo.IsRevoked,
+		SendTime:   talkRecordGroupInfo.SendTime,
+		Extra:      talkRecordGroupInfo.Extra,
+		Quote:      talkRecordGroupInfo.Quote,
+	}
+
+	list, err := s.handleTalkRecords(ctx, []*model.TalkMessageRecord{record})
+	if err != nil {
+		return nil, err
+	}
+
+	return list[0], nil
+}
+
+// FindAllTalkRecords 获取所有对话消息
+func (s *TalkRecordService) FindAllTalkRecords(ctx context.Context, opt *FindAllTalkRecordsOpt) ([]*model.TalkMessageRecord, error) {
+	var (
+		items  = make([]*model.TalkMessageRecord, 0, opt.Limit)
+		cursor = opt.Cursor
+	)
+
+	for {
+		// 这里查询数据放弃了关联查询，所以这里需要查询多次，防止查询中存在用户已删除的数据需要过滤掉
+		list, err := s.findAllRecords(ctx, &FindAllTalkRecordsOpt{
+			TalkType:   opt.TalkType,
+			UserId:     opt.UserId,
+			ReceiverId: opt.ReceiverId,
+			MsgType:    opt.MsgType,
+			Keyword:    opt.Keyword,
+			Cursor:     cursor,
+			Limit:      opt.Limit + 10, // 多查几条数据
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if len(list) == 0 {
+			break
+		}
+
+		if opt.TalkType == entity.ChatGroupMode {
+			tmpMsgIds := make([]string, 0, len(list))
+			for _, v := range list {
+				tmpMsgIds = append(tmpMsgIds, v.MsgId)
+			}
+
+			msgIds, err := s.TalkRecordsDeleteRepo.FindAllMsgIds(ctx, opt.UserId, tmpMsgIds)
+			if err != nil {
+				return nil, err
+			}
+
+			hashIds := make(map[string]struct{}, len(msgIds))
+			for _, msgId := range msgIds {
+				hashIds[msgId] = struct{}{}
+			}
+
+			for _, v := range list {
+				if _, ok := hashIds[v.MsgId]; ok {
+					continue
+				}
+
+				items = append(items, v)
+			}
+		} else {
+			items = append(items, list...)
+		}
+
+		if len(items) >= opt.Limit || len(list) < opt.Limit {
+			break
+		}
+
+		// 设置游标继续往下执行
+		cursor = list[len(list)-1].Id
+	}
+
+	if len(items) > opt.Limit {
+		items = items[:opt.Limit]
+	}
+
+	return s.handleTalkRecords(ctx, items)
+}
+
+// findAllRecords 查询所有对话消息记录
+// 对于私聊，先查询 TalkSession 获取 SessionId，然后使用 SessionId 查询消息
+// 对于群聊，直接使用 GroupId 查询消息
+func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalkRecordsOpt) ([]*model.TalkMessageRecord, error) {
+	query := s.Source.Db().WithContext(ctx)
+
+	fields := []string{
+		"id",
+		"msg_id",
+		"msg_type",
+		"is_revoked",
+		"extra",
+		"quote",
+		"send_time",
+		"from_id",
+	}
+
+	if opt.TalkType == 1 {
+		// 私聊：先查询 TalkSession 获取 SessionId
+		query = query.Model(&model.TalkUserMessage{})
+
+		if s.TalkSessionRepo != nil {
+			// 优化方案：使用 SessionId 查询
+			session, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", opt.UserId, opt.ReceiverId, opt.TalkType)
+			if err != nil {
+				return nil, err
+			}
+			query.Where("session_id = ?", session.SessionId)
+		} else {
+			// 降级方案：使用传统方式查询（兼容未注入 TalkSessionRepo 的情况）
+			query.Where("user_id = ? and receiver_id = ?", opt.UserId, opt.ReceiverId)
+		}
+
+		query.Where("is_deleted = ?", model.No)
+	} else {
+		// 群聊：直接使用 GroupId 查询
+		query = query.Model(&model.TalkGroupMessage{})
+		query.Where("group_id = ?", opt.ReceiverId)
+	}
+
+	// 关键字搜索：仅对文本/混合/代码等内容型消息按内容做模糊匹配。
+	// 为简单起见，这里直接对 extra 字段做 LIKE；如果后续抽出独立 content 字段，可改为针对 content。
+	if opt.Keyword != "" {
+		kw := "%" + opt.Keyword + "%"
+		query = query.Where("extra LIKE ?", kw)
+	}
+
+	query.Select(fields)
+
+	if opt.Cursor > 0 {
+		query.Where("id < ?", opt.Cursor)
+	}
+
+	if len(opt.MsgType) > 0 {
+		query.Where("msg_type in ?", opt.MsgType)
+	}
+
+	query.Order("id desc").Limit(opt.Limit)
+
+	var items []*model.TalkMessageRecord
+	if err := query.Scan(&items).Error; err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(items); i++ {
+		items[i].TalkMode = opt.TalkType
+		items[i].ReceiverId = opt.ReceiverId
+	}
+
+	return items, nil
+}
+
+// FindForwardRecords 获取转发消息记录
+func (s *TalkRecordService) FindForwardRecords(ctx context.Context, uid int, msgIds []string, talkType int) ([]*model.TalkMessageRecord, error) {
+	var (
+		fields = []string{
+			"id",
+			"msg_id",
+			"msg_type",
+			"is_revoked",
+			"extra",
+			"quote",
+			"send_time",
+			"from_id",
+		}
+		items = make([]*model.TalkMessageRecord, 0)
+	)
+
+	if talkType == 2 {
+		query := s.Source.Db().Model(&model.TalkGroupMessage{})
+		query.Select(fields)
+		query.Where("msg_id in ?", msgIds)
+		query.Order("id asc")
+		if err := query.Scan(&items).Error; err != nil {
+			return nil, err
+		}
+	} else {
+		query := s.Source.Db().Model(&model.TalkUserMessage{})
+		query.Select(fields)
+		query.Where("msg_id in ?", msgIds)
+		query.Order("id asc")
+		if err := query.Scan(&items).Error; err != nil {
+			return nil, err
+		}
+	}
+
+	return s.handleTalkRecords(ctx, items)
+}
+
+// HandleTalkRecords 处理消息
+func (s *TalkRecordService) handleTalkRecords(ctx context.Context, items []*model.TalkMessageRecord) ([]*model.TalkMessageRecord, error) {
+	if len(items) == 0 {
+		return make([]*model.TalkMessageRecord, 0), nil
+	}
+
+	uids := make([]int, 0, len(items))
+	for _, item := range items {
+		uids = append(uids, item.FromId)
+	}
+
+	var usersItems []*model.Users
+	err := s.Source.Db().WithContext(ctx).Model(&model.Users{}).
+		Select("id,nickname,avatar").
+		Where("id in ?", sliceutil.Unique(uids)).Scan(&usersItems).Error
+	if err != nil {
+		return nil, err
+	}
+
+	hashUser := make(map[int]*model.Users)
+	for _, user := range usersItems {
+		hashUser[user.Id] = user
+	}
+
+	for i := 0; i < len(items); i++ {
+		if user, ok := hashUser[items[i].FromId]; ok {
+			items[i].Nickname = user.Nickname
+			items[i].Avatar = user.Avatar
+		}
+
+		//if err = jsonutil.Unmarshal(items[i].Extra, &items[i].Extra); err != nil {
+		//	fmt.Println("ERR===>", items[i].Msgid, items[i].Extra, items[i].Extra)
+		//}
+		//
+		//if err = jsonutil.Unmarshal(items[i].Quote, &items[i].Quote); err != nil {
+		//	fmt.Println("ERR===>", items[i].Msgid, items[i].Quote, items[i].Quote)
+		//}
+	}
+
+	return items, nil
+}

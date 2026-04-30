@@ -1,0 +1,255 @@
+syntax = "proto3";
+package web;
+
+option go_package = "web/v1;web";
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+// Wen 授权服务
+service Auth {
+  // 登录接口
+  rpc Login(AuthLoginRequest) returns (AuthLoginResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/login"
+      body: "*"
+    };
+  }
+
+  // 图形验证码（登录页先请求本接口获取 voucher + 图片 base64）
+  rpc Captcha(AuthCaptchaRequest) returns (AuthCaptchaResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/auth/captcha"
+      body: "*"
+    };
+  }
+
+  // 注册接口
+  rpc Register(AuthRegisterRequest) returns (AuthRegisterResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/register"
+      body: "*"
+    };
+  }
+
+  // 找回密码接口
+  rpc Forget(AuthForgetRequest) returns (AuthForgetResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/forget"
+      body: "*"
+    };
+  }
+
+  // 获取 oauth2.0 跳转地址
+  rpc Oauth(AuthOauthRequest) returns (AuthOauthResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/oauth"
+      body: "*"
+    };
+  }
+
+  // 绑定第三方登录接口
+  rpc OauthBind(AuthOAuthBindRequest) returns (AuthOAuthBindResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/oauth/bind"
+      body: "*"
+    };
+  }
+
+  // 第三方登录接口
+  rpc OauthLogin(AuthOauthLoginRequest) returns (AuthOauthLoginResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/oauth/login"
+      body: "*"
+    };
+  }
+
+  // 邮箱验证码登录接口
+  rpc EmailLogin(AuthEmailLoginRequest) returns (AuthEmailLoginResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/email-login"
+      body: "*"
+    };
+  }
+
+  // Token 刷新接口
+  rpc RefreshToken(AuthRefreshTokenRequest) returns (AuthRefreshTokenResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/refresh-token"
+      body: "*"
+    };
+  }
+
+  // 退出登录接口
+  rpc Logout(AuthLogoutRequest) returns (AuthLogoutResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/logout"
+      body: "*"
+    };
+  }
+}
+
+
+
+// 登录接口请求参数
+message AuthLoginRequest{
+  // 登录账号（手机号/用户名/邮箱）
+  string mobile = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+  // 登录密码
+  string password = 2 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+  // 登录平台
+  string platform = 3 [(buf.validate.field).string = {in:["web", "windows", "mac"]}, (google.api.field_behavior) = REQUIRED];
+  // 图形验证码凭证（与 AuthCaptchaResponse.voucher 对应；可在配置中关闭校验）
+  string captcha_voucher = 4;
+  // 用户输入的图形验证码
+  string captcha = 5;
+}
+
+message AuthCaptchaRequest {}
+
+message AuthCaptchaResponse {
+  // 验证码唯一凭证，登录时放在 captcha_voucher（关闭验证码时为空）
+  string voucher = 1 [(google.api.field_behavior) = REQUIRED];
+  // PNG 图片 base64（不含 data:image 前缀；关闭验证码时为空）
+  string captcha = 2 [(google.api.field_behavior) = REQUIRED];
+  // 与 app.disable_login_captcha 一致：为 true 时登录无需传验证码，voucher/captcha 可忽略
+  bool disable_login_captcha = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 登录接口响应参数
+message AuthLoginResponse{
+  // Token 类型
+  string type = 1 [(google.api.field_behavior) = REQUIRED];
+  // token
+  string access_token = 2[(google.api.field_behavior) = REQUIRED];
+  // 过期时间
+  int32 expires_in = 3[(google.api.field_behavior) = REQUIRED];
+  // 是否已设置交易密码（0/1）
+  int32 is_trans = 4 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 注册接口请求参数
+message AuthRegisterRequest{
+  // 昵称
+  string nickname = 1 [(buf.validate.field).string = {min_len: 2, max_len: 20}];
+  // 手机号（可选）
+  string mobile = 2;
+  // 邮箱（可选）
+  string email = 7;
+  // 登录密码
+  string password = 3 [(buf.validate.field).string.min_len = 1];
+  // 登录平台
+  string platform = 4 [(buf.validate.field).string = {in:["web", "windows", "mac"]}];
+  // 短信验证码（手机注册时需要）
+  string sms_code = 5;
+  // 邀请码（可选）
+  string invite_code = 6;
+  // 邮箱验证码（邮箱注册时需要）
+  string email_code = 8;
+}
+
+// 注册接口响应参数
+message AuthRegisterResponse{
+  // Token 类型
+  string type = 1 [(google.api.field_behavior) = REQUIRED];
+  // token
+  string access_token = 2 [(google.api.field_behavior) = REQUIRED];
+  // 过期时间
+  int32 expires_in = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 退出登录接口请求参数
+message AuthLogoutRequest{}
+
+// 退出登录接口响应参数
+message AuthLogoutResponse{
+  // 是否成功
+  bool success = 1 [(google.api.field_behavior) = REQUIRED];
+  // 提示信息
+  string message = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Token 刷新接口请求参数
+message AuthRefreshTokenRequest{}
+
+// Token 刷新接口响应参数
+message AuthRefreshTokenResponse{
+  // Token 类型
+  string type = 1 [(google.api.field_behavior) = REQUIRED];
+  // token
+  string access_token = 2 [(google.api.field_behavior) = REQUIRED];
+  // 过期时间
+  int32 expires_in = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 找回密码接口请求参数
+message AuthForgetRequest{
+  // 邮箱
+  string email = 1 [(buf.validate.field).string.email = true, (google.api.field_behavior) = REQUIRED];
+  // 登录密码
+  string password = 2 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+  // 邮箱验证码
+  string email_code = 3 [(buf.validate.field).string.len = 6, (google.api.field_behavior) = REQUIRED];
+}
+
+// 找回密码接口响应参数
+message AuthForgetResponse{}
+
+
+message AuthOauthRequest{
+  string oauth_type = 3 [(buf.validate.field).string = {in:["github", "gitee"]}, (google.api.field_behavior) = REQUIRED];
+}
+
+message AuthOauthResponse{
+  string uri = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message AuthOauthLoginRequest{
+  string oauth_type = 3 [(buf.validate.field).string = {in:["github", "gitee"]}, (google.api.field_behavior) = REQUIRED];
+  string code = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+  string state = 2 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+message AuthOauthLoginResponse{
+  string is_authorize = 1 [(google.api.field_behavior) = REQUIRED];
+  Authorize authorize = 2 [(google.api.field_behavior) = REQUIRED];
+  string bind_token = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message Authorize{
+  string access_token = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 expires_in = 2 [(google.api.field_behavior) = REQUIRED];
+  string type = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+
+message AuthOAuthBindRequest{
+  string bind_token = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+  string mobile = 2 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+  string sms_code = 3 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+message AuthOAuthBindResponse{
+  Authorize authorize = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 邮箱登录请求参数
+message AuthEmailLoginRequest{
+  // 邮箱
+  string email = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+  // 邮箱验证码
+  string email_code = 2 [(buf.validate.field).string.len = 6, (google.api.field_behavior) = REQUIRED];
+  // 登录平台
+  string platform = 3 [(buf.validate.field).string = {in:["web", "windows", "mac"]}, (google.api.field_behavior) = REQUIRED];
+}
+
+// 邮箱登录响应参数
+message AuthEmailLoginResponse{
+  // Token 类型
+  string type = 1 [(google.api.field_behavior) = REQUIRED];
+  // token
+  string access_token = 2 [(google.api.field_behavior) = REQUIRED];
+  // 过期时间
+  int32 expires_in = 3 [(google.api.field_behavior) = REQUIRED];
+}

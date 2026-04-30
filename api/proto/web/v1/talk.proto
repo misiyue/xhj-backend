@@ -1,0 +1,171 @@
+syntax = "proto3";
+package web;
+option go_package = "web/v1;web";
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+// 会话服务
+service Talk {
+  // 会话创建接口
+  rpc SessionCreate(TalkSessionCreateRequest) returns (TalkSessionCreateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-create"
+      body: "*"
+    };
+  }
+
+  // 会话删除接口
+  rpc SessionDelete(TalkSessionDeleteRequest) returns (TalkSessionDeleteResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-delete"
+      body: "*"
+    };
+  }
+
+  // 会话置顶接口
+  rpc SessionTop(TalkSessionTopRequest) returns (TalkSessionTopResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-top"
+      body: "*"
+    };
+  }
+
+  // 会话免打扰接口
+  rpc SessionDisturb(TalkSessionDisturbRequest) returns (TalkSessionDisturbResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-disturb"
+      body: "*"
+    };
+  }
+  
+  // 会话详情接口
+  rpc SessionDetail(TalkSessionDetailRequest) returns (TalkSessionDetailResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-detail"
+      body: "*"
+    };
+  }
+
+  // 会话列表接口
+  rpc SessionList(TalkSessionListRequest) returns (TalkSessionListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-list"
+      body: "*"
+    };
+  }
+
+  // 会话未读数清除接口
+  rpc SessionClearUnreadNum(TalkSessionClearUnreadNumRequest) returns (TalkSessionClearUnreadNumResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-clear-unread-num"
+      body: "*"
+    };
+  }
+}
+
+// 会话列表项
+message TalkSessionItem{
+  int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 talk_mode = 2 [(google.api.field_behavior) = REQUIRED];
+  int32 receiver_id = 3 [(google.api.field_behavior) = REQUIRED];
+  int32 is_top = 4 [(google.api.field_behavior) = REQUIRED];
+  int32 is_disturb = 5 [(google.api.field_behavior) = REQUIRED];
+  int32 is_robot = 7 [(google.api.field_behavior) = REQUIRED];
+  string name = 8 [(google.api.field_behavior) = REQUIRED];
+  string avatar = 9 [(google.api.field_behavior) = REQUIRED];
+  string remark = 10 [(google.api.field_behavior) = REQUIRED];
+  int32 unread_num = 11 [(google.api.field_behavior) = REQUIRED];
+  string msg_text = 12 [(google.api.field_behavior) = REQUIRED];
+  string updated_at = 13 [(google.api.field_behavior) = REQUIRED];
+  // 该会话中 @ 我的消息条数（群聊有效，单聊为 0），前端 atMeUserCount
+  int32 at_me_user_count = 14;
+}
+
+// 会话创建接口请求参数
+message TalkSessionCreateRequest{
+  // 1:私聊 2:群聊
+  int32 talk_mode = 1 [(buf.validate.field).int32 = {in:[1, 2]}];
+  // 对方ID
+  int32 receiver_id = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// 会话创建接口响应参数
+message TalkSessionCreateResponse{
+  int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 talk_mode = 2 [(google.api.field_behavior) = REQUIRED];
+  int32 receiver_id = 3 [(google.api.field_behavior) = REQUIRED];
+  int32 is_top = 4 [(google.api.field_behavior) = REQUIRED];
+  int32 is_disturb = 5 [(google.api.field_behavior) = REQUIRED];
+  int32 is_online = 6 [(google.api.field_behavior) = REQUIRED];
+  int32 is_robot = 7 [(google.api.field_behavior) = REQUIRED];
+  string name = 8 [(google.api.field_behavior) = REQUIRED];
+  string avatar = 9 [(google.api.field_behavior) = REQUIRED];
+  string remark = 10 [(google.api.field_behavior) = REQUIRED];
+  int32 unread_num = 11 [(google.api.field_behavior) = REQUIRED];
+  string msg_text = 12 [(google.api.field_behavior) = REQUIRED];
+  string updated_at = 13 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 会话删除接口请求参数
+message TalkSessionDeleteRequest{
+  int32 talk_mode = 1 [(buf.validate.field).int32 = {in:[1, 2]}];
+  int32 receiver_id = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// 会话删除接口响应参数
+message TalkSessionDeleteResponse{}
+
+// 会话置顶接口请求参数
+message TalkSessionTopRequest{
+  int32 talk_mode = 1 [(buf.validate.field).int32 = {in:[1, 2]}];
+  int32 receiver_id = 2 [(buf.validate.field).int32.gte = 1];
+  int32 action = 3 [(buf.validate.field).int32 = {in:[1, 2]}];
+}
+
+// 会话置顶接口响应参数
+message TalkSessionTopResponse{
+  int32 is_top = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 会话免打扰接口请求参数
+message TalkSessionDisturbRequest{
+  int32 talk_mode = 1 [(buf.validate.field).int32 = {in:[1, 2]}];
+  int32 receiver_id = 2 [(buf.validate.field).int32.gte = 1];
+  int32 action = 3 [(buf.validate.field).int32 = {in:[1, 2]}];
+}
+
+// 会话免打扰接口响应参数
+message TalkSessionDisturbResponse{
+  int32 is_disturb = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 会话详情接口请求参数
+message TalkSessionDetailRequest{
+  int32 talk_mode = 1 [(buf.validate.field).int32 = {in:[1, 2]}];
+  int32 receiver_id = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// 会话详情接口响应参数
+message TalkSessionDetailResponse{
+  int32 is_top = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 is_disturb = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 会话列表接口请求参数
+message TalkSessionListRequest{}
+
+// 会话列表接口响应参数
+message TalkSessionListResponse{
+  repeated TalkSessionItem items = 1;
+}
+
+// 会话未读数清除接口请求参数
+message TalkSessionClearUnreadNumRequest{
+  int32 talk_mode = 1 [(buf.validate.field).int32 = {in:[1, 2]}];
+  int32 receiver_id = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// 会话未读数清除接口响应参数
+message TalkSessionClearUnreadNumResponse{}

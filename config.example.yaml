@@ -1,0 +1,228 @@
+# 项目配置信息
+app:
+  env: dev
+  debug: false
+  admin_email:
+    -
+  # 是否允许手机号注册 (默认: false - 不允许)
+  allow_phone_registration: false
+  # 是否需要邀请码才能注册 (默认: false - 不需要)
+  require_invite_code: false
+  # 是否关闭「登录」图形验证码校验（默认 false，即需要验证码）。旧客户端未改时可临时设为 true
+  disable_login_captcha: false
+    # 不知道怎么生成的可以看这个网站 http://www.usey.cn/rsa?bits=2048
+  public_key: |
+    -----BEGIN PUBLIC KEY-----
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1JqqxPLNWEy371X+kOXq
+    wE8fMebohqHI9txXRoUIh28dYsrv85JTrknLlPcYWT5Q27nHGcywu8hpsjMwe1U2
+    akHikIzLYEu/8GaGqI7qHa+73F54lVKHBcwdK8PjH8+o76kN9MsouJ8QA7Nk0g4u
+    6equEzyrchwjr/bOjP4MhPt4hU90jpQbp3tqDu6PQgPQZzxDtIX9TeqzplCAYNy2
+    M4i1HtbZk2a9vimFqTsM8i+ALPH47c+Bt4b4mLoKqSyF6K1muhV/kqfecV8fvyfN
+    bkJdUkWQnNvgTX0f1nhAshArLMw4VyROrYBAamFgtzwRpC4qCYhBzWqyhb10bEEf
+    XwIDAQAB
+    -----END PUBLIC KEY-----
+
+  private_key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDUmqrE8s1YTLfv
+    Vf6Q5erATx8x5uiGocj23FdGhQiHbx1iyu/zklOuScuU9xhZPlDbuccZzLC7yGmy
+    MzB7VTZqQeKQjMtgS7/wZoaojuodr7vcXniVUocFzB0rw+Mfz6jvqQ30yyi4nxAD
+    s2TSDi7p6q4TPKtyHCOv9s6M/gyE+3iFT3SOlBune2oO7o9CA9BnPEO0hf1N6rOm
+    UIBg3LYziLUe1tmTZr2+KYWpOwzyL4As8fjtz4G3hviYugqpLIXorWa6FX+Sp95x
+    Xx+/J81uQl1SRZCc2+BNfR/WeECyECsszDhXJE6tgEBqYWC3PBGkLioJiEHNarKF
+    vXRsQR9fAgMBAAECggEBAIgad8Zbda/YdUwHrk9OkQkJ3fuRSjyeJ8w5ZLnlgn9J
+    V/Od3Rz+CQojfevgf7rqFNOFS/utOVsNwvRsptXdyFcf1I4bRDtiYv7gc8ZGr4PP
+    s6Ew7VsSmRPSBr60yZrc0taSUDftMyV11se3uYxrvgbL0SLJjSwg7YvBoZtLK/KY
+    6u+oAhMALuiOV773+TApKatQrNy41DaB+YNkxQzQbp8lHaLApLLSYkyIn47kxmwh
+    qaH3NX13KnWauNYA2HuuZmrVH4nabr8WFq2057vJlssWcxgwxDEEjtkY2GofiHAo
+    r+cXslrErX8hpJrQ2S6bVtisqVVib5yhruG7Ke45kOkCgYEA9vnQxF5LqY2TETz0
+    1NAPu1mSvPdmM78CwT5uFnjhYDfnf41346Cv/WEDvZJuLwo2LCf+N0qpb/pJ7e0V
+    lAhXsJqFSdRgd6GOdImVvuC2meoUQF282neGeRI6SKPCz4r+DRMBbjkIrDSCw/TR
+    yB+hPAxxgHKHC4ji3tB9Lzl//y0CgYEA3F9Xv5PFV/A5j0uDK3rOE0frfEWUfxPx
+    IUPjaWPbajHQqgJDqJyB6lg2M284FEYGtGlPHZGSU9Q15NEVukmhsZJm2Vzsf6Ss
+    8BEAJS7ngtj064h0QYrOwyUHMVC99OdvQTSi5LTQxTYQp0jnxdinFX2NF8zDRdt5
+    ePQqi0AYkDsCgYEA9hr2N9enGewj8veFGVPDeXPGz1rQkxvyCNLHLMmD/Dd5DhfQ
+    shl7hcfYzF1QQruwQ8wOfNZ/hUApz1eDOyIdD7TKwUlKX6uzotk/SRfvnewuBf3i
+    pOiaLadGQQA+rkXY5vpbYJSg2cjxzYb2TK+IIahcqhx2Cb58JIApXpezvnkCgYBL
+    Ba5SyxTI3kBKNzPdjn4vdDGH6gwmwvw5DeqSi2s8GN9nsUOlWDqmNAentPpLdJd9
+    vcgwUcmV/k2mq0ORWtXQJP4ci5T7020IgVEiV3h7RC8FLDwfwAipyKZNNKamhE+M
+    zEWURLY6HTDIMnqtERe4qjhpXM0xsAkHk2AUbequ1wKBgGjV3oF/Pk9i94YhG61P
+    +OSFzf6Ci+c6aGz1pWRP6KwTJAnHV/1sI+8uHp6gJZnxiJyPsESqX8whttF36UaC
+    en1nf7/FASIbrMbL+vAAxzKPCbo6iBOV9e4MsimgT9Vo7kpsi49VsNCFCriliCja
+    k4cC5qJhehEvZcgOiwr5qsvi
+    -----END PRIVATE KEY-----
+
+  aes_key: "BLHPzm3Urx5t9DTA"
+
+server:
+  http_addr: ":9501"
+  websocket_addr: ":9502"
+  tcp_addr: ":9505"
+  # WebSocket 最大连接数，0或不配置则根据系统资源自动检测
+  # 手动配置示例: max_open_conns: 10000
+  max_open_conns: 0
+  # 为其他服务（MySQL、Redis等）预留的资源百分比，范围: 0-100，默认: 35
+  # 这个值越大，为 WebSocket 分配的资源越少，但系统更稳定
+  reserve_percent: 35
+
+# 日志配置
+log:
+  # 日志文件路径 *请使用绝对路径*
+  path: "/path/to/.../runtime"
+
+# Redis 相关配置
+redis:
+  host: 127.0.0.1:6379
+  auth: xxx
+  database: 0
+
+# Mysql 数据库配置
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  charset: utf8mb4
+  username: root
+  password: xxxx
+  database: go_chat
+  collation: utf8mb4_general_ci
+
+# Jwt 配置
+jwt:
+  secret: 836c3fea9bba4e04d51bd0fbcc5
+  expires_time: 3600
+  buffer_time: 3600
+
+# 跨域配置
+cors:
+  origin: "*"
+  headers: "Content-Type,Cache-Control,User-Agent,Keep-Alive,DNT,AccessToken,Authorization"
+  methods: "OPTIONS,GET,POST,PUT,DELETE"
+  credentials: false
+  max_age: 600
+  websocket_origins: "*"  # WebSocket CORS origins (default: "*" allows all origins)
+
+# 文件系统配置【qiniu 暂不支持】
+# 注意：高可用部署时不能使用 local，必须使用 minio/aws/cos/oss 等分布式存储
+filesystem:
+  default: local  # 支持: local, minio, aws, cos, oss
+  local:
+    # 文件保存的根目录
+    root: "/path/xx/lumenim/"
+    # 公开的 bucket
+    bucket_public: "public"
+    # 私有的 bucket
+    bucket_private: "private"
+    endpoint: "im-cdn.xxx.com"
+    ssl: false
+  minio:
+    secret_id: "xxxxxx"
+    secret_key: "xxxxx"
+    # 公开的 bucket
+    bucket_public: "im-static"
+    # 私有的 bucket
+    bucket_private: "im-private"
+    endpoint: "im-cdn.xxx.com"
+    ssl: false
+  aws:
+    secret_id: "xxxxxx"
+    secret_key: "xxxxx"
+    bucket_public: "im-static"
+    bucket_private: "im-private"
+    region: "ap-northeast-1"
+    endpoint: "" # Optional, leave empty for standard AWS S3
+    ssl: true
+  cos:
+    secret_id: "xxxxxx"
+    secret_key: "xxxxx"
+    bucket_public: "im-static-125xxxxx"
+    bucket_private: "im-private-125xxxxx"
+    region: "ap-guangzhou"
+    ssl: true
+    # 腾讯云主账号UIN（10位数字），用于生成STS临时密钥
+    app_id: "125xxxxx"
+    cos_domain: "abc.example.com"
+    cos_domain_ssl_enabled: true
+  oss:
+    access_key_id: "xxxxxx"
+    access_secret: "xxxxx"
+    bucket_public: "im-static"
+    bucket_private: "im-private"
+    endpoint: "oss-cn-hangzhou.aliyuncs.com"
+    ssl: true
+    oss_domain: ""  # 自定义域名 (可选)
+    oss_domain_ssl_enabled: true
+
+# 邮件配置
+email:
+  # 设置为 true 使用服务器自身的SMTP服务，false 使用外部SMTP服务器
+  # 建议使用外部SMTP服务器，否则Gmail等邮箱会拦截，客户无法收到邮件
+  use_local: true
+
+  # 使用本地SMTP服务器发送邮件（不推荐）
+  local_host: localhost    # 本地SMTP服务器地址，默认 localhost
+  local_port: 25           # 本地SMTP服务器端口，默认 25
+  username: noreply@xhj.im  # 发件人邮箱地址（使用本地SMTP时作为From地址）
+  fromname: "小火箭 IM"      # 发送人名称
+  
+  # 以下配置仅在 use_local 为 false 时使用（外部SMTP服务器）
+  host: smtp.163.com       # 外部SMTP服务器地址
+  port: 465                # 外部SMTP服务器端口
+  password: xxxxx          # 外部SMTP服务器密码
+
+oauth:
+  github:
+    client_id: "Iv23lxxxxxDz8o"
+    client_secret: "7fb8feaxxxxxbe876a1"
+    redirect_uri: "http://localhost:5173/oauth/callback/github"
+  gitee:
+    client_id: "cc6f015ebcaxxxa1b"
+    client_secret: "33402xbbeafeb20cfc1bb"
+    redirect_uri: "http://localhost:5173/oauth/callback/gitee"
+
+# TRTC Config
+trtc:
+  sdk_app_id: 1400000000
+  secret_key: "your_secret_key_here"
+
+# 钱包平台配置
+wallet:
+  base_url: "https://example.com/api"
+  key: "mh**************************"
+
+# 安全配置
+security:
+  # IP限流配置
+  rate_limit:
+    enabled: true       # 是否启用IP限流
+    capacity: 2000      # 令牌桶容量（最大突发请求数）
+    rate: 900           # 每秒生成的令牌数（QPS）
+  
+  # 全局限流配置
+  global_rate_limit:
+    enabled: true       # 是否启用全局限流
+    capacity: 8000      # 令牌桶容量（最大突发请求数）
+    rate: 2000          # 每秒生成的令牌数（全局QPS）
+  
+  # 暴力破解保护配置
+  brute_force:
+    enabled: true       # 是否启用暴力破解保护
+    max_attempts: 5     # 最大失败尝试次数
+    block_duration: 5   # 封禁时长（分钟）
+    reset_duration: 15  # 重置失败计数的时长（分钟）
+  
+  # 安全头配置
+  security_headers:
+    enabled: true
+    x_frame_options: "SAMEORIGIN"                      # 防止点击劫持
+    x_content_type_options: "nosniff"                  # 防止MIME类型嗅探
+    xss_protection: "1; mode=block"                    # XSS过滤器
+    strict_transport_security: "max-age=31536000; includeSubDomains"  # HSTS
+    content_security_policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
+    referrer_policy: "strict-origin-when-cross-origin" # Referrer策略
+    permissions_policy: "geolocation=(), microphone=(), camera=()"  # 权限策略
+  
+  # 请求大小限制配置
+  request_size:
+    enabled: true
+    max_body_size: 67108864  # 最大请求体大小（字节），默认64MB
+

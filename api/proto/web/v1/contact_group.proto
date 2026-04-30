@@ -1,0 +1,61 @@
+syntax = "proto3";
+package web;
+
+option go_package = "web/v1;web";
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+// 联系人分组服务
+service ContactGroup {
+  // 联系人分组列表接口
+  rpc List(ContactGroupListRequest) returns (ContactGroupListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contact-group/list"
+      body: "*"
+    };
+  }
+
+  // 保存联系人分组接口
+  rpc Save(ContactGroupSaveRequest) returns (ContactGroupSaveResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contact-group/save"
+      body: "*"
+    };
+  }
+}
+
+// 联系人分组列表接口请求参数
+message ContactGroupListRequest{}
+
+// 联系人分组列表接口响应参数
+message ContactGroupListResponse{
+  message Item{
+    // 分组ID
+    int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+    // 分组名称
+    string name = 2 [(google.api.field_behavior) = REQUIRED];
+    // 联系人数
+    int32 count = 3 [(google.api.field_behavior) = REQUIRED];
+    // 分组排序
+    int32 sort = 4 [(google.api.field_behavior) = REQUIRED];
+  }
+
+  // 分组列表
+  repeated Item items = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 保存联系人分组接口请求参数
+message ContactGroupSaveRequest{
+  message Item{
+    int32 id = 1 [(buf.validate.field).int32.gte = 0];
+    int32 sort = 2 [(buf.validate.field).int32.gt = 0];
+    string name = 3 [(buf.validate.field).string.min_len = 1];
+  }
+
+  repeated Item items = 1;
+}
+
+// 保存联系人分组接口响应参数
+message ContactGroupSaveResponse{}

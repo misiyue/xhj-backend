@@ -1,0 +1,49 @@
+# Stress Test Configuration Example
+# Copy this file and modify as needed
+
+# HTTP API Endpoint
+http_endpoint: "http://localhost:9503"
+
+# WebSocket Endpoint
+websocket_endpoint: "ws://localhost:9501/wss"
+
+# Test Parameters
+test_params:
+  # User Creation Test
+  user_creation:
+    count: 100
+    concurrency: 50
+  
+  # Friend Request Test
+  friend_requests:
+    users: 50
+    requests_per_user: 10
+    concurrency: 50
+  
+  # Group Chat Test
+  group_chat:
+    groups: 10
+    members_per_group: 20
+    messages_per_member: 100
+    concurrency: 50
+  
+  # Mixed Operations Test
+  mixed_operations:
+    duration_seconds: 60
+    concurrent_users: 50
+    operation_delay_ms: 100
+
+# Database Configuration (for cleanup)
+database:
+  mysql:
+    host: "localhost"
+    port: 3306
+    username: "root"
+    password: "password"
+    database: "im_chat"
+
+# Logging
+logging:
+  level: "info"  # debug, info, warn, error
+  output: "console"  # console, file
+  file_path: "stress-test.log"

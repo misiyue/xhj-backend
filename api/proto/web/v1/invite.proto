@@ -1,0 +1,129 @@
+syntax = "proto3";
+package web;
+
+option go_package = "web/v1;web";
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+// 邀请码服务
+service Invite {
+  // 生成邀请码
+  rpc GenerateInviteCode(InviteGenerateRequest) returns (InviteGenerateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/generate"
+      body: "*"
+    };
+  }
+
+  // 获取我的邀请码列表
+  rpc GetMyInviteCodes(InviteListRequest) returns (InviteListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/list"
+      body: "*"
+    };
+  }
+
+  // 获取邀请统计
+  rpc GetInviteStats(InviteStatsRequest) returns (InviteStatsResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/stats"
+      body: "*"
+    };
+  }
+
+  // 禁用邀请码
+  rpc DisableInviteCode(InviteDisableRequest) returns (InviteDisableResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/disable"
+      body: "*"
+    };
+  }
+
+  // 我邀请注册的好友列表（users.invite_user_id = 当前用户）
+  rpc ListInviteFriends(InviteFriendListRequest) returns (InviteFriendListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/friends"
+      body: "*"
+    };
+  }
+}
+
+// 生成邀请码请求
+message InviteGenerateRequest {
+  // 有效期天数，默认365天
+  int32 expire_days = 1;
+  // 最大使用次数，默认1次
+  int32 max_usage = 2;
+}
+
+// 生成邀请码响应
+message InviteGenerateResponse {
+  string code = 1 [(google.api.field_behavior) = REQUIRED];
+  string expire_at = 2 [(google.api.field_behavior) = REQUIRED];
+  int32 max_usage_count = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 获取邀请码列表请求
+message InviteListRequest {}
+
+// 获取邀请码列表响应
+message InviteListResponse {
+  repeated InviteCodeItem items = 1;
+}
+
+// 邀请码信息
+message InviteCodeItem {
+  int32 id = 1;
+  string code = 2;
+  int32 status = 3; // 0:可用 1:已使用 2:已禁用
+  string expire_at = 4;
+  int32 max_usage_count = 5;
+  int32 usage_count = 6;
+  string created_at = 7;
+}
+
+// 获取邀请统计请求
+message InviteStatsRequest {}
+
+// 获取邀请统计响应
+message InviteStatsResponse {
+  int32 total_codes = 1; // 总邀请码数
+  int32 available_codes = 2; // 可用邀请码数
+  int32 used_codes = 3; // 已使用邀请码数
+  int32 total_invitations = 4; // 总邀请人数
+}
+
+// 禁用邀请码请求
+message InviteDisableRequest {
+  string code = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+// 禁用邀请码响应
+message InviteDisableResponse {}
+
+// 邀请好友列表请求
+message InviteFriendListRequest {
+  // 页码，从 1 开始；未传或 0 时服务端按 1 处理
+  int32 page = 1;
+  // 每页条数；未传或 0 时默认 20，最大 100
+  int32 page_size = 2;
+}
+
+// 邀请好友列表响应
+message InviteFriendListResponse {
+  repeated InviteFriendItem items = 1;
+  // 符合条件的总条数（用于分页）
+  int32 total = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 被邀请注册的好友（简要信息）
+message InviteFriendItem {
+  int32 user_id = 1 [(google.api.field_behavior) = REQUIRED]; // users.id
+  string nickname = 2;
+  string avatar = 3;
+  string mobile = 4; // 脱敏展示
+  string email = 5; // 脱敏展示
+  string created_at = 6; // 注册时间
+}

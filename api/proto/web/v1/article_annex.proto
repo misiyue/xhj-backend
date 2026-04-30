@@ -1,0 +1,110 @@
+syntax = "proto3";
+package web;
+
+option go_package = "web/v1;web";
+
+import "web/v1/paginate.proto";
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+
+
+// 文章附件服务
+service ArticleAnnex {
+  // 文章附件删除接口
+  rpc Delete(ArticleAnnexDeleteRequest) returns (ArticleAnnexDeleteResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/article-annex/delete"
+      body: "*"
+    };
+  }
+
+  // 文章附件恢复删除接口
+  rpc Recover(ArticleAnnexRecoverRequest) returns (ArticleAnnexRecoverResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/article-annex/recover"
+      body: "*"
+    };
+  }
+
+  // 文章附件永久删除接口
+  rpc ForeverDelete(ArticleAnnexForeverDeleteRequest) returns (ArticleAnnexForeverDeleteResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/article-annex/forever-delete"
+      body: "*"
+    };
+  }
+
+  // 文章附件回收站列表接口
+  rpc RecoverList(ArticleAnnexRecoverListRequest) returns (ArticleAnnexRecoverListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/article-annex/recover-list"
+      body: "*"
+    };
+  }
+}
+
+// 文章附件上传接口请求参数
+message ArticleAnnexUploadRequest{
+  int32 article_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+// 文章附件上传接口响应参数
+message ArticleAnnexUploadResponse{
+  int32 annex_id = 1;
+  int32 annex_size = 2;
+  string annex_name = 3;
+  string created_at = 4;
+}
+
+// 文章附件删除接口请求参数
+message ArticleAnnexDeleteRequest{
+  int32 annex_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+// 文章附件删除接口响应参数
+message ArticleAnnexDeleteResponse{}
+
+// 文章附件恢复删除接口请求参数
+message ArticleAnnexRecoverRequest{
+  int32 annex_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+// 文章附件恢复删除接口响应参数
+message ArticleAnnexRecoverResponse{}
+
+// 文章附件永久删除接口请求参数
+message ArticleAnnexForeverDeleteRequest{
+  int32 annex_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+// 文章附件永久删除接口响应参数
+message ArticleAnnexForeverDeleteResponse{}
+
+// 文章附件下载接口请求参数
+message ArticleAnnexDownloadRequest{
+  int32 annex_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+// 文章附件下载接口响应参数
+message ArticleAnnexDownloadResponse{}
+
+// 文章附件回收站列表接口请求参数
+message ArticleAnnexRecoverListRequest{
+  int32 page = 1;
+}
+
+// 文章附件回收站列表接口响应参数
+message ArticleAnnexRecoverListResponse{
+  message Item{
+    int32 annex_id = 1;
+    string annex_name = 2;
+    int32 article_id = 3;
+    string article_title = 4;
+    string created_at = 5;
+    string deleted_at = 6;
+    int32 day = 7;
+  }
+
+  repeated Item items = 1;
+  Paginate paginate = 2;
+}

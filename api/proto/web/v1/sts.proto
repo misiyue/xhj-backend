@@ -1,0 +1,23 @@
+syntax = "proto3";
+package web;
+option go_package = "web/v1;web";
+import "buf/validate/validate.proto";
+
+// 获取COS临时密钥请求参数
+message GetCosSTSRequest{
+  string file_name = 1 [(buf.validate.field).string.min_len = 1]; // 文件名
+  string file_type = 2; // 文件类型 (image, video, file)
+}
+
+// 获取COS临时密钥响应参数
+message GetCosSTSResponse{
+  string tmp_secret_id = 1;     // 临时密钥 ID
+  string tmp_secret_key = 2;    // 临时密钥 Key
+  string session_token = 3;     // 临时密钥 Token
+  string region = 4;            // COS区域
+  string bucket = 5;            // Bucket名称
+  string key = 6;               // 对象路径(文件在COS中的完整路径)
+  int64 start_time = 7;         // 临时密钥生效时间(Unix时间戳)
+  int64 expired_time = 8;       // 临时密钥过期时间(Unix时间戳)
+  string presigned_url = 9;     // 预签名PUT URL(客户端可直接PUT上传)
+}
