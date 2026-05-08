@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -51,7 +52,7 @@ type Auth struct {
 // Login 登录
 //
 //	@Summary		登录
-//	@Description	使用手机号和密码进行身份验证
+//	@Description	使用账号（请求字段 mobile，对应 users.username）与密码进行身份验证
 //	@Tags			认证
 //	@Accept			json
 //	@Produce		json
@@ -74,7 +75,12 @@ func (a *Auth) Login(ctx context.Context, in *web.AuthLoginRequest) (*web.AuthLo
 		return nil, err
 	}
 
-	user, err := a.UserService.Login(ctx, in.Mobile, string(password))
+	account := strings.TrimSpace(in.GetMobile())
+	if account == "" {
+		return nil, errorx.New(400, "请填写登录账号")
+	}
+
+	user, err := a.UserService.Login(ctx, account, string(password))
 	if err != nil {
 		return nil, err
 	}

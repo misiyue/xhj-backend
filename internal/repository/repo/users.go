@@ -54,6 +54,11 @@ func (u *Users) ClearTableCache(ctx context.Context, id int) error {
 	return u.tableCache.Del(ctx, id)
 }
 
+// FindByUsername 按登录名 users.username 精确查询
+func (u *Users) FindByUsername(ctx context.Context, username string) (*model.Users, error) {
+	return u.Repo.FindByWhere(ctx, "username = ?", username)
+}
+
 // SearchByKeyword 通过关键词搜索用户（登录用：先精确再模糊）
 func (u *Users) SearchByKeyword(ctx context.Context, keyword string) (*model.Users, error) {
 	// 先尝试精确匹配用户名

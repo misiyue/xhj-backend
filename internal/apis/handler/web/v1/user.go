@@ -262,8 +262,9 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := session.UserId
 
+	newEmail := strings.TrimSpace(req.Email)
 	user, _ := u.UsersRepo.FindById(ctx, uid)
-	if user.Email == req.Email {
+	if user.Email == newEmail {
 		return nil, errorx.New(400, "邮箱与原邮箱一致无需修改")
 	}
 
@@ -280,19 +281,27 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 		return nil, entity.ErrPermissionDenied
 	}
 
-	if !u.EmailService.Verify(ctx, entity.EmailVerifyChannel, req.Email, req.Code) {
+	if !u.EmailService.Verify(ctx, entity.EmailVerifyChannel, newEmail, req.Code) {
 		return nil, errorx.New(400, "邮箱验证码错误")
 	}
 
+	if other, _ := u.UsersRepo.FindByEmail(ctx, newEmail); other != nil && other.Id > 0 && other.Id != user.Id {
+		return nil, errorx.New(400, "该邮箱已被其他账号使用")
+	}
+	if other, _ := u.UsersRepo.FindByUsername(ctx, newEmail); other != nil && other.Id > 0 && other.Id != user.Id {
+		return nil, errorx.New(400, "该邮箱对应的登录名已被占用")
+	}
+
 	_, err = u.UsersRepo.UpdateById(ctx, user.Id, map[string]any{
-		"email": req.Email,
+		"email":    newEmail,
+		"username": newEmail,
 	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	u.EmailService.Delete(ctx, entity.EmailVerifyChannel, req.Email)
+	u.EmailService.Delete(ctx, entity.EmailVerifyChannel, newEmail)
 
 	_ = u.UsersRepo.ClearTableCache(ctx, user.Id)
 	return &web.UserEmailUpdateResponse{}, nil

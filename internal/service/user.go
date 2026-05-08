@@ -20,7 +20,7 @@ var _ IUserService = (*UserService)(nil)
 
 type IUserService interface {
 	Register(ctx context.Context, opt *UserRegisterOpt) (*model.Users, error)
-	Login(ctx context.Context, mobile string, password string) (*model.Users, error)
+	Login(ctx context.Context, account string, password string) (*model.Users, error)
 	Forget(ctx context.Context, opt *UserForgetOpt) (bool, error)
 	UpdatePassword(ctx context.Context, uid int, oldPassword string, password string) error
 	OauthBind(ctx context.Context, mobile string, oauthUser *model.OAuthUser) (int, error)
@@ -172,11 +172,9 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 }
 
 // Login 登录处理
-// 支持使用手机号、邮箱或昵称进行登录
-func (s *UserService) Login(ctx context.Context, mobile string, password string) (*model.Users, error) {
-	// 使用 SearchByKeyword 来支持多种查询方式（mobile、email、nickname）
-	// 这样可以处理注册时只有 email 但登录时使用 email 作为用户名的情况
-	user, err := s.UsersRepo.SearchByKeyword(ctx, mobile)
+// account 为前端登录框内容（接口字段名仍为 mobile）：仅与 users.username 精确匹配
+func (s *UserService) Login(ctx context.Context, account string, password string) (*model.Users, error) {
+	user, err := s.UsersRepo.FindByUsername(ctx, account)
 	if err != nil {
 		if utils.IsSqlNoRows(err) {
 			return nil, entity.ErrAccountOrPassword

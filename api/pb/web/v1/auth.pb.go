@@ -26,7 +26,7 @@ const (
 // 登录接口请求参数
 type AuthLoginRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 登录账号（手机号/用户名/邮箱）
+	// 登录账号（前端字段名仍为 mobile；服务端仅按 users.username 精确匹配）
 	Mobile string `protobuf:"bytes,1,opt,name=mobile,proto3" json:"mobile,omitempty"`
 	// 登录密码
 	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
