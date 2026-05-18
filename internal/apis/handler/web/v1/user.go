@@ -2,9 +2,11 @@ package v1
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/gzydong/go-chat/api/pb/web/v1"
+	"github.com/gzydong/go-chat/external/wallet"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
@@ -25,6 +27,7 @@ var _ web.IUserHandler = (*User)(nil)
 type User struct {
 	Redis               *redis.Client
 	UsersRepo           *repo.Users
+	WalletUserRepo      *repo.WalletUser
 	MerchantRepo        *repo.Merchant
 	MerchantTaskRepo    *repo.MerchantTask
 	MerchantPaytypeRepo *repo.MerchantPaytype
@@ -307,10 +310,48 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 	return &web.UserEmailUpdateResponse{}, nil
 }
 
+// freezeMerchantSurety 调用钱包冻结保证金；成功时返回 data.bill_id（>0 时应写入 merchant.surety_bill_id）。
+func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64) (billID int, err error) {
+	if surety < 500 {
+		return 0, errorx.New(400, "保证金不得低于 500 元")
+	}
+	wc := wallet.GetClient()
+	if wc == nil {
+		return 0, errorx.New(500, "钱包服务未初始化，请检查配置 wallet.base_url 与 wallet.key")
+	}
+	user, err := u.UsersRepo.FindById(ctx, uid)
+	if err != nil || user == nil || user.Id == 0 {
+		return 0, errorx.New(400, "用户不存在")
+	}
+	walletUID := 0
+	if u.WalletUserRepo != nil {
+		if wu, werr := u.WalletUserRepo.FindByUserId(ctx, uid); werr == nil && wu != nil && wu.WalletUID != 0 {
+			walletUID = wu.WalletUID
+		}
+	}
+	if walletUID == 0 && user.Uuid != 0 {
+		walletUID = user.Uuid
+	}
+	if walletUID == 0 {
+		return 0, errorx.New(400, "钱包账户未就绪，无法冻结保证金")
+	}
+	billID, err = wc.FreezeAccount(fmt.Sprintf("%d", uid), walletUID, surety, 1)
+	if err != nil {
+		msg := strings.TrimPrefix(err.Error(), "wallet api error: ")
+		msg = strings.TrimSpace(msg)
+		if msg == "" {
+			msg = "冻结保证金失败"
+		}
+		return 0, errorx.New(400, msg)
+	}
+	return billID, nil
+}
+
 // MerchantApply 商户入驻申请
 func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyRequest) (*web.UserMerchantApplyResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
+	surety := in.GetSurety()
 
 	hasApproved, err := u.MerchantRepo.HasApprovedByUserId(ctx, uid)
 	if err != nil {
@@ -329,23 +370,35 @@ func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyReque
 			return nil, errorx.New(400, "您有待审核的商户申请，请勿重复提交")
 		}
 		if latest.Status == model.MerchantStatusRejected {
+			billID, err := u.freezeMerchantSurety(ctx, uid, surety)
+			if err != nil {
+				return nil, err
+			}
 			updates := map[string]any{
-				"nickname":  strings.TrimSpace(in.GetNickname()),
-				"realname":  strings.TrimSpace(in.GetRealname()),
-				"nation":    strings.TrimSpace(in.GetNation()),
-				"id_type":   int(in.GetIdType()),
-				"idcard":    strings.TrimSpace(in.GetIdcard()),
-				"image":     strings.TrimSpace(in.GetImage()),
-				"backimage": strings.TrimSpace(in.GetBackImage()),
-				"surety":    in.GetSurety(),
-				"status":    model.MerchantStatusPending,
-				"reason":    "",
+				"nickname":   strings.TrimSpace(in.GetNickname()),
+				"realname":   strings.TrimSpace(in.GetRealname()),
+				"nation":     strings.TrimSpace(in.GetNation()),
+				"id_type":    int(in.GetIdType()),
+				"idcard":     strings.TrimSpace(in.GetIdcard()),
+				"image":      strings.TrimSpace(in.GetImage()),
+				"backimage":  strings.TrimSpace(in.GetBackImage()),
+				"surety":     surety,
+				"status":     model.MerchantStatusPending,
+				"reason":     "",
+			}
+			if billID > 0 {
+				updates["surety_bill_id"] = billID
 			}
 			if err := u.MerchantRepo.UpdateById(ctx, latest.Id, updates); err != nil {
 				return nil, err
 			}
 			return &web.UserMerchantApplyResponse{Id: int32(latest.Id)}, nil
 		}
+	}
+
+	billID, err := u.freezeMerchantSurety(ctx, uid, surety)
+	if err != nil {
+		return nil, err
 	}
 
 	row := &model.Merchant{
@@ -357,8 +410,11 @@ func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyReque
 		Idcard:    strings.TrimSpace(in.GetIdcard()),
 		Image:     strings.TrimSpace(in.GetImage()),
 		Backimage: strings.TrimSpace(in.GetBackImage()),
-		Surety:    in.GetSurety(),
+		Surety:    surety,
 		Status:    model.MerchantStatusPending,
+	}
+	if billID > 0 {
+		row.SuretyBillId = billID
 	}
 	if err := u.MerchantRepo.Create(ctx, row); err != nil {
 		return nil, err

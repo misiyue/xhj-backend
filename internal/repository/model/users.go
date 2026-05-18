@@ -30,6 +30,7 @@ type Users struct {
 	IsRobot      int       `gorm:"column:is_robot;" json:"is_robot"`                          // 是否机器人[1:否;2:是;]
 	Status       int       `gorm:"column:status;" json:"status"`                              // 用户状态[1:正常;2:停用;3:注销]
 	InviteUserId int       `gorm:"column:invite_user_id;default:0" json:"invite_user_id"`     // 邀请人用户 id（invite_code.user_id）
+	DeviceCode   string    `gorm:"column:device_code;type:varchar(128)" json:"device_code"`   // 客户端设备码
 	CreatedAt    time.Time `gorm:"column:created_at;" json:"created_at"`                      // 注册时间
 	UpdatedAt    time.Time `gorm:"column:updated_at;" json:"updated_at"`                      // 更新时间
 }

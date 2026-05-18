@@ -147,6 +147,8 @@ message AuthRegisterRequest{
   string invite_code = 6;
   // 邮箱验证码（邮箱注册时需要）
   string email_code = 8;
+  // 设备码（配置开启 register_device_limit 时必填；最长 128）
+  string device_code = 9 [(buf.validate.field).string.max_len = 128];
 }
 
 // 注册接口响应参数

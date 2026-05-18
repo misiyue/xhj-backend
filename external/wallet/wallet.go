@@ -180,9 +180,9 @@ type KYCStatusData struct {
 	Remark    string `json:"remark"`
 }
 
-// FileUploadData is returned by UploadFile.
-type FileUploadData struct {
-	ImageID string `json:"image_id"`
+// FreezeAccountData is returned in data by the freezeAccount API.
+type FreezeAccountData struct {
+	BillID int `json:"bill_id"`
 }
 
 // --- API methods ---
@@ -375,8 +375,8 @@ func (c *Client) GetKYCStatus(uid string, uUID int) (*KYCStatusData, error) {
 	return &data, nil
 }
 
-// FreezeAccount freezes user assets.
-func (c *Client) FreezeAccount(uid string, uUID int, amount float64, currencyID int) error {
+// FreezeAccount freezes user assets. On success returns data.bill_id (0 if absent or unparsable).
+func (c *Client) FreezeAccount(uid string, uUID int, amount float64, currencyID int) (billID int, err error) {
 	params := url.Values{}
 	params.Set("uid", uid)
 	params.Set("u_uid", fmt.Sprintf("%d", uUID))
@@ -384,6 +384,16 @@ func (c *Client) FreezeAccount(uid string, uUID int, amount float64, currencyID 
 	params.Set("currency_id", fmt.Sprintf("%d", currencyID))
 	params.Set("key", c.Key)
 
-	_, err := c.post("/order/freezeAccount", params)
-	return err
+	resp, err := c.post("/order/freezeAccount", params)
+	if err != nil {
+		return 0, err
+	}
+	if len(resp.Data) == 0 {
+		return 0, nil
+	}
+	var data FreezeAccountData
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return 0, fmt.Errorf("wallet api decode freeze account data failed: %w", err)
+	}
+	return data.BillID, nil
 }

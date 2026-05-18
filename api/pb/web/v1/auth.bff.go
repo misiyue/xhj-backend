@@ -14,7 +14,7 @@ type IAuthHandler interface {
 
 	// 登录接口
 	Login(ctx context.Context, in *AuthLoginRequest) (*AuthLoginResponse, error)
-	// 图形验证码（登录前获取）
+	// 图形验证码（登录页先请求本接口获取 voucher &#43; 图片 base64）
 	Captcha(ctx context.Context, in *AuthCaptchaRequest) (*AuthCaptchaResponse, error)
 	// 注册接口
 	Register(ctx context.Context, in *AuthRegisterRequest) (*AuthRegisterResponse, error)

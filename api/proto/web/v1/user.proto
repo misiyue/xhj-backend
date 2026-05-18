@@ -364,7 +364,7 @@ message UserMerchantApplyRequest {
   string idcard = 5 [(buf.validate.field).string = {min_len: 1, max_len: 30}];
   string image = 6 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
   string back_image = 7 [(buf.validate.field).string.max_len = 255];
-  // 保证金（元），最低 500
+  // 保证金（元），最低 500；提交时会调用钱包冻结接口
   double surety = 8 [(buf.validate.field).double = {gte: 500}];
 }
 

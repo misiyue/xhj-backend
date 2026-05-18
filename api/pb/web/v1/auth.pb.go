@@ -295,7 +295,9 @@ type AuthRegisterRequest struct {
 	// 邀请码（可选）
 	InviteCode string `protobuf:"bytes,6,opt,name=invite_code,json=inviteCode,proto3" json:"invite_code,omitempty"`
 	// 邮箱验证码（邮箱注册时需要）
-	EmailCode     string `protobuf:"bytes,8,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
+	EmailCode string `protobuf:"bytes,8,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
+	// 设备码（配置开启 register_device_limit 时必填；最长 128）
+	DeviceCode    string `protobuf:"bytes,9,opt,name=device_code,json=deviceCode,proto3" json:"device_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -382,6 +384,13 @@ func (x *AuthRegisterRequest) GetInviteCode() string {
 func (x *AuthRegisterRequest) GetEmailCode() string {
 	if x != nil {
 		return x.EmailCode
+	}
+	return ""
+}
+
+func (x *AuthRegisterRequest) GetDeviceCode() string {
+	if x != nil {
+		return x.DeviceCode
 	}
 	return ""
 }
@@ -1265,7 +1274,7 @@ const file_web_v1_auth_proto_rawDesc = "" +
 	"\faccess_token\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\vaccessToken\x12#\n" +
 	"\n" +
 	"expires_in\x18\x03 \x01(\x05B\x04\xe2A\x01\x02R\texpiresIn\x12\x1f\n" +
-	"\bis_trans\x18\x04 \x01(\x05B\x04\xe2A\x01\x02R\aisTrans\"\xa0\x02\n" +
+	"\bis_trans\x18\x04 \x01(\x05B\x04\xe2A\x01\x02R\aisTrans\"\xcb\x02\n" +
 	"\x13AuthRegisterRequest\x12%\n" +
 	"\bnickname\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x02\x18\x14R\bnickname\x12\x16\n" +
 	"\x06mobile\x18\x02 \x01(\tR\x06mobile\x12\x14\n" +
@@ -1276,7 +1285,9 @@ const file_web_v1_auth_proto_rawDesc = "" +
 	"\vinvite_code\x18\x06 \x01(\tR\n" +
 	"inviteCode\x12\x1d\n" +
 	"\n" +
-	"email_code\x18\b \x01(\tR\temailCode\"~\n" +
+	"email_code\x18\b \x01(\tR\temailCode\x12)\n" +
+	"\vdevice_code\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\n" +
+	"deviceCode\"~\n" +
 	"\x14AuthRegisterResponse\x12\x18\n" +
 	"\x04type\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x04type\x12'\n" +
 	"\faccess_token\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\vaccessToken\x12#\n" +

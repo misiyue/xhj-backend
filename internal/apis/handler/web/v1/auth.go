@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -33,6 +34,7 @@ var _ web.IAuthHandler = (*Auth)(nil)
 type Auth struct {
 	Config              *config.Config
 	Redis               *redis.Client
+	RegisterLimiter     *cache.RegisterLimiter
 	JwtTokenStorage     *cache.JwtTokenStorage
 	RedisLock           *cache.RedisLock
 	RobotRepo           *repo.Robot
@@ -221,6 +223,46 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		return nil, err
 	}
 
+	appCfg := a.Config.App
+	ipLimit, devLimit := 0, 0
+	if appCfg != nil {
+		ipLimit = appCfg.RegisterIPLimit
+		devLimit = appCfg.RegisterDeviceLimit
+	}
+	deviceCode := strings.TrimSpace(in.GetDeviceCode())
+	if devLimit > 0 && deviceCode == "" {
+		return nil, errorx.New(400, "请提供设备码")
+	}
+
+	clientIP := middleware.ClientIPFromContext(ctx)
+
+	var releaseIP, releaseDev func(context.Context)
+
+	if a.RegisterLimiter != nil && ipLimit > 0 {
+		var relErr error
+		releaseIP, relErr = a.RegisterLimiter.TryAcquireIP(ctx, clientIP, ipLimit)
+		if relErr != nil {
+			if errors.Is(relErr, cache.ErrRegisterIPExceeded) {
+				return nil, errorx.New(429, "该 IP 24 小时内注册次数已达上限")
+			}
+			return nil, relErr
+		}
+	}
+
+	if a.RegisterLimiter != nil && devLimit > 0 {
+		var relErr error
+		releaseDev, relErr = a.RegisterLimiter.TryAcquireDevice(ctx, deviceCode, devLimit)
+		if relErr != nil {
+			if releaseIP != nil {
+				releaseIP(ctx)
+			}
+			if errors.Is(relErr, cache.ErrRegisterDeviceExceeded) {
+				return nil, errorx.New(429, "该设备注册次数已达上限")
+			}
+			return nil, relErr
+		}
+	}
+
 	user, err := a.UserService.Register(ctx, &service.UserRegisterOpt{
 		Nickname:     in.Nickname,
 		Mobile:       in.Mobile,
@@ -228,10 +270,17 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		Password:     string(password),
 		Platform:     in.Platform,
 		InviteUserId: inviteUserId,
+		DeviceCode:   deviceCode,
 		// Username 没有前端字段时，内部会自动用 mobile/email/nickname 生成
 	})
 
 	if err != nil {
+		if releaseIP != nil {
+			releaseIP(ctx)
+		}
+		if releaseDev != nil {
+			releaseDev(ctx)
+		}
 		return nil, err
 	}
 

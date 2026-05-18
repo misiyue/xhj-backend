@@ -706,7 +706,7 @@ type UserMerchantApplyRequest struct {
 	Idcard    string                 `protobuf:"bytes,5,opt,name=idcard,proto3" json:"idcard,omitempty"`
 	Image     string                 `protobuf:"bytes,6,opt,name=image,proto3" json:"image,omitempty"`
 	BackImage string                 `protobuf:"bytes,7,opt,name=back_image,json=backImage,proto3" json:"back_image,omitempty"`
-	// 保证金（元），最低 500
+	// 保证金（元），最低 500；提交时会调用钱包冻结接口
 	Surety        float64 `protobuf:"fixed64,8,opt,name=surety,proto3" json:"surety,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

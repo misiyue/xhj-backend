@@ -19,4 +19,5 @@ var ProviderSet = wire.NewSet(
 	NewGroupApplyStorage,
 	NewUserClient,
 	NewMentionStorage,
+	NewRegisterLimiter,
 )

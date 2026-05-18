@@ -18,6 +18,7 @@ func NewRouter(conf *config.Config, handler *handler.Handler, session *cache.Jwt
 	router := gin.New()
 
 	router.Use(middleware.Cors(conf.Cors))
+	router.Use(middleware.InjectClientIP())
 
 	// 添加安全头中间件
 	router.Use(middleware.SecurityHeadersMiddleware(conf.Security.SecurityHeaders))

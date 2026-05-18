@@ -261,6 +261,8 @@ func TestFreezeAccount(t *testing.T) {
 			Code: 1,
 			Msg:  "success",
 		}
+		data := FreezeAccountData{BillID: 1001}
+		resp.Data, _ = json.Marshal(data)
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -271,9 +273,12 @@ func TestFreezeAccount(t *testing.T) {
 		HTTPClient: server.Client(),
 	}
 
-	err := c.FreezeAccount("9527", 12345, 50, 1)
+	billID, err := c.FreezeAccount("9527", 12345, 50, 1)
 	if err != nil {
 		t.Fatalf("FreezeAccount() error = %v", err)
+	}
+	if billID != 1001 {
+		t.Fatalf("FreezeAccount() billID = %d, want 1001", billID)
 	}
 }
 

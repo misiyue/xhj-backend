@@ -97,6 +97,8 @@ type UserRegisterOpt struct {
 	Username string // 可选：显式指定登录用户名
 	// InviteUserId 邀请人用户 ID（来自有效邀请码的生成者）；0 表示无
 	InviteUserId int
+	// DeviceCode 客户端设备码（可选；开启设备注册限制时由接口层校验）
+	DeviceCode string
 }
 
 // Register 注册用户
@@ -132,6 +134,7 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 	if opt.InviteUserId > 0 {
 		user.InviteUserId = opt.InviteUserId
 	}
+	user.DeviceCode = opt.DeviceCode
 
 	// 设置手机号（如果提供）
 	if opt.Mobile != "" {

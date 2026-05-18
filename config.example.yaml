@@ -10,7 +10,11 @@ app:
   require_invite_code: false
   # 是否关闭「登录」图形验证码校验（默认 false，即需要验证码）。旧客户端未改时可临时设为 true
   disable_login_captcha: false
-    # 不知道怎么生成的可以看这个网站 http://www.usey.cn/rsa?bits=2048
+  # 24小时内同一 IP 最大成功注册次数（Redis），0 不限制
+  register_ip_limit: 0
+  # 同一设备码累计最大成功注册次数（Redis，无过期），0 不限制
+  register_device_limit: 0
+  # 不知道怎么生成的可以看这个网站 http://www.usey.cn/rsa?bits=2048
   public_key: |
     -----BEGIN PUBLIC KEY-----
     MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1JqqxPLNWEy371X+kOXq

@@ -21,6 +21,7 @@ type Merchant struct {
 	Image      string    `gorm:"column:image;type:varchar(255);not null" json:"image"`
 	Backimage  string    `gorm:"column:backimage;type:varchar(255)" json:"backimage"`
 	Surety     float64   `gorm:"column:surety;type:decimal(12,4);default:0" json:"surety"`
+	SuretyBillId int     `gorm:"column:surety_bill_id;default:0" json:"surety_bill_id"` // 保证金冻结凭证 id（钱包）
 	Status     int       `gorm:"column:status;default:0" json:"status"`
 	Reason     string    `gorm:"column:reason;type:varchar(255)" json:"reason"`
 	IsLimit    int       `gorm:"column:is_limit;default:0" json:"is_limit"`
