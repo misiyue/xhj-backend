@@ -22,8 +22,6 @@ type MerchantTask struct {
 	Price        float64   `gorm:"column:price;type:decimal(10,2);not null;default:0" json:"price"`
 	Count        float64   `gorm:"column:count;type:float(16,4);not null;default:0" json:"count"`
 	Paytype      string    `gorm:"column:paytype;type:varchar(32)" json:"paytype"`
-	Nickname     string    `gorm:"column:nickname;type:varchar(100)" json:"nickname"`
-	Account      string    `gorm:"column:account;type:varchar(100)" json:"account"`
 	Status       int       `gorm:"column:status;not null;default:0" json:"status"`
 	IsUp         int       `gorm:"column:is_up;not null;default:0" json:"is_up"`
 	UpTime       int       `gorm:"column:up_time;not null;default:0" json:"up_time"`

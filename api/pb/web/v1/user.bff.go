@@ -293,7 +293,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderCreate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderDetailRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -311,7 +311,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderCancel(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err

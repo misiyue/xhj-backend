@@ -17,6 +17,27 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
+func merchantOrderToListProto(o *model.MerchantOrder) *web.UserMerchantOrderListItem {
+	if o == nil {
+		return nil
+	}
+	return &web.UserMerchantOrderListItem{
+		Id:        int32(o.Id),
+		OrderId:   o.OrderId,
+		BuyerId:   int32(o.BuyerId),
+		SalerId:   int32(o.SalerId),
+		Amount:    o.Amount,
+		TaskId:    int32(o.TaskId),
+		Counts:    o.Counts,
+		PayType:   int32(o.PayType),
+		BuyType:   int32(o.BuyType),
+		Status:    int32(o.Status),
+		IsCancel:  int32(o.IsCancel),
+		IsAppeal:  int32(o.IsAppeal),
+		CreatedAt: timeutil.FormatDatetime(o.CreatedAt),
+	}
+}
+
 func merchantOrderToProto(o *model.MerchantOrder) *web.UserMerchantOrderItem {
 	if o == nil {
 		return nil
@@ -143,9 +164,9 @@ func (u *User) MerchantOrderList(ctx context.Context, in *web.UserMerchantOrderL
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*web.UserMerchantOrderItem, 0, len(rows))
+	items := make([]*web.UserMerchantOrderListItem, 0, len(rows))
 	for i := range rows {
-		items = append(items, merchantOrderToProto(&rows[i]))
+		items = append(items, merchantOrderToListProto(&rows[i]))
 	}
 	tot := int32(total)
 	if total > math.MaxInt32 {

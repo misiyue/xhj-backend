@@ -87,6 +87,14 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.Sequence{},
 		&model.AppVersion{},
 		&model.AppExplore{},
+
+		// 商户 C2C
+		&model.Merchant{},
+		&model.MerchantTask{},
+		&model.MerchantPaytype{},
+		&model.MerchantOrder{},
+		&model.MerchantSession{},
+		&model.MerchantMessage{},
 	)
 	
 	if err != nil {

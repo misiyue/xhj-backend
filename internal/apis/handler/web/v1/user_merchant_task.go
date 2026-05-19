@@ -70,8 +70,6 @@ func merchantTaskToProto(t *model.MerchantTask) *web.UserMerchantTaskItem {
 		Price:        t.Price,
 		SellCount:    t.Count,
 		Paytype:      t.Paytype,
-		Nickname:     t.Nickname,
-		Account:      t.Account,
 		Status:       int32(t.Status),
 		IsUp:         int32(t.IsUp),
 		UpTime:       int32(t.UpTime),
@@ -107,8 +105,6 @@ func (u *User) MerchantTaskCreate(ctx context.Context, in *web.UserMerchantTaskC
 		Price:        in.GetPrice(),
 		Count:        in.GetSellCount(),
 		Paytype:      strings.TrimSpace(in.GetPaytype()),
-		Nickname:     strings.TrimSpace(in.GetNickname()),
-		Account:      strings.TrimSpace(in.GetAccount()),
 		Status:       model.MerchantTaskStatusPending,
 		IsUp:         0,
 		UpTime:       0,
@@ -201,9 +197,7 @@ func (u *User) MerchantTaskUpdate(ctx context.Context, in *web.UserMerchantTaskU
 		"currency_type": int(in.GetCurrencyType()),
 		"price":         in.GetPrice(),
 		"count":         newCount,
-		"paytype":       strings.TrimSpace(in.GetPaytype()),
-		"nickname":      strings.TrimSpace(in.GetNickname()),
-		"account":       strings.TrimSpace(in.GetAccount()),
+		"paytype": strings.TrimSpace(in.GetPaytype()),
 	}
 	if err := u.MerchantTaskRepo.UpdateByID(ctx, t.Id, updates); err != nil {
 		return nil, err
