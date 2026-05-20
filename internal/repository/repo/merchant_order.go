@@ -15,10 +15,9 @@ import (
 )
 
 var (
-	ErrMerchantOrderSelfBuy        = errors.New("merchant_order: cannot buy own task")
-	ErrMerchantOrderTaskUnavailable = errors.New("merchant_order: task not available for purchase")
-	ErrMerchantOrderActiveExists   = errors.New("merchant_order: task already has an active order")
-	ErrMerchantOrderCountsMismatch = errors.New("merchant_order: purchase quantity must equal task listing quantity")
+	ErrMerchantOrderSelfBuy           = errors.New("merchant_order: cannot buy own task")
+	ErrMerchantOrderTaskUnavailable   = errors.New("merchant_order: task not available for purchase")
+	ErrMerchantOrderInsufficientCount = errors.New("merchant_order: purchase quantity exceeds remaining listing quantity")
 )
 
 type MerchantOrder struct {
@@ -88,7 +87,7 @@ func (r *MerchantOrder) ListByParticipant(ctx context.Context, userId int, asBuy
 	return rows, total, nil
 }
 
-// CreateFromTask 创建订单并将挂单置为「交易中」（整单购买：counts 须等于任务剩余数量）
+// CreateFromTask 创建订单并在事务内扣减挂单剩余数量（counts 须 >0 且不超过当前 count）
 func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID int, counts float64, payType, buyType int) (*model.MerchantOrder, error) {
 	var out *model.MerchantOrder
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -105,17 +104,15 @@ func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID 
 		if task.IsDeleted != 0 || task.IsUp != 1 || task.Status != model.MerchantTaskStatusPending {
 			return ErrMerchantOrderTaskUnavailable
 		}
-		var active int64
-		if err := tx.Model(&model.MerchantOrder{}).
-			Where("task_id = ? AND is_cancel = 0 AND status IN ?", taskID, []int{model.MerchantOrderStatusPendingPay, model.MerchantOrderStatusPaid}).
-			Count(&active).Error; err != nil {
-			return err
+		if task.Count <= MerchantTaskCountEpsilon {
+			return ErrMerchantOrderTaskUnavailable
 		}
-		if active > 0 {
-			return ErrMerchantOrderActiveExists
+		if counts <= 0 || counts > task.Count+MerchantTaskCountEpsilon {
+			return ErrMerchantOrderInsufficientCount
 		}
-		if math.Abs(task.Count-counts) > 1e-4 {
-			return ErrMerchantOrderCountsMismatch
+		newCount := task.Count - counts
+		if newCount < MerchantTaskCountEpsilon {
+			newCount = 0
 		}
 		amount := math.Round(task.Price*counts*100) / 100
 		oid := "MO" + strings.ReplaceAll(uuid.New().String(), "-", "")
@@ -135,9 +132,13 @@ func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID 
 		if err := tx.Create(row).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&model.MerchantTask{}).Where("id = ?", taskID).Updates(map[string]any{
-			"status": model.MerchantTaskStatusTrading,
-		}).Error; err != nil {
+		taskUpdates := map[string]any{"count": newCount}
+		if newCount <= MerchantTaskCountEpsilon {
+			taskUpdates["count"] = 0
+			taskUpdates["status"] = model.MerchantTaskStatusDone
+			taskUpdates["is_up"] = 0
+		}
+		if err := tx.Model(&model.MerchantTask{}).Where("id = ?", taskID).Updates(taskUpdates).Error; err != nil {
 			return err
 		}
 		out = row
@@ -173,9 +174,19 @@ func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID
 			return err
 		}
 		if o.TaskId > 0 {
-			if err := tx.Model(&model.MerchantTask{}).Where("id = ?", o.TaskId).Updates(map[string]any{
-				"status": model.MerchantTaskStatusPending,
-			}).Error; err != nil {
+			var task model.MerchantTask
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", o.TaskId).First(&task).Error; err != nil {
+				return err
+			}
+			newCount := task.Count + o.Counts
+			if task.Total > MerchantTaskCountEpsilon && newCount > task.Total+MerchantTaskCountEpsilon {
+				newCount = task.Total
+			}
+			updates := map[string]any{"count": newCount}
+			if task.Status == model.MerchantTaskStatusDone && newCount > MerchantTaskCountEpsilon {
+				updates["status"] = model.MerchantTaskStatusPending
+			}
+			if err := tx.Model(&model.MerchantTask{}).Where("id = ?", o.TaskId).Updates(updates).Error; err != nil {
 				return err
 			}
 		}

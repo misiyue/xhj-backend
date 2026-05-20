@@ -69,6 +69,7 @@ func merchantTaskToProto(t *model.MerchantTask) *web.UserMerchantTaskItem {
 		CurrencyType: int32(t.CurrencyType),
 		Price:        t.Price,
 		SellCount:    t.Count,
+		SellTotal:    t.Total,
 		Paytype:      t.Paytype,
 		Status:       int32(t.Status),
 		IsUp:         int32(t.IsUp),
@@ -99,11 +100,13 @@ func (u *User) MerchantTaskCreate(ctx context.Context, in *web.UserMerchantTaskC
 	if _, err := u.requireEffectiveMerchant(ctx, uid, "无法操作挂售任务"); err != nil {
 		return nil, err
 	}
+	sellCount := in.GetSellCount()
 	row := &model.MerchantTask{
 		UserId:       uid,
 		CurrencyType: int(in.GetCurrencyType()),
 		Price:        in.GetPrice(),
-		Count:        in.GetSellCount(),
+		Count:        sellCount,
+		Total:        sellCount,
 		Paytype:      strings.TrimSpace(in.GetPaytype()),
 		Status:       model.MerchantTaskStatusPending,
 		IsUp:         0,
@@ -192,12 +195,16 @@ func (u *User) MerchantTaskUpdate(ctx context.Context, in *web.UserMerchantTaskU
 	if t.IsUp != 0 {
 		return nil, errorx.New(400, "仅下架状态的任务可修改，请先下架后再编辑")
 	}
+	if t.Total > suretyCountEpsilon && math.Abs(t.Count-t.Total) > suretyCountEpsilon {
+		return nil, errorx.New(400, "挂单已有出售记录，无法修改")
+	}
 	newCount := in.GetSellCount()
 	updates := map[string]any{
 		"currency_type": int(in.GetCurrencyType()),
 		"price":         in.GetPrice(),
 		"count":         newCount,
-		"paytype": strings.TrimSpace(in.GetPaytype()),
+		"total":         newCount,
+		"paytype":       strings.TrimSpace(in.GetPaytype()),
 	}
 	if err := u.MerchantTaskRepo.UpdateByID(ctx, t.Id, updates); err != nil {
 		return nil, err
@@ -225,6 +232,9 @@ func (u *User) MerchantTaskUp(ctx context.Context, in *web.UserMerchantTaskIdReq
 	}
 	if t.Status != model.MerchantTaskStatusPending {
 		return nil, errorx.New(400, "仅待交易任务可上架")
+	}
+	if t.Count <= suretyCountEpsilon {
+		return nil, errorx.New(400, "挂单剩余数量为 0，无法上架")
 	}
 	if t.IsUp != 0 {
 		return nil, errorx.New(400, "任务已处于上架状态")

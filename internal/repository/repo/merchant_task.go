@@ -12,8 +12,16 @@ type MerchantTask struct {
 	db *gorm.DB
 }
 
+const MerchantTaskCountEpsilon = 1e-4
+
 func NewMerchantTask(db *gorm.DB) *MerchantTask {
 	return &MerchantTask{db: db}
+}
+
+// marketListedScope 市场上架且可购买的挂单：待交易、已上架、未删除、剩余数量>0
+func marketListedScope(db *gorm.DB) *gorm.DB {
+	return db.Model(&model.MerchantTask{}).
+		Where("is_deleted = 0 AND is_up = 1 AND status = ? AND `count` > ?", model.MerchantTaskStatusPending, MerchantTaskCountEpsilon)
 }
 
 func (r *MerchantTask) Create(ctx context.Context, row *model.MerchantTask) error {
@@ -52,7 +60,8 @@ func (r *MerchantTask) UpdateByID(ctx context.Context, id int, updates map[strin
 func (r *MerchantTask) SumListedActiveCount(ctx context.Context, userId int, excludeID int) (float64, error) {
 	q := r.db.WithContext(ctx).Model(&model.MerchantTask{}).
 		Select("COALESCE(SUM(`count`),0)").
-		Where("user_id = ? AND is_deleted = 0 AND status IN ? AND is_up = ?", userId, []int{model.MerchantTaskStatusPending, model.MerchantTaskStatusTrading}, 1)
+		Where("user_id = ? AND is_deleted = 0 AND status = ? AND is_up = ? AND `count` > ?",
+			userId, model.MerchantTaskStatusPending, 1, MerchantTaskCountEpsilon)
 	if excludeID > 0 {
 		q = q.Where("id <> ?", excludeID)
 	}
@@ -81,14 +90,13 @@ func (r *MerchantTask) ListByUserID(ctx context.Context, userId int, page, pageS
 
 func (r *MerchantTask) ListMarketPending(ctx context.Context, page, pageSize int) ([]model.MerchantTask, int64, error) {
 	var total int64
-	base := r.db.WithContext(ctx).Model(&model.MerchantTask{}).
-		Where("is_deleted = 0 AND is_up = 1 AND status = ?", model.MerchantTaskStatusPending)
+	base := marketListedScope(r.db.WithContext(ctx))
 	if err := base.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	offset := (page - 1) * pageSize
 	var rows []model.MerchantTask
-	err := r.db.WithContext(ctx).Where("is_deleted = 0 AND is_up = 1 AND status = ?", model.MerchantTaskStatusPending).
+	err := marketListedScope(r.db.WithContext(ctx)).
 		Order("up_time DESC, id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error
 	if err != nil {
 		return nil, 0, err

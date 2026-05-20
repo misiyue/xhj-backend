@@ -1103,19 +1103,21 @@ func (x *UserMerchantStatusResponse) GetUpdatedAt() string {
 }
 
 type UserMerchantTaskItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	CurrencyType  int32                  `protobuf:"varint,3,opt,name=currency_type,json=currencyType,proto3" json:"currency_type,omitempty"`
-	Price         float64                `protobuf:"fixed64,4,opt,name=price,proto3" json:"price,omitempty"`
-	SellCount     float64                `protobuf:"fixed64,5,opt,name=sell_count,json=sellCount,proto3" json:"sell_count,omitempty"`
-	Paytype       string                 `protobuf:"bytes,6,opt,name=paytype,proto3" json:"paytype,omitempty"`
-	Status        int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status,omitempty"`
-	IsUp          int32                  `protobuf:"varint,8,opt,name=is_up,json=isUp,proto3" json:"is_up,omitempty"`
-	UpTime        int32                  `protobuf:"varint,9,opt,name=up_time,json=upTime,proto3" json:"up_time,omitempty"`
-	IsDeleted     int32                  `protobuf:"varint,10,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId       int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	CurrencyType int32                  `protobuf:"varint,3,opt,name=currency_type,json=currencyType,proto3" json:"currency_type,omitempty"`
+	Price        float64                `protobuf:"fixed64,4,opt,name=price,proto3" json:"price,omitempty"`
+	SellCount    float64                `protobuf:"fixed64,5,opt,name=sell_count,json=sellCount,proto3" json:"sell_count,omitempty"`
+	Paytype      string                 `protobuf:"bytes,6,opt,name=paytype,proto3" json:"paytype,omitempty"`
+	Status       int32                  `protobuf:"varint,7,opt,name=status,proto3" json:"status,omitempty"`
+	IsUp         int32                  `protobuf:"varint,8,opt,name=is_up,json=isUp,proto3" json:"is_up,omitempty"`
+	UpTime       int32                  `protobuf:"varint,9,opt,name=up_time,json=upTime,proto3" json:"up_time,omitempty"`
+	IsDeleted    int32                  `protobuf:"varint,10,opt,name=is_deleted,json=isDeleted,proto3" json:"is_deleted,omitempty"`
+	CreatedAt    string                 `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt    string                 `protobuf:"bytes,12,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// 原总出售数量（创建时与 sell_count 一致，出售过程中不变）
+	SellTotal     float64 `protobuf:"fixed64,13,opt,name=sell_total,json=sellTotal,proto3" json:"sell_total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1232,6 +1234,13 @@ func (x *UserMerchantTaskItem) GetUpdatedAt() string {
 		return x.UpdatedAt
 	}
 	return ""
+}
+
+func (x *UserMerchantTaskItem) GetSellTotal() float64 {
+	if x != nil {
+		return x.SellTotal
+	}
+	return 0
 }
 
 type UserMerchantTaskCreateRequest struct {
@@ -4209,7 +4218,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x12 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x13 \x01(\tR\tupdatedAt\"\x8c\x03\n" +
+	"updated_at\x18\x13 \x01(\tR\tupdatedAt\"\xb1\x03\n" +
 	"\x14UserMerchantTaskItem\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x1d\n" +
 	"\auser_id\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x06userId\x12)\n" +
@@ -4227,7 +4236,9 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\v \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\f \x01(\tR\tupdatedAt\"\xc5\x01\n" +
+	"updated_at\x18\f \x01(\tR\tupdatedAt\x12#\n" +
+	"\n" +
+	"sell_total\x18\r \x01(\x01B\x04\xe2A\x01\x02R\tsellTotal\"\xc5\x01\n" +
 	"\x1dUserMerchantTaskCreateRequest\x12,\n" +
 	"\rcurrency_type\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x020\x01R\fcurrencyType\x12$\n" +
 	"\x05price\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x05price\x12-\n" +

@@ -81,7 +81,7 @@ func (u *User) assertOrderParticipant(o *model.MerchantOrder, uid int) error {
 	return nil
 }
 
-// MerchantOrderCreate 创建订单（整单购买：counts 须等于挂单数量；挂单变为交易中）
+// MerchantOrderCreate 创建订单（可购买不超过挂单剩余 count 的任意数量，事务内扣减 count）
 func (u *User) MerchantOrderCreate(ctx context.Context, in *web.UserMerchantOrderCreateRequest) (*web.UserMerchantOrderCreateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	buyerID := int(session.UserId)
@@ -91,11 +91,9 @@ func (u *User) MerchantOrderCreate(ctx context.Context, in *web.UserMerchantOrde
 		case errors.Is(err, repo.ErrMerchantOrderSelfBuy):
 			return nil, errorx.New(400, "不能购买自己的挂单")
 		case errors.Is(err, repo.ErrMerchantOrderTaskUnavailable):
-			return nil, errorx.New(400, "挂单不可购买（未上架、已删除或已有进行中的订单）")
-		case errors.Is(err, repo.ErrMerchantOrderActiveExists):
-			return nil, errorx.New(400, "该挂单已有进行中的订单")
-		case errors.Is(err, repo.ErrMerchantOrderCountsMismatch):
-			return nil, errorx.New(400, "购买数量须与挂单出售数量一致（整单购买）")
+			return nil, errorx.New(400, "挂单不可购买（未上架、已售完、已完成或已删除）")
+		case errors.Is(err, repo.ErrMerchantOrderInsufficientCount):
+			return nil, errorx.New(400, "购买数量须大于 0 且不超过挂单剩余数量")
 		default:
 			if err.Error() == "任务不存在" {
 				return nil, errorx.New(404, "任务不存在")
