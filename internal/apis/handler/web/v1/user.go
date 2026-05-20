@@ -347,7 +347,22 @@ func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64
 	return billID, nil
 }
 
-// MerchantApply 商户入驻申请
+// merchantApplyPayload 从请求组装待写入 merchant 表的资料字段。
+func merchantApplyPayload(in *web.UserMerchantApplyRequest, surety float64) map[string]any {
+	return map[string]any{
+		"nickname":  strings.TrimSpace(in.GetNickname()),
+		"realname":  strings.TrimSpace(in.GetRealname()),
+		"nation":    strings.TrimSpace(in.GetNation()),
+		"id_type":   int(in.GetIdType()),
+		"idcard":    strings.TrimSpace(in.GetIdcard()),
+		"image":     strings.TrimSpace(in.GetImage()),
+		"backimage": strings.TrimSpace(in.GetBackImage()),
+		"surety":    surety,
+	}
+}
+
+// MerchantApply 商户入驻申请（POST /api/v1/merchant/apply）
+// 首次申请插入新记录；驳回后再次申请在同一记录上更新资料并将 status 置为待审核。
 func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyRequest) (*web.UserMerchantApplyResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
@@ -366,33 +381,26 @@ func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyReque
 		return nil, err
 	}
 	if latest != nil {
-		if latest.Status == model.MerchantStatusPending {
+		switch latest.Status {
+		case model.MerchantStatusPending:
 			return nil, errorx.New(400, "您有待审核的商户申请，请勿重复提交")
-		}
-		if latest.Status == model.MerchantStatusRejected {
+		case model.MerchantStatusRejected:
 			billID, err := u.freezeMerchantSurety(ctx, uid, surety)
 			if err != nil {
 				return nil, err
 			}
-			updates := map[string]any{
-				"nickname":   strings.TrimSpace(in.GetNickname()),
-				"realname":   strings.TrimSpace(in.GetRealname()),
-				"nation":     strings.TrimSpace(in.GetNation()),
-				"id_type":    int(in.GetIdType()),
-				"idcard":     strings.TrimSpace(in.GetIdcard()),
-				"image":      strings.TrimSpace(in.GetImage()),
-				"backimage":  strings.TrimSpace(in.GetBackImage()),
-				"surety":     surety,
-				"status":     model.MerchantStatusPending,
-				"reason":     "",
-			}
-			if billID > 0 {
-				updates["surety_bill_id"] = billID
-			}
+			updates := merchantApplyPayload(in, surety)
+			updates["status"] = model.MerchantStatusPending
+			updates["reason"] = ""
+			updates["surety_bill_id"] = billID
 			if err := u.MerchantRepo.UpdateById(ctx, latest.Id, updates); err != nil {
 				return nil, err
 			}
 			return &web.UserMerchantApplyResponse{Id: int32(latest.Id)}, nil
+		case model.MerchantStatusApproved:
+			return nil, errorx.New(400, "您已是认证商户，无法再次申请")
+		default:
+			return nil, errorx.New(400, "当前申请状态不允许重复提交")
 		}
 	}
 

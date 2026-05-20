@@ -149,14 +149,15 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.EmailUpdate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	merchantApply := func(ctx *gin.Context) (any, error) {
 		var in UserMerchantApplyRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
-
 		return handler.MerchantApply(ctx.Request.Context(), &in)
-	}))
+	}
+	r.POST("/api/v1/merchant/apply", interceptor.Do(merchantApply))
+	r.POST("/api/v1/user/merchant-apply", interceptor.Do(merchantApply))
 
 	r.POST("/api/v1/merchant/status", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantStatusRequest
