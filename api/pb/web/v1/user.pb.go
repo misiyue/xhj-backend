@@ -4435,42 +4435,42 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\"UserMerchantChatClearUnreadRequest\x12&\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\tsessionId\"%\n" +
-	"#UserMerchantChatClearUnreadResponse2\xdc$\n" +
+	"#UserMerchantChatClearUnreadResponse2\xd7#\n" +
 	"\x04User\x12Y\n" +
 	"\x06Detail\x12\x16.web.UserDetailRequest\x1a\x17.web.UserDetailResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/user/detail\x12]\n" +
 	"\aSetting\x12\x17.web.UserSettingRequest\x1a\x18.web.UserSettingResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/user/setting\x12r\n" +
 	"\fDetailUpdate\x12\x1c.web.UserDetailUpdateRequest\x1a\x1d.web.UserDetailUpdateResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/user/detail-update\x12z\n" +
 	"\x0ePasswordUpdate\x12\x1e.web.UserPasswordUpdateRequest\x1a\x1f.web.UserPasswordUpdateResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/user/password-update\x12r\n" +
 	"\fMobileUpdate\x12\x1c.web.UserMobileUpdateRequest\x1a\x1d.web.UserMobileUpdateResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/user/mobile-update\x12n\n" +
-	"\vEmailUpdate\x12\x1b.web.UserEmailUpdateRequest\x1a\x1c.web.UserEmailUpdateResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/user/email-update\x12v\n" +
-	"\rMerchantApply\x12\x1d.web.UserMerchantApplyRequest\x1a\x1e.web.UserMerchantApplyResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/user/merchant-apply\x12z\n" +
-	"\x0eMerchantStatus\x12\x1e.web.UserMerchantStatusRequest\x1a\x1f.web.UserMerchantStatusResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/user/merchant-status\x12}\n" +
-	"\x0fMerchantProfile\x12\x1f.web.UserMerchantProfileRequest\x1a\x1f.web.UserMerchantStatusResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/user/merchant-profile\x12\x8b\x01\n" +
-	"\x12MerchantTaskCreate\x12\".web.UserMerchantTaskCreateRequest\x1a#.web.UserMerchantTaskCreateResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/user/merchant-task/create\x12\x8a\x01\n" +
-	"\x12MerchantTaskMyList\x12\".web.UserMerchantTaskMyListRequest\x1a!.web.UserMerchantTaskListResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/user/merchant-task/my-list\x12\x96\x01\n" +
-	"\x16MerchantTaskMarketList\x12&.web.UserMerchantTaskMarketListRequest\x1a!.web.UserMerchantTaskListResponse\"1\x82\xd3\xe4\x93\x02+:\x01*\"&/api/v1/user/merchant-task/market-list\x12\x81\x01\n" +
-	"\x12MerchantTaskDetail\x12\".web.UserMerchantTaskDetailRequest\x1a\x19.web.UserMerchantTaskItem\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/user/merchant-task/detail\x12\x8b\x01\n" +
-	"\x12MerchantTaskUpdate\x12\".web.UserMerchantTaskUpdateRequest\x1a#.web.UserMerchantTaskUpdateResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/user/merchant-task/update\x12\x7f\n" +
-	"\x0eMerchantTaskUp\x12\x1e.web.UserMerchantTaskIdRequest\x1a#.web.UserMerchantTaskActionResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/user/merchant-task/up\x12\x83\x01\n" +
-	"\x10MerchantTaskDown\x12\x1e.web.UserMerchantTaskIdRequest\x1a#.web.UserMerchantTaskActionResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/user/merchant-task/down\x12\x87\x01\n" +
-	"\x12MerchantTaskFinish\x12\x1e.web.UserMerchantTaskIdRequest\x1a#.web.UserMerchantTaskActionResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/user/merchant-task/finish\x12\x97\x01\n" +
-	"\x15MerchantPaytypeCreate\x12%.web.UserMerchantPaytypeCreateRequest\x1a&.web.UserMerchantPaytypeCreateResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/v1/user/merchant-paytype/create\x12\x97\x01\n" +
-	"\x15MerchantPaytypeUpdate\x12%.web.UserMerchantPaytypeUpdateRequest\x1a&.web.UserMerchantPaytypeUpdateResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/v1/user/merchant-paytype/update\x12\x8f\x01\n" +
-	"\x13MerchantPaytypeList\x12#.web.UserMerchantPaytypeListRequest\x1a$.web.UserMerchantPaytypeListResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/user/merchant-paytype/list\x12\xa7\x01\n" +
-	"\x19MerchantPaytypeInvalidate\x12).web.UserMerchantPaytypeInvalidateRequest\x1a*.web.UserMerchantPaytypeInvalidateResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/user/merchant-paytype/invalidate\x12\x8f\x01\n" +
-	"\x13MerchantOrderCreate\x12#.web.UserMerchantOrderCreateRequest\x1a$.web.UserMerchantOrderCreateResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/user/merchant-order/create\x12\x80\x01\n" +
-	"\x13MerchantOrderDetail\x12#.web.UserMerchantOrderDetailRequest\x1a\x1a.web.UserMerchantOrderItem\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/merchant/order/detail\x12\x8f\x01\n" +
-	"\x13MerchantOrderCancel\x12#.web.UserMerchantOrderCancelRequest\x1a$.web.UserMerchantOrderActionResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/user/merchant-order/cancel\x12\x82\x01\n" +
-	"\x11MerchantOrderList\x12!.web.UserMerchantOrderListRequest\x1a\".web.UserMerchantOrderListResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/merchant/order/list\x12\x9c\x01\n" +
-	"\x17MerchantOrderConfirmPay\x12'.web.UserMerchantOrderConfirmPayRequest\x1a$.web.UserMerchantOrderActionResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/v1/user/merchant-order/confirm-pay\x12\x87\x01\n" +
-	"\x11MerchantOrderUrge\x12\x1f.web.UserMerchantOrderIdRequest\x1a$.web.UserMerchantOrderActionResponse\"+\x82\xd3\xe4\x93\x02%:\x01*\" /api/v1/user/merchant-order/urge\x12\x9c\x01\n" +
-	"\x19MerchantOrderAppealSeller\x12#.web.UserMerchantOrderAppealRequest\x1a$.web.UserMerchantOrderActionResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/v1/user/merchant-order/appeal-seller\x12\x9a\x01\n" +
-	"\x18MerchantOrderAppealBuyer\x12#.web.UserMerchantOrderAppealRequest\x1a$.web.UserMerchantOrderActionResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/v1/user/merchant-order/appeal-buyer\x12\x83\x01\n" +
-	"\x10MerchantChatSend\x12 .web.UserMerchantChatSendRequest\x1a!.web.UserMerchantChatSendResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/user/merchant-chat/send\x12\x8b\x01\n" +
-	"\x12MerchantChatUnread\x12\".web.UserMerchantChatUnreadRequest\x1a#.web.UserMerchantChatUnreadResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/user/merchant-chat/unread\x12\xa0\x01\n" +
-	"\x17MerchantChatSessionList\x12'.web.UserMerchantChatSessionListRequest\x1a(.web.UserMerchantChatSessionListResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/v1/user/merchant-chat/session-list\x12\xa0\x01\n" +
-	"\x17MerchantChatMessageList\x12'.web.UserMerchantChatMessageListRequest\x1a(.web.UserMerchantChatMessageListResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/v1/user/merchant-chat/message-list\x12\xa0\x01\n" +
-	"\x17MerchantChatClearUnread\x12'.web.UserMerchantChatClearUnreadRequest\x1a(.web.UserMerchantChatClearUnreadResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/v1/user/merchant-chat/clear-unreadB\fZ\n" +
+	"\vEmailUpdate\x12\x1b.web.UserEmailUpdateRequest\x1a\x1c.web.UserEmailUpdateResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/user/email-update\x12q\n" +
+	"\rMerchantApply\x12\x1d.web.UserMerchantApplyRequest\x1a\x1e.web.UserMerchantApplyResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/merchant/apply\x12u\n" +
+	"\x0eMerchantStatus\x12\x1e.web.UserMerchantStatusRequest\x1a\x1f.web.UserMerchantStatusResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/merchant/status\x12x\n" +
+	"\x0fMerchantProfile\x12\x1f.web.UserMerchantProfileRequest\x1a\x1f.web.UserMerchantStatusResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/merchant/profile\x12\x86\x01\n" +
+	"\x12MerchantTaskCreate\x12\".web.UserMerchantTaskCreateRequest\x1a#.web.UserMerchantTaskCreateResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/merchant/task/create\x12\x85\x01\n" +
+	"\x12MerchantTaskMyList\x12\".web.UserMerchantTaskMyListRequest\x1a!.web.UserMerchantTaskListResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/merchant/task/my-list\x12\x91\x01\n" +
+	"\x16MerchantTaskMarketList\x12&.web.UserMerchantTaskMarketListRequest\x1a!.web.UserMerchantTaskListResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/merchant/task/market-list\x12|\n" +
+	"\x12MerchantTaskDetail\x12\".web.UserMerchantTaskDetailRequest\x1a\x19.web.UserMerchantTaskItem\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/merchant/task/detail\x12\x86\x01\n" +
+	"\x12MerchantTaskUpdate\x12\".web.UserMerchantTaskUpdateRequest\x1a#.web.UserMerchantTaskUpdateResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/merchant/task/update\x12z\n" +
+	"\x0eMerchantTaskUp\x12\x1e.web.UserMerchantTaskIdRequest\x1a#.web.UserMerchantTaskActionResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/merchant/task/up\x12~\n" +
+	"\x10MerchantTaskDown\x12\x1e.web.UserMerchantTaskIdRequest\x1a#.web.UserMerchantTaskActionResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/merchant/task/down\x12\x82\x01\n" +
+	"\x12MerchantTaskFinish\x12\x1e.web.UserMerchantTaskIdRequest\x1a#.web.UserMerchantTaskActionResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/merchant/task/finish\x12\x92\x01\n" +
+	"\x15MerchantPaytypeCreate\x12%.web.UserMerchantPaytypeCreateRequest\x1a&.web.UserMerchantPaytypeCreateResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/merchant/paytype/create\x12\x92\x01\n" +
+	"\x15MerchantPaytypeUpdate\x12%.web.UserMerchantPaytypeUpdateRequest\x1a&.web.UserMerchantPaytypeUpdateResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/merchant/paytype/update\x12\x8a\x01\n" +
+	"\x13MerchantPaytypeList\x12#.web.UserMerchantPaytypeListRequest\x1a$.web.UserMerchantPaytypeListResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/merchant/paytype/list\x12\xa2\x01\n" +
+	"\x19MerchantPaytypeInvalidate\x12).web.UserMerchantPaytypeInvalidateRequest\x1a*.web.UserMerchantPaytypeInvalidateResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/api/v1/merchant/paytype/invalidate\x12\x8a\x01\n" +
+	"\x13MerchantOrderCreate\x12#.web.UserMerchantOrderCreateRequest\x1a$.web.UserMerchantOrderCreateResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/merchant/order/create\x12\x80\x01\n" +
+	"\x13MerchantOrderDetail\x12#.web.UserMerchantOrderDetailRequest\x1a\x1a.web.UserMerchantOrderItem\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/merchant/order/detail\x12\x8a\x01\n" +
+	"\x13MerchantOrderCancel\x12#.web.UserMerchantOrderCancelRequest\x1a$.web.UserMerchantOrderActionResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/merchant/order/cancel\x12\x82\x01\n" +
+	"\x11MerchantOrderList\x12!.web.UserMerchantOrderListRequest\x1a\".web.UserMerchantOrderListResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/merchant/order/list\x12\x97\x01\n" +
+	"\x17MerchantOrderConfirmPay\x12'.web.UserMerchantOrderConfirmPayRequest\x1a$.web.UserMerchantOrderActionResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/merchant/order/confirm-pay\x12\x82\x01\n" +
+	"\x11MerchantOrderUrge\x12\x1f.web.UserMerchantOrderIdRequest\x1a$.web.UserMerchantOrderActionResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/merchant/order/urge\x12\x97\x01\n" +
+	"\x19MerchantOrderAppealSeller\x12#.web.UserMerchantOrderAppealRequest\x1a$.web.UserMerchantOrderActionResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/v1/merchant/order/appeal-seller\x12\x95\x01\n" +
+	"\x18MerchantOrderAppealBuyer\x12#.web.UserMerchantOrderAppealRequest\x1a$.web.UserMerchantOrderActionResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/api/v1/merchant/order/appeal-buyer\x12~\n" +
+	"\x10MerchantChatSend\x12 .web.UserMerchantChatSendRequest\x1a!.web.UserMerchantChatSendResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/merchant/chat/send\x12\x86\x01\n" +
+	"\x12MerchantChatUnread\x12\".web.UserMerchantChatUnreadRequest\x1a#.web.UserMerchantChatUnreadResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/merchant/chat/unread\x12\x9b\x01\n" +
+	"\x17MerchantChatSessionList\x12'.web.UserMerchantChatSessionListRequest\x1a(.web.UserMerchantChatSessionListResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/merchant/chat/session-list\x12\x9b\x01\n" +
+	"\x17MerchantChatMessageList\x12'.web.UserMerchantChatMessageListRequest\x1a(.web.UserMerchantChatMessageListResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/merchant/chat/message-list\x12\x9b\x01\n" +
+	"\x17MerchantChatClearUnread\x12'.web.UserMerchantChatClearUnreadRequest\x1a(.web.UserMerchantChatClearUnreadResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/v1/merchant/chat/clear-unreadB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (

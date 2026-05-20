@@ -149,7 +149,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.EmailUpdate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantApplyRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -158,7 +158,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantApply(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-status", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/status", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantStatusRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -167,7 +167,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantStatus(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-profile", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/profile", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantProfileRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -176,7 +176,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantProfile(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskCreateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -185,7 +185,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskCreate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/my-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/my-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskMyListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -194,7 +194,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskMyList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/market-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/market-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskMarketListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -203,7 +203,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskMarketList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskDetailRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -212,7 +212,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskDetail(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskUpdateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -221,7 +221,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskUpdate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/up", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/up", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -230,7 +230,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskUp(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/down", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/down", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -239,7 +239,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskDown(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/finish", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/task/finish", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantTaskIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -248,7 +248,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskFinish(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/paytype/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantPaytypeCreateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -257,7 +257,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeCreate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/paytype/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantPaytypeUpdateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -266,7 +266,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeUpdate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/paytype/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantPaytypeListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -275,7 +275,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/invalidate", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/paytype/invalidate", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantPaytypeInvalidateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -284,7 +284,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeInvalidate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderCreateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -302,7 +302,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderDetail(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/cancel", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/cancel", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderCancelRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -320,7 +320,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/confirm-pay", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/confirm-pay", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderConfirmPayRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -329,7 +329,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderConfirmPay(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/urge", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/urge", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -338,7 +338,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderUrge(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/appeal-seller", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/appeal-seller", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderAppealRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -347,7 +347,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderAppealSeller(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/appeal-buyer", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/order/appeal-buyer", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantOrderAppealRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -356,7 +356,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderAppealBuyer(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/send", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/chat/send", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantChatSendRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -365,7 +365,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatSend(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/chat/unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantChatUnreadRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -374,7 +374,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatUnread(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/session-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/chat/session-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantChatSessionListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -383,7 +383,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatSessionList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/message-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/chat/message-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantChatMessageListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
@@ -392,7 +392,7 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatMessageList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/clear-unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/chat/clear-unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserMerchantChatClearUnreadRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err

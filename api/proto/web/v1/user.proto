@@ -60,7 +60,7 @@ service User {
   // 商户入驻申请
   rpc MerchantApply(UserMerchantApplyRequest) returns (UserMerchantApplyResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-apply"
+      post: "/api/v1/merchant/apply"
       body: "*"
     };
   }
@@ -68,7 +68,7 @@ service User {
   // 查询本人最近一次商户申请状态
   rpc MerchantStatus(UserMerchantStatusRequest) returns (UserMerchantStatusResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-status"
+      post: "/api/v1/merchant/status"
       body: "*"
     };
   }
@@ -76,7 +76,7 @@ service User {
   // 获取本人商户资料（供查看/编辑表单回填，字段与 merchant 表一致）
   rpc MerchantProfile(UserMerchantProfileRequest) returns (UserMerchantStatusResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-profile"
+      post: "/api/v1/merchant/profile"
       body: "*"
     };
   }
@@ -84,56 +84,56 @@ service User {
   // 发布商户挂售任务
   rpc MerchantTaskCreate(UserMerchantTaskCreateRequest) returns (UserMerchantTaskCreateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/create"
+      post: "/api/v1/merchant/task/create"
       body: "*"
     };
   }
   // 本人商户任务列表
   rpc MerchantTaskMyList(UserMerchantTaskMyListRequest) returns (UserMerchantTaskListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/my-list"
+      post: "/api/v1/merchant/task/my-list"
       body: "*"
     };
   }
   // 全平台：已上架且待交易的任务列表
   rpc MerchantTaskMarketList(UserMerchantTaskMarketListRequest) returns (UserMerchantTaskListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/market-list"
+      post: "/api/v1/merchant/task/market-list"
       body: "*"
     };
   }
   // 任务详情（按 id）
   rpc MerchantTaskDetail(UserMerchantTaskDetailRequest) returns (UserMerchantTaskItem) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/detail"
+      post: "/api/v1/merchant/task/detail"
       body: "*"
     };
   }
   // 修改自己的任务（仅待交易且未删除）
   rpc MerchantTaskUpdate(UserMerchantTaskUpdateRequest) returns (UserMerchantTaskUpdateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/update"
+      post: "/api/v1/merchant/task/update"
       body: "*"
     };
   }
   // 上架自己的任务
   rpc MerchantTaskUp(UserMerchantTaskIdRequest) returns (UserMerchantTaskActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/up"
+      post: "/api/v1/merchant/task/up"
       body: "*"
     };
   }
   // 下架自己的任务
   rpc MerchantTaskDown(UserMerchantTaskIdRequest) returns (UserMerchantTaskActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/down"
+      post: "/api/v1/merchant/task/down"
       body: "*"
     };
   }
   // 结束自己的任务（软删除，不再展示）
   rpc MerchantTaskFinish(UserMerchantTaskIdRequest) returns (UserMerchantTaskActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/finish"
+      post: "/api/v1/merchant/task/finish"
       body: "*"
     };
   }
@@ -141,28 +141,28 @@ service User {
   // 商户收款方式：创建
   rpc MerchantPaytypeCreate(UserMerchantPaytypeCreateRequest) returns (UserMerchantPaytypeCreateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/create"
+      post: "/api/v1/merchant/paytype/create"
       body: "*"
     };
   }
   // 商户收款方式：编辑
   rpc MerchantPaytypeUpdate(UserMerchantPaytypeUpdateRequest) returns (UserMerchantPaytypeUpdateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/update"
+      post: "/api/v1/merchant/paytype/update"
       body: "*"
     };
   }
   // 商户收款方式：列表（本人全部，含已作废，不分页）
   rpc MerchantPaytypeList(UserMerchantPaytypeListRequest) returns (UserMerchantPaytypeListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/list"
+      post: "/api/v1/merchant/paytype/list"
       body: "*"
     };
   }
   // 商户收款方式：作废
   rpc MerchantPaytypeInvalidate(UserMerchantPaytypeInvalidateRequest) returns (UserMerchantPaytypeInvalidateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/invalidate"
+      post: "/api/v1/merchant/paytype/invalidate"
       body: "*"
     };
   }
@@ -170,7 +170,7 @@ service User {
   // 商户订单：创建（整单购买，挂单变为交易中）
   rpc MerchantOrderCreate(UserMerchantOrderCreateRequest) returns (UserMerchantOrderCreateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/create"
+      post: "/api/v1/merchant/order/create"
       body: "*"
     };
   }
@@ -182,7 +182,7 @@ service User {
   }
   rpc MerchantOrderCancel(UserMerchantOrderCancelRequest) returns (UserMerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/cancel"
+      post: "/api/v1/merchant/order/cancel"
       body: "*"
     };
   }
@@ -194,25 +194,25 @@ service User {
   }
   rpc MerchantOrderConfirmPay(UserMerchantOrderConfirmPayRequest) returns (UserMerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/confirm-pay"
+      post: "/api/v1/merchant/order/confirm-pay"
       body: "*"
     };
   }
   rpc MerchantOrderUrge(UserMerchantOrderIdRequest) returns (UserMerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/urge"
+      post: "/api/v1/merchant/order/urge"
       body: "*"
     };
   }
   rpc MerchantOrderAppealSeller(UserMerchantOrderAppealRequest) returns (UserMerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/appeal-seller"
+      post: "/api/v1/merchant/order/appeal-seller"
       body: "*"
     };
   }
   rpc MerchantOrderAppealBuyer(UserMerchantOrderAppealRequest) returns (UserMerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/appeal-buyer"
+      post: "/api/v1/merchant/order/appeal-buyer"
       body: "*"
     };
   }
@@ -220,32 +220,32 @@ service User {
   // 商户订单 C2C 对话：发消息（首条自动建 merchant_session，WebSocket event: im.message.c2c）
   rpc MerchantChatSend(UserMerchantChatSendRequest) returns (UserMerchantChatSendResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/send"
+      post: "/api/v1/merchant/chat/send"
       body: "*"
     };
   }
   rpc MerchantChatUnread(UserMerchantChatUnreadRequest) returns (UserMerchantChatUnreadResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/unread"
+      post: "/api/v1/merchant/chat/unread"
       body: "*"
     };
   }
   rpc MerchantChatSessionList(UserMerchantChatSessionListRequest) returns (UserMerchantChatSessionListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/session-list"
+      post: "/api/v1/merchant/chat/session-list"
       body: "*"
     };
   }
   rpc MerchantChatMessageList(UserMerchantChatMessageListRequest) returns (UserMerchantChatMessageListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/message-list"
+      post: "/api/v1/merchant/chat/message-list"
       body: "*"
     };
   }
   // 清除某商户会话未读（与 talk_mode=3、Redis im:unread 键一致；入参 receiver_id 为 session_id）
   rpc MerchantChatClearUnread(UserMerchantChatClearUnreadRequest) returns (UserMerchantChatClearUnreadResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/clear-unread"
+      post: "/api/v1/merchant/chat/clear-unread"
       body: "*"
     };
   }
