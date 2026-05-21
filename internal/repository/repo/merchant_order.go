@@ -61,26 +61,24 @@ func (r *MerchantOrder) UpdateByID(ctx context.Context, id int, updates map[stri
 	return r.db.WithContext(ctx).Model(&model.MerchantOrder{}).Where("id = ?", id).Updates(updates).Error
 }
 
-// ListByParticipant 分页：asBuyer=true 查 buyer_id，否则查 saler_id
-func (r *MerchantOrder) ListByParticipant(ctx context.Context, userId int, asBuyer bool, page, pageSize int) ([]model.MerchantOrder, int64, error) {
+// ListByParticipant 分页：asBuyer=true 查 buyer_id，否则查 saler_id；statuses 非空时按 status IN 筛选
+func (r *MerchantOrder) ListByParticipant(ctx context.Context, userId int, asBuyer bool, statuses []int, page, pageSize int) ([]model.MerchantOrder, int64, error) {
 	q := r.db.WithContext(ctx).Model(&model.MerchantOrder{})
 	if asBuyer {
 		q = q.Where("buyer_id = ?", userId)
 	} else {
 		q = q.Where("saler_id = ?", userId)
 	}
+	if len(statuses) > 0 {
+		q = q.Where("status IN ?", statuses)
+	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	offset := (page - 1) * pageSize
-	col := "buyer_id"
-	if !asBuyer {
-		col = "saler_id"
-	}
 	var rows []model.MerchantOrder
-	err := r.db.WithContext(ctx).Where(col+" = ?", userId).
-		Order("id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error
+	err := q.Order("id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error
 	if err != nil {
 		return nil, 0, err
 	}

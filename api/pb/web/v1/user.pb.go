@@ -2992,10 +2992,12 @@ func (x *UserMerchantOrderAppealRequest) GetAppealReason() string {
 
 type UserMerchantOrderListRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 1-买入（默认），2-卖出
-	Direct        int32 `protobuf:"varint,1,opt,name=direct,proto3" json:"direct,omitempty"`
-	Page          int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// 1-买家订单（默认），2-卖家订单
+	Direct   int32 `protobuf:"varint,1,opt,name=direct,proto3" json:"direct,omitempty"`
+	Page     int32 `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// 订单状态筛选，多个用英文逗号分隔：0待支付 1已支付待放币 2已完成 3已取消；空表示不限
+	Status        string `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3049,6 +3051,13 @@ func (x *UserMerchantOrderListRequest) GetPageSize() int32 {
 		return x.PageSize
 	}
 	return 0
+}
+
+func (x *UserMerchantOrderListRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
 }
 
 type UserMerchantOrderListResponse struct {
@@ -4372,11 +4381,12 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x1eUserMerchantOrderAppealRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x02id\x12/\n" +
 	"\rappeal_reason\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\fappealReason\"\x88\x01\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\fappealReason\"\xa9\x01\n" +
 	"\x1cUserMerchantOrderListRequest\x12#\n" +
 	"\x06direct\x18\x01 \x01(\x05B\v\xbaH\b\x1a\x060\x000\x010\x02R\x06direct\x12\x1b\n" +
 	"\x04page\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
-	"\tpage_size\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\"q\n" +
+	"\tpage_size\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\x12\x1f\n" +
+	"\x06status\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18@R\x06status\"q\n" +
 	"\x1dUserMerchantOrderListResponse\x124\n" +
 	"\x05items\x18\x01 \x03(\v2\x1e.web.UserMerchantOrderListItemR\x05items\x12\x1a\n" +
 	"\x05total\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x05total\"!\n" +

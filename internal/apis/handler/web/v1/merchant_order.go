@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -148,7 +149,39 @@ func (u *User) MerchantOrderCancel(ctx context.Context, in *web.UserMerchantOrde
 	return &web.UserMerchantOrderActionResponse{}, nil
 }
 
-// MerchantOrderList 买入/卖出订单分页列表，direct：1 买入（默认），2 卖出
+// parseMerchantOrderStatusFilter 解析逗号分隔的订单状态，如 "0,1,3"
+func parseMerchantOrderStatusFilter(raw string) ([]int, error) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, nil
+	}
+	seen := make(map[int]struct{})
+	var out []int
+	for _, part := range strings.Split(raw, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		v, err := strconv.Atoi(part)
+		if err != nil {
+			return nil, errorx.New(400, "status 格式错误，请使用 0,1,2,3 逗号分隔")
+		}
+		if v < model.MerchantOrderStatusPendingPay || v > model.MerchantOrderStatusCancelled {
+			return nil, errorx.New(400, "status 取值范围为 0-3")
+		}
+		if _, ok := seen[v]; ok {
+			continue
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	if len(out) == 0 {
+		return nil, errorx.New(400, "status 格式错误，请使用 0,1,2,3 逗号分隔")
+	}
+	return out, nil
+}
+
+// MerchantOrderList 订单分页列表，direct：1 买家（默认），2 卖家；status 逗号分隔筛选
 func (u *User) MerchantOrderList(ctx context.Context, in *web.UserMerchantOrderListRequest) (*web.UserMerchantOrderListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
@@ -156,9 +189,16 @@ func (u *User) MerchantOrderList(ctx context.Context, in *web.UserMerchantOrderL
 	if direct == 0 {
 		direct = 1
 	}
-	asBuyer := direct != 2
+	if direct != 1 && direct != 2 {
+		return nil, errorx.New(400, "direct 须为 1（买家订单）或 2（卖家订单）")
+	}
+	statuses, err := parseMerchantOrderStatusFilter(in.GetStatus())
+	if err != nil {
+		return nil, err
+	}
+	asBuyer := direct == 1
 	page, pageSize := normMerchantTaskPage(int(in.GetPage()), int(in.GetPageSize()))
-	rows, total, err := u.MerchantOrderRepo.ListByParticipant(ctx, uid, asBuyer, page, pageSize)
+	rows, total, err := u.MerchantOrderRepo.ListByParticipant(ctx, uid, asBuyer, statuses, page, pageSize)
 	if err != nil {
 		return nil, err
 	}

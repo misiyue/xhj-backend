@@ -596,10 +596,12 @@ message UserMerchantOrderAppealRequest {
 }
 
 message UserMerchantOrderListRequest {
-  // 1-买入（默认），2-卖出
+  // 1-买家订单（默认），2-卖家订单
   int32 direct = 1 [(buf.validate.field).int32 = {in: [0, 1, 2]}];
   int32 page = 2 [(buf.validate.field).int32.gte = 0];
   int32 page_size = 3 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+  // 订单状态筛选，多个用英文逗号分隔：0待支付 1已支付待放币 2已完成 3已取消；空表示不限
+  string status = 4 [(buf.validate.field).string.max_len = 64];
 }
 
 message UserMerchantOrderListResponse {
