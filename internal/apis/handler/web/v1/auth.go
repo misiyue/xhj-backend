@@ -243,7 +243,7 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		releaseIP, relErr = a.RegisterLimiter.TryAcquireIP(ctx, clientIP, ipLimit)
 		if relErr != nil {
 			if errors.Is(relErr, cache.ErrRegisterIPExceeded) {
-				return nil, errorx.New(429, "该 IP 24 小时内注册次数已达上限")
+				return nil, errorx.New(429, "账号注册次数已达上限")
 			}
 			return nil, relErr
 		}
@@ -257,7 +257,7 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 				releaseIP(ctx)
 			}
 			if errors.Is(relErr, cache.ErrRegisterDeviceExceeded) {
-				return nil, errorx.New(429, "该设备注册次数已达上限")
+				return nil, errorx.New(429, "账号注册次数已达上限")
 			}
 			return nil, relErr
 		}
