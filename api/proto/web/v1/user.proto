@@ -421,7 +421,7 @@ message UserMerchantTaskCreateRequest {
   int32 currency_type = 1 [(buf.validate.field).int32 = {in: [1]}];
   double price = 2 [(buf.validate.field).double = {gt: 0}];
   double sell_count = 3 [(buf.validate.field).double = {gt: 0}];
-  string paytype = 4 [(buf.validate.field).string.max_len = 32];
+  string paytype = 4 [(buf.validate.field).string.max_len = 1024];
 }
 
 message UserMerchantTaskCreateResponse {
@@ -454,7 +454,7 @@ message UserMerchantTaskUpdateRequest {
   int32 currency_type = 2 [(buf.validate.field).int32 = {in: [1]}];
   double price = 3 [(buf.validate.field).double = {gt: 0}];
   double sell_count = 4 [(buf.validate.field).double = {gt: 0}];
-  string paytype = 5 [(buf.validate.field).string.max_len = 32];
+  string paytype = 5 [(buf.validate.field).string.max_len = 1024];
 }
 
 message UserMerchantTaskUpdateResponse {}
