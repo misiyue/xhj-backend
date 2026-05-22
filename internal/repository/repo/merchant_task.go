@@ -18,10 +18,11 @@ func NewMerchantTask(db *gorm.DB) *MerchantTask {
 	return &MerchantTask{db: db}
 }
 
-// marketListedScope 市场上架且可购买的挂单：待交易、已上架、未删除、剩余数量>0
+// marketListedScope 市场挂单：已上架、未删除、未完成、剩余数量必须大于 0
 func marketListedScope(db *gorm.DB) *gorm.DB {
 	return db.Model(&model.MerchantTask{}).
-		Where("is_deleted = 0 AND is_up = 1 AND status = ? AND `count` > ?", model.MerchantTaskStatusPending, MerchantTaskCountEpsilon)
+		Where("is_deleted = 0 AND is_up = 1 AND status <> ? AND `count` > ?",
+			model.MerchantTaskStatusDone, MerchantTaskCountEpsilon)
 }
 
 func (r *MerchantTask) Create(ctx context.Context, row *model.MerchantTask) error {
@@ -60,8 +61,8 @@ func (r *MerchantTask) UpdateByID(ctx context.Context, id int, updates map[strin
 func (r *MerchantTask) SumListedActiveCount(ctx context.Context, userId int, excludeID int) (float64, error) {
 	q := r.db.WithContext(ctx).Model(&model.MerchantTask{}).
 		Select("COALESCE(SUM(`count`),0)").
-		Where("user_id = ? AND is_deleted = 0 AND status = ? AND is_up = ? AND `count` > ?",
-			userId, model.MerchantTaskStatusPending, 1, MerchantTaskCountEpsilon)
+		Where("user_id = ? AND is_deleted = 0 AND is_up = 1 AND status <> ? AND `count` > ?",
+			userId, model.MerchantTaskStatusDone, MerchantTaskCountEpsilon)
 	if excludeID > 0 {
 		q = q.Where("id <> ?", excludeID)
 	}

@@ -30,7 +30,7 @@ func merchantOrderToListProto(o *model.MerchantOrder) *web.UserMerchantOrderList
 		Amount:    o.Amount,
 		TaskId:    int32(o.TaskId),
 		Counts:    o.Counts,
-		PayType:   int32(o.PayType),
+		PayType:   o.PayType,
 		BuyType:   int32(o.BuyType),
 		Status:    int32(o.Status),
 		IsCancel:  int32(o.IsCancel),
@@ -51,7 +51,7 @@ func merchantOrderToProto(o *model.MerchantOrder) *web.UserMerchantOrderItem {
 		Amount:       o.Amount,
 		TaskId:       int32(o.TaskId),
 		Counts:       o.Counts,
-		PayType:      int32(o.PayType),
+		PayType:      o.PayType,
 		BuyType:      int32(o.BuyType),
 		Status:       int32(o.Status),
 		PayImg:       o.PayImg,
@@ -86,7 +86,7 @@ func (u *User) assertOrderParticipant(o *model.MerchantOrder, uid int) error {
 func (u *User) MerchantOrderCreate(ctx context.Context, in *web.UserMerchantOrderCreateRequest) (*web.UserMerchantOrderCreateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	buyerID := int(session.UserId)
-	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), int(in.GetPayType()), int(in.GetBuyType()))
+	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), strings.TrimSpace(in.GetPayType()), int(in.GetBuyType()))
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderSelfBuy):
@@ -138,13 +138,14 @@ func (u *User) MerchantOrderCancel(ctx context.Context, in *web.UserMerchantOrde
 	}
 	err = u.MerchantOrderRepo.CancelOrderTx(ctx, o.Id, int(in.GetCancelId()), strings.TrimSpace(in.GetRemark()))
 	if err != nil {
-		if strings.Contains(err.Error(), "已取消") {
+		switch {
+		case errors.Is(err, repo.ErrMerchantOrderAlreadyCancelled):
 			return nil, errorx.New(400, "订单已取消")
-		}
-		if strings.Contains(err.Error(), "不可取消") {
+		case errors.Is(err, repo.ErrMerchantOrderNotCancellable):
 			return nil, errorx.New(400, "当前订单状态不可取消")
+		default:
+			return nil, err
 		}
-		return nil, err
 	}
 	return &web.UserMerchantOrderActionResponse{}, nil
 }

@@ -2251,7 +2251,7 @@ type UserMerchantOrderListItem struct {
 	Amount        float64                `protobuf:"fixed64,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	TaskId        int32                  `protobuf:"varint,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Counts        float64                `protobuf:"fixed64,7,opt,name=counts,proto3" json:"counts,omitempty"`
-	PayType       int32                  `protobuf:"varint,8,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
+	PayType       string                 `protobuf:"bytes,8,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
 	BuyType       int32                  `protobuf:"varint,9,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
 	Status        int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
 	IsCancel      int32                  `protobuf:"varint,11,opt,name=is_cancel,json=isCancel,proto3" json:"is_cancel,omitempty"`
@@ -2340,11 +2340,11 @@ func (x *UserMerchantOrderListItem) GetCounts() float64 {
 	return 0
 }
 
-func (x *UserMerchantOrderListItem) GetPayType() int32 {
+func (x *UserMerchantOrderListItem) GetPayType() string {
 	if x != nil {
 		return x.PayType
 	}
-	return 0
+	return ""
 }
 
 func (x *UserMerchantOrderListItem) GetBuyType() int32 {
@@ -2391,7 +2391,7 @@ type UserMerchantOrderItem struct {
 	Amount        float64                `protobuf:"fixed64,5,opt,name=amount,proto3" json:"amount,omitempty"`
 	TaskId        int32                  `protobuf:"varint,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Counts        float64                `protobuf:"fixed64,7,opt,name=counts,proto3" json:"counts,omitempty"`
-	PayType       int32                  `protobuf:"varint,8,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
+	PayType       string                 `protobuf:"bytes,8,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
 	BuyType       int32                  `protobuf:"varint,9,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
 	Status        int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
 	PayImg        string                 `protobuf:"bytes,11,opt,name=pay_img,json=payImg,proto3" json:"pay_img,omitempty"`
@@ -2492,11 +2492,11 @@ func (x *UserMerchantOrderItem) GetCounts() float64 {
 	return 0
 }
 
-func (x *UserMerchantOrderItem) GetPayType() int32 {
+func (x *UserMerchantOrderItem) GetPayType() string {
 	if x != nil {
 		return x.PayType
 	}
-	return 0
+	return ""
 }
 
 func (x *UserMerchantOrderItem) GetBuyType() int32 {
@@ -2619,11 +2619,12 @@ func (x *UserMerchantOrderItem) GetUpdatedAt() string {
 }
 
 type UserMerchantOrderCreateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TaskId        int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Counts        float64                `protobuf:"fixed64,2,opt,name=counts,proto3" json:"counts,omitempty"`
-	PayType       int32                  `protobuf:"varint,3,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
-	BuyType       int32                  `protobuf:"varint,4,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	TaskId int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Counts float64                `protobuf:"fixed64,2,opt,name=counts,proto3" json:"counts,omitempty"`
+	// 支付方式 JSON 字符串
+	PayType       string `protobuf:"bytes,3,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
+	BuyType       int32  `protobuf:"varint,4,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2672,11 +2673,11 @@ func (x *UserMerchantOrderCreateRequest) GetCounts() float64 {
 	return 0
 }
 
-func (x *UserMerchantOrderCreateRequest) GetPayType() int32 {
+func (x *UserMerchantOrderCreateRequest) GetPayType() string {
 	if x != nil {
 		return x.PayType
 	}
-	return 0
+	return ""
 }
 
 func (x *UserMerchantOrderCreateRequest) GetBuyType() int32 {
@@ -4318,7 +4319,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x06amount\x18\x05 \x01(\x01R\x06amount\x12\x17\n" +
 	"\atask_id\x18\x06 \x01(\x05R\x06taskId\x12\x16\n" +
 	"\x06counts\x18\a \x01(\x01R\x06counts\x12\x19\n" +
-	"\bpay_type\x18\b \x01(\x05R\apayType\x12\x19\n" +
+	"\bpay_type\x18\b \x01(\tR\apayType\x12\x19\n" +
 	"\bbuy_type\x18\t \x01(\x05R\abuyType\x12\x16\n" +
 	"\x06status\x18\n" +
 	" \x01(\x05R\x06status\x12\x1b\n" +
@@ -4334,7 +4335,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x06amount\x18\x05 \x01(\x01R\x06amount\x12\x17\n" +
 	"\atask_id\x18\x06 \x01(\x05R\x06taskId\x12\x16\n" +
 	"\x06counts\x18\a \x01(\x01R\x06counts\x12\x19\n" +
-	"\bpay_type\x18\b \x01(\x05R\apayType\x12\x19\n" +
+	"\bpay_type\x18\b \x01(\tR\apayType\x12\x19\n" +
 	"\bbuy_type\x18\t \x01(\x05R\abuyType\x12\x16\n" +
 	"\x06status\x18\n" +
 	" \x01(\x05R\x06status\x12\x17\n" +
@@ -4357,11 +4358,11 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x18 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x19 \x01(\tR\tupdatedAt\"\xa0\x01\n" +
+	"updated_at\x18\x19 \x01(\tR\tupdatedAt\"\xaa\x01\n" +
 	"\x1eUserMerchantOrderCreateRequest\x12 \n" +
 	"\atask_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x06taskId\x12&\n" +
-	"\x06counts\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06counts\x12\x19\n" +
-	"\bpay_type\x18\x03 \x01(\x05R\apayType\x12\x19\n" +
+	"\x06counts\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06counts\x12#\n" +
+	"\bpay_type\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\apayType\x12\x19\n" +
 	"\bbuy_type\x18\x04 \x01(\x05R\abuyType\"X\n" +
 	"\x1fUserMerchantOrderCreateResponse\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x1f\n" +

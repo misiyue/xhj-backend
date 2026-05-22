@@ -25,7 +25,7 @@ type MerchantOrder struct {
 	Amount       float64   `gorm:"column:amount;type:decimal(10,2);not null;default:0" json:"amount"`
 	TaskId       int       `gorm:"column:task_id;index;not null;default:0" json:"task_id"`
 	Counts       float64   `gorm:"column:counts;type:float(12,4);not null;default:0" json:"counts"`
-	PayType      int       `gorm:"column:pay_type" json:"pay_type"`
+	PayType      string    `gorm:"column:pay_type;type:varchar(255);default:0" json:"pay_type"`
 	BuyType      int       `gorm:"column:buy_type;not null;default:0" json:"buy_type"`
 	Status       int       `gorm:"column:status;not null;default:0" json:"status"`
 	PayImg       string    `gorm:"column:pay_img;type:varchar(255)" json:"pay_img"`

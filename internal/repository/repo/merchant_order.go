@@ -18,6 +18,9 @@ var (
 	ErrMerchantOrderSelfBuy           = errors.New("merchant_order: cannot buy own task")
 	ErrMerchantOrderTaskUnavailable   = errors.New("merchant_order: task not available for purchase")
 	ErrMerchantOrderInsufficientCount = errors.New("merchant_order: purchase quantity exceeds remaining listing quantity")
+	ErrMerchantOrderAlreadyCancelled  = errors.New("merchant_order: already cancelled")
+	ErrMerchantOrderNotCancellable    = errors.New("merchant_order: not cancellable")
+	ErrMerchantOrderSkipExpire = errors.New("merchant_order: skip expire cancel")
 )
 
 type MerchantOrder struct {
@@ -85,8 +88,8 @@ func (r *MerchantOrder) ListByParticipant(ctx context.Context, userId int, asBuy
 	return rows, total, nil
 }
 
-// CreateFromTask 创建订单并在事务内扣减挂单剩余数量（counts 须 >0 且不超过当前 count）
-func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID int, counts float64, payType, buyType int) (*model.MerchantOrder, error) {
+// CreateFromTask 创建订单：单事务内锁挂单 → 扣减 count → 创建订单（任一步失败整体回滚）
+func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID int, counts float64, payType string, buyType int) (*model.MerchantOrder, error) {
 	var out *model.MerchantOrder
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var task model.MerchantTask
@@ -99,20 +102,20 @@ func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID 
 		if task.UserId == buyerID {
 			return ErrMerchantOrderSelfBuy
 		}
-		if task.IsDeleted != 0 || task.IsUp != 1 || task.Status != model.MerchantTaskStatusPending {
-			return ErrMerchantOrderTaskUnavailable
-		}
-		if task.Count <= MerchantTaskCountEpsilon {
+		if !isMerchantTaskBuyable(&task) {
 			return ErrMerchantOrderTaskUnavailable
 		}
 		if counts <= 0 || counts > task.Count+MerchantTaskCountEpsilon {
 			return ErrMerchantOrderInsufficientCount
 		}
-		newCount := task.Count - counts
-		if newCount < MerchantTaskCountEpsilon {
-			newCount = 0
+		if err := deductMerchantTaskCountInTx(tx, taskID, counts); err != nil {
+			return err
 		}
 		amount := math.Round(task.Price*counts*100) / 100
+		payType = strings.TrimSpace(payType)
+		if payType == "" {
+			payType = "0"
+		}
 		oid := "MO" + strings.ReplaceAll(uuid.New().String(), "-", "")
 		row := &model.MerchantOrder{
 			OrderId:  oid,
@@ -130,15 +133,6 @@ func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID 
 		if err := tx.Create(row).Error; err != nil {
 			return err
 		}
-		taskUpdates := map[string]any{"count": newCount}
-		if newCount <= MerchantTaskCountEpsilon {
-			taskUpdates["count"] = 0
-			taskUpdates["status"] = model.MerchantTaskStatusDone
-			taskUpdates["is_up"] = 0
-		}
-		if err := tx.Model(&model.MerchantTask{}).Where("id = ?", taskID).Updates(taskUpdates).Error; err != nil {
-			return err
-		}
 		out = row
 		return nil
 	})
@@ -148,46 +142,115 @@ func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID 
 	return out, nil
 }
 
-// CancelOrderTx 取消订单并恢复挂单为待交易（仅待支付/已支付可取消）
-func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID int, remark string) error {
+// cancelOrderInTx 在已有事务内取消订单并恢复挂单 count（订单行须已 FOR UPDATE 锁定）
+func cancelOrderInTx(tx *gorm.DB, o *model.MerchantOrder, cancelID int, remark string, allowedStatus map[int]struct{}) error {
+	if o.IsCancel != 0 {
+		return ErrMerchantOrderAlreadyCancelled
+	}
+	if _, ok := allowedStatus[o.Status]; !ok {
+		return ErrMerchantOrderNotCancellable
+	}
+	statusList := make([]int, 0, len(allowedStatus))
+	for s := range allowedStatus {
+		statusList = append(statusList, s)
+	}
 	now := int(time.Now().Unix())
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var o model.MerchantOrder
-		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", orderID).First(&o).Error; err != nil {
-			return err
-		}
-		if o.IsCancel != 0 {
-			return fmt.Errorf("订单已取消")
-		}
-		if o.Status != model.MerchantOrderStatusPendingPay && o.Status != model.MerchantOrderStatusPaid {
-			return fmt.Errorf("当前状态不可取消")
-		}
-		if err := tx.Model(&model.MerchantOrder{}).Where("id = ?", orderID).Updates(map[string]any{
+	res := tx.Model(&model.MerchantOrder{}).
+		Where("id = ? AND is_cancel = 0 AND status IN ?", o.Id, statusList).
+		Updates(map[string]any{
 			"status":      model.MerchantOrderStatusCancelled,
 			"is_cancel":   1,
 			"cancel_id":   cancelID,
 			"remark":      remark,
 			"cancel_time": now,
-		}).Error; err != nil {
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrMerchantOrderNotCancellable
+	}
+	return restoreMerchantTaskCountOnCancel(tx, o.TaskId, o.Counts)
+}
+
+// CancelOrderTx 手动取消：待支付/已支付均可；订单状态更新与 count 回滚同一事务
+func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID int, remark string) error {
+	allowed := map[int]struct{}{
+		model.MerchantOrderStatusPendingPay: {},
+		model.MerchantOrderStatusPaid:       {},
+	}
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var o model.MerchantOrder
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", orderID).First(&o).Error; err != nil {
 			return err
 		}
-		if o.TaskId > 0 {
-			var task model.MerchantTask
-			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", o.TaskId).First(&task).Error; err != nil {
-				return err
-			}
-			newCount := task.Count + o.Counts
-			if task.Total > MerchantTaskCountEpsilon && newCount > task.Total+MerchantTaskCountEpsilon {
-				newCount = task.Total
-			}
-			updates := map[string]any{"count": newCount}
-			if task.Status == model.MerchantTaskStatusDone && newCount > MerchantTaskCountEpsilon {
-				updates["status"] = model.MerchantTaskStatusPending
-			}
-			if err := tx.Model(&model.MerchantTask{}).Where("id = ?", o.TaskId).Updates(updates).Error; err != nil {
-				return err
-			}
-		}
-		return nil
+		return cancelOrderInTx(tx, &o, cancelID, remark, allowed)
 	})
+}
+
+const (
+	MerchantOrderUnpaidCancelTimeout = 30 * time.Minute
+	MerchantOrderAutoCancelRemark    = "超时未支付自动取消"
+)
+
+// cancelUnpaidExpiredInTx 定时任务用：事务内锁单并校验「待支付 + 已超时」后取消并回滚 count
+func cancelUnpaidExpiredInTx(tx *gorm.DB, orderID int, notAfter time.Time, cancelID int, remark string) error {
+	var o model.MerchantOrder
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", orderID).First(&o).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrMerchantOrderSkipExpire
+		}
+		return err
+	}
+	if o.IsCancel != 0 {
+		return ErrMerchantOrderSkipExpire
+	}
+	if o.Status != model.MerchantOrderStatusPendingPay {
+		return ErrMerchantOrderSkipExpire
+	}
+	if o.CreatedAt.After(notAfter) {
+		return ErrMerchantOrderSkipExpire
+	}
+	allowed := map[int]struct{}{model.MerchantOrderStatusPendingPay: {}}
+	return cancelOrderInTx(tx, &o, cancelID, remark, allowed)
+}
+
+// CancelExpiredUnpaid 批量取消超时未支付订单，每笔独立事务并在事务内二次校验
+func (r *MerchantOrder) CancelExpiredUnpaid(ctx context.Context, timeout time.Duration) (int, error) {
+	if timeout <= 0 {
+		timeout = MerchantOrderUnpaidCancelTimeout
+	}
+	notAfter := time.Now().Add(-timeout)
+	const batchSize = 50
+	cancelled := 0
+	for {
+		var ids []int
+		err := r.db.WithContext(ctx).Model(&model.MerchantOrder{}).
+			Where("status = ? AND is_cancel = 0 AND created_at <= ?",
+				model.MerchantOrderStatusPendingPay, notAfter).
+			Order("id ASC").Limit(batchSize).
+			Pluck("id", &ids).Error
+		if err != nil {
+			return cancelled, err
+		}
+		if len(ids) == 0 {
+			break
+		}
+		for _, id := range ids {
+			err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+				return cancelUnpaidExpiredInTx(tx, id, notAfter, 0, MerchantOrderAutoCancelRemark)
+			})
+			if err != nil {
+				if errors.Is(err, ErrMerchantOrderSkipExpire) {
+					continue
+				}
+				return cancelled, err
+			}
+			cancelled++
+		}
+		if len(ids) < batchSize {
+			break
+		}
+	}
+	return cancelled, nil
 }
