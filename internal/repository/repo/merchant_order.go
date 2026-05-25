@@ -2,13 +2,13 @@ package repo
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"math"
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -116,7 +116,7 @@ func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID 
 		if payType == "" {
 			payType = "0"
 		}
-		oid := "MO" + strings.ReplaceAll(uuid.New().String(), "-", "")
+		oid := generateMerchantOrderID(time.Now())
 		row := &model.MerchantOrder{
 			OrderId:  oid,
 			BuyerId:  buyerID,
@@ -253,4 +253,12 @@ func (r *MerchantOrder) CancelExpiredUnpaid(ctx context.Context, timeout time.Du
 		}
 	}
 	return cancelled, nil
+}
+
+// generateMerchantOrderID 订单号：yyyyMMddHHmmss + 毫秒(3位) + 随机数(2位)，如 2026022815190329812
+func generateMerchantOrderID(now time.Time) string {
+	var rnd [1]byte
+	_, _ = rand.Read(rnd[:])
+	n := int(rnd[0]) % 100
+	return fmt.Sprintf("%s%03d%02d", now.Format("20060102150405"), now.Nanosecond()/1e6, n)
 }
