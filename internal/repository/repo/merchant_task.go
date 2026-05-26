@@ -73,16 +73,22 @@ func (r *MerchantTask) SumListedActiveCount(ctx context.Context, userId int, exc
 	return sum, nil
 }
 
-func (r *MerchantTask) ListByUserID(ctx context.Context, userId int, page, pageSize int) ([]model.MerchantTask, int64, error) {
+// ListByUserID 本人挂单列表；isUpFilter：0-不限，1-已上架(is_up=1)，2-已下架(is_up=0)
+func (r *MerchantTask) ListByUserID(ctx context.Context, userId int, page, pageSize int, isUpFilter int) ([]model.MerchantTask, int64, error) {
+	q := r.db.WithContext(ctx).Model(&model.MerchantTask{}).Where("user_id = ?", userId)
+	switch isUpFilter {
+	case 1:
+		q = q.Where("is_up = ?", 1)
+	case 2:
+		q = q.Where("is_up = ?", 0)
+	}
 	var total int64
-	base := r.db.WithContext(ctx).Model(&model.MerchantTask{}).Where("user_id = ?", userId)
-	if err := base.Count(&total).Error; err != nil {
+	if err := q.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 	offset := (page - 1) * pageSize
 	var rows []model.MerchantTask
-	err := r.db.WithContext(ctx).Where("user_id = ?", userId).
-		Order("id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error
+	err := q.Order("id DESC").Offset(offset).Limit(pageSize).Find(&rows).Error
 	if err != nil {
 		return nil, 0, err
 	}

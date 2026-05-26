@@ -58,6 +58,7 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 				"/api/v1/common/app-version",
 				"/api/v1/common/explore-list",
 				"/api/v1/common/app-dict",
+				"/api/v1/merchant/order/notify",
 			}
 		},
 	)
@@ -95,10 +96,15 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 
 	web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
 
-	registerCustomApiRouter(resp, api, handler)
+	registerCustomApiRouter(resp, router, api, handler)
 }
 
-func registerCustomApiRouter(resp *Interceptor, api gin.IRoutes, handler *web.Handler) {
+func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRoutes, handler *web.Handler) {
+	// 汇美支付回调：无 JWT，响应纯文本 success
+	router.POST("/api/v1/merchant/order/notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderNotify(c)
+	})
+
 	api.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
 		in := &web2.CommonAppVersionLatestRequest{
 			Platform: strings.ToLower(strings.TrimSpace(c.Query("platform"))),

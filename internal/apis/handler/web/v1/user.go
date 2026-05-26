@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gzydong/go-chat/api/pb/web/v1"
+	"github.com/gzydong/go-chat/config"
 	"github.com/gzydong/go-chat/external/wallet"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/logic"
@@ -25,6 +26,7 @@ import (
 var _ web.IUserHandler = (*User)(nil)
 
 type User struct {
+	Config              *config.Config
 	Redis               *redis.Client
 	UsersRepo           *repo.Users
 	WalletUserRepo      *repo.WalletUser
@@ -32,6 +34,7 @@ type User struct {
 	MerchantTaskRepo    *repo.MerchantTask
 	MerchantPaytypeRepo *repo.MerchantPaytype
 	MerchantOrderRepo   *repo.MerchantOrder
+	MerchantHmOrderRepo *repo.MerchantHmOrder
 	MerchantSessionRepo *repo.MerchantSession
 	MerchantMessageRepo *repo.MerchantMessage
 	PushMessage         *logic.PushMessage
@@ -348,7 +351,7 @@ func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64
 }
 
 // merchantApplyPayload 从请求组装待写入 merchant 表的资料字段。
-func merchantApplyPayload(in *web.UserMerchantApplyRequest, surety float64) map[string]any {
+func merchantApplyPayload(in *web.MerchantApplyRequest, surety float64) map[string]any {
 	return map[string]any{
 		"nickname":  strings.TrimSpace(in.GetNickname()),
 		"realname":  strings.TrimSpace(in.GetRealname()),
@@ -363,7 +366,7 @@ func merchantApplyPayload(in *web.UserMerchantApplyRequest, surety float64) map[
 
 // MerchantApply 商户入驻申请（POST /api/v1/merchant/apply）
 // 首次申请插入新记录；驳回后再次申请在同一记录上更新资料并将 status 置为待审核。
-func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyRequest) (*web.UserMerchantApplyResponse, error) {
+func (u *User) MerchantApply(ctx context.Context, in *web.MerchantApplyRequest) (*web.MerchantApplyResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	surety := in.GetSurety()
@@ -396,7 +399,7 @@ func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyReque
 			if err := u.MerchantRepo.UpdateById(ctx, latest.Id, updates); err != nil {
 				return nil, err
 			}
-			return &web.UserMerchantApplyResponse{Id: int32(latest.Id)}, nil
+			return &web.MerchantApplyResponse{Id: int32(latest.Id)}, nil
 		case model.MerchantStatusApproved:
 			return nil, errorx.New(400, "您已是认证商户，无法再次申请")
 		default:
@@ -427,43 +430,48 @@ func (u *User) MerchantApply(ctx context.Context, in *web.UserMerchantApplyReque
 	if err := u.MerchantRepo.Create(ctx, row); err != nil {
 		return nil, err
 	}
-	return &web.UserMerchantApplyResponse{Id: int32(row.Id)}, nil
+	return &web.MerchantApplyResponse{Id: int32(row.Id)}, nil
 }
 
 // MerchantStatus 查询本人最近一次商户申请状态
-func (u *User) MerchantStatus(ctx context.Context, _ *web.UserMerchantStatusRequest) (*web.UserMerchantStatusResponse, error) {
+func (u *User) MerchantStatus(ctx context.Context, _ *web.MerchantStatusRequest) (*web.MerchantStatusResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	latest, err := u.MerchantRepo.FindLatestByUserId(ctx, int(session.UserId))
 	if err != nil {
 		return nil, err
 	}
 	if latest == nil {
-		return &web.UserMerchantStatusResponse{HasApplication: false}, nil
+		return &web.MerchantStatusResponse{HasApplication: false}, nil
 	}
-	return &web.UserMerchantStatusResponse{
+	return merchantToStatusResponse(latest), nil
+}
+
+func merchantToStatusResponse(m *model.Merchant) *web.MerchantStatusResponse {
+	return &web.MerchantStatusResponse{
 		HasApplication: true,
-		Id:             int32(latest.Id),
-		Nickname:       latest.Nickname,
-		Realname:       latest.Realname,
-		Nation:         latest.Nation,
-		IdType:         int32(latest.IdType),
-		Idcard:         latest.Idcard,
-		Image:          latest.Image,
-		BackImage:      latest.Backimage,
-		Surety:         latest.Surety,
-		Status:         int32(latest.Status),
-		Reason:         latest.Reason,
-		IsLimit:        int32(latest.IsLimit),
-		LimitTime:      int32(latest.LimitTime),
-		IsFrozen:       int32(latest.IsFrozen),
-		FrozenTime:     int32(latest.FrozenTime),
-		IsClose:        int32(latest.IsClose),
-		CreatedAt:      timeutil.FormatDatetime(latest.CreatedAt),
-		UpdatedAt:      timeutil.FormatDatetime(latest.UpdatedAt),
-	}, nil
+		Id:             int32(m.Id),
+		Nickname:       m.Nickname,
+		Realname:       m.Realname,
+		Nation:         m.Nation,
+		IdType:         int32(m.IdType),
+		Idcard:         m.Idcard,
+		Image:          m.Image,
+		BackImage:      m.Backimage,
+		Surety:         m.Surety,
+		Status:         int32(m.Status),
+		Reason:         m.Reason,
+		IsLimit:        int32(m.IsLimit),
+		LimitTime:      int32(m.LimitTime),
+		IsFrozen:       int32(m.IsFrozen),
+		FrozenTime:     int32(m.FrozenTime),
+		IsClose:        int32(m.IsClose),
+		CreatedAt:      timeutil.FormatDatetime(m.CreatedAt),
+		UpdatedAt:      timeutil.FormatDatetime(m.UpdatedAt),
+		IsHm:           int32(m.IsHm),
+	}
 }
 
 // MerchantProfile 获取本人商户资料（与 MerchantStatus 数据一致，供表单查看/编辑回填）
-func (u *User) MerchantProfile(ctx context.Context, _ *web.UserMerchantProfileRequest) (*web.UserMerchantStatusResponse, error) {
-	return u.MerchantStatus(ctx, &web.UserMerchantStatusRequest{})
+func (u *User) MerchantProfile(ctx context.Context, _ *web.MerchantProfileRequest) (*web.MerchantStatusResponse, error) {
+	return u.MerchantStatus(ctx, &web.MerchantStatusRequest{})
 }

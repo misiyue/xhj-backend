@@ -98,7 +98,7 @@ func (u *User) merchantChatSessionUnread(ctx context.Context, uid, sessionID int
 }
 
 // MerchantChatSend 发送商户 C2C 消息（首条自动创建 merchant_session）
-func (u *User) MerchantChatSend(ctx context.Context, in *web.UserMerchantChatSendRequest) (*web.UserMerchantChatSendResponse, error) {
+func (u *User) MerchantChatSend(ctx context.Context, in *web.MerchantChatSendRequest) (*web.MerchantChatSendResponse, error) {
 	if u.PushMessage == nil || u.UnreadStorage == nil {
 		return nil, errorx.New(500, "消息推送或未读组件未初始化")
 	}
@@ -186,7 +186,7 @@ func (u *User) MerchantChatSend(ctx context.Context, in *web.UserMerchantChatSen
 	})
 	u.UnreadStorage.Incr(ctx, peer, entity.ChatMerchantMode, sess.Id)
 
-	return &web.UserMerchantChatSendResponse{
+	return &web.MerchantChatSendResponse{
 		MessageDbId: row.Id,
 		MsgId:       row.MsgId,
 		SessionId:   int32(sess.Id),
@@ -194,7 +194,7 @@ func (u *User) MerchantChatSend(ctx context.Context, in *web.UserMerchantChatSen
 }
 
 // MerchantChatUnread 指定订单（order_no）对应商户会话的未读数；会话按订单主键 id 与 merchant_session.tags 关联，买卖双方即买家与任务发布人（卖方）
-func (u *User) MerchantChatUnread(ctx context.Context, in *web.UserMerchantChatUnreadRequest) (*web.UserMerchantChatUnreadResponse, error) {
+func (u *User) MerchantChatUnread(ctx context.Context, in *web.MerchantChatUnreadRequest) (*web.MerchantChatUnreadResponse, error) {
 	if u.UnreadStorage == nil {
 		return nil, errorx.New(500, "未读组件未初始化")
 	}
@@ -213,22 +213,22 @@ func (u *User) MerchantChatUnread(ctx context.Context, in *web.UserMerchantChatU
 		return nil, err
 	}
 	if sess == nil {
-		return &web.UserMerchantChatUnreadResponse{TotalUnread: 0}, nil
+		return &web.MerchantChatUnreadResponse{TotalUnread: 0}, nil
 	}
 	n := u.UnreadStorage.Get(ctx, uid, entity.ChatMerchantMode, sess.Id)
-	return &web.UserMerchantChatUnreadResponse{TotalUnread: int32(n)}, nil
+	return &web.MerchantChatUnreadResponse{TotalUnread: int32(n)}, nil
 }
 
 // MerchantChatSessionList 商户对话列表（无分页，按更新时间倒序）。
 // 数据来自 merchant_session：inviter_id 或 friend_id 为当前用户且 status=展示。
-func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.UserMerchantChatSessionListRequest) (*web.UserMerchantChatSessionListResponse, error) {
+func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.MerchantChatSessionListRequest) (*web.MerchantChatSessionListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	rows, err := u.MerchantSessionRepo.ListVisibleByUser(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
-	out := &web.UserMerchantChatSessionListResponse{Items: make([]*web.UserMerchantChatSessionItem, 0, len(rows))}
+	out := &web.MerchantChatSessionListResponse{Items: make([]*web.MerchantChatSessionItem, 0, len(rows))}
 	for i := range rows {
 		oid, _ := strconv.Atoi(strings.TrimSpace(rows[i].Tags))
 		peerID := merchantChatPeerUserID(&rows[i], uid)
@@ -242,7 +242,7 @@ func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.UserMerchantC
 		if lm, err := u.MerchantMessageRepo.FindLatestBySession(ctx, rows[i].Id); err == nil && lm != nil {
 			preview = merchantChatExtraPreview(lm.Extra)
 		}
-		out.Items = append(out.Items, &web.UserMerchantChatSessionItem{
+		out.Items = append(out.Items, &web.MerchantChatSessionItem{
 			SessionId:    int32(rows[i].Id),
 			OrderId:      int32(oid),
 			PeerUserId:   int32(peerID),
@@ -257,7 +257,7 @@ func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.UserMerchantC
 }
 
 // MerchantChatMessageList 会话内消息分页（id 倒序，最新在前）
-func (u *User) MerchantChatMessageList(ctx context.Context, in *web.UserMerchantChatMessageListRequest) (*web.UserMerchantChatMessageListResponse, error) {
+func (u *User) MerchantChatMessageList(ctx context.Context, in *web.MerchantChatMessageListRequest) (*web.MerchantChatMessageListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	sid := int(in.GetSessionId())
@@ -273,10 +273,10 @@ func (u *User) MerchantChatMessageList(ctx context.Context, in *web.UserMerchant
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*web.UserMerchantChatMessageItem, 0, len(rows))
+	items := make([]*web.MerchantChatMessageItem, 0, len(rows))
 	for i := range rows {
 		r := &rows[i]
-		items = append(items, &web.UserMerchantChatMessageItem{
+		items = append(items, &web.MerchantChatMessageItem{
 			Id:         r.Id,
 			MsgId:      r.MsgId,
 			OrgMsgId:   r.OrgMsgId,
@@ -297,11 +297,11 @@ func (u *User) MerchantChatMessageList(ctx context.Context, in *web.UserMerchant
 	if total > 1<<31-1 {
 		tot = 1<<31 - 1
 	}
-	return &web.UserMerchantChatMessageListResponse{Items: items, Total: tot}, nil
+	return &web.MerchantChatMessageListResponse{Items: items, Total: tot}, nil
 }
 
 // MerchantChatClearUnread 清除当前用户在指定商户会话下的未读计数（Redis），并推送 im.session.unread.cleared（talk_mode=3，receiver_id 为 session_id）
-func (u *User) MerchantChatClearUnread(ctx context.Context, in *web.UserMerchantChatClearUnreadRequest) (*web.UserMerchantChatClearUnreadResponse, error) {
+func (u *User) MerchantChatClearUnread(ctx context.Context, in *web.MerchantChatClearUnreadRequest) (*web.MerchantChatClearUnreadResponse, error) {
 	if u.UnreadStorage == nil {
 		return nil, errorx.New(500, "未读组件未初始化")
 	}
@@ -327,5 +327,5 @@ func (u *User) MerchantChatClearUnread(ctx context.Context, in *web.UserMerchant
 			}),
 		})
 	}
-	return &web.UserMerchantChatClearUnreadResponse{}, nil
+	return &web.MerchantChatClearUnreadResponse{}, nil
 }

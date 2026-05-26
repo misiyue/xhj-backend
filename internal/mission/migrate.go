@@ -93,6 +93,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.MerchantTask{},
 		&model.MerchantPaytype{},
 		&model.MerchantOrder{},
+		&model.MerchantHmOrder{},
 		&model.MerchantSession{},
 		&model.MerchantMessage{},
 	)

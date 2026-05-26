@@ -2,13 +2,19 @@ package v1
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"math"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gzydong/go-chat/api/pb/web/v1"
+	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/external/hmpay"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
@@ -18,32 +24,53 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
-func merchantOrderToListProto(o *model.MerchantOrder) *web.UserMerchantOrderListItem {
+func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *web.MerchantOrderListItem {
 	if o == nil {
 		return nil
 	}
-	return &web.UserMerchantOrderListItem{
-		Id:        int32(o.Id),
-		OrderId:   o.OrderId,
-		BuyerId:   int32(o.BuyerId),
-		SalerId:   int32(o.SalerId),
-		Amount:    o.Amount,
-		TaskId:    int32(o.TaskId),
-		Counts:    o.Counts,
-		PayType:   o.PayType,
-		BuyType:   int32(o.BuyType),
-		Status:    int32(o.Status),
-		IsCancel:  int32(o.IsCancel),
-		IsAppeal:  int32(o.IsAppeal),
-		CreatedAt: timeutil.FormatDatetime(o.CreatedAt),
+	return &web.MerchantOrderListItem{
+		Id:               int32(o.Id),
+		OrderId:          o.OrderId,
+		BuyerId:          int32(o.BuyerId),
+		SalerId:          int32(o.SalerId),
+		Amount:           o.Amount,
+		TaskId:           int32(o.TaskId),
+		Counts:           o.Counts,
+		PayType:          o.PayType,
+		BuyType:          int32(o.BuyType),
+		Status:           int32(o.Status),
+		IsCancel:         int32(o.IsCancel),
+		IsAppeal:         int32(o.IsAppeal),
+		CreatedAt:        timeutil.FormatDatetime(o.CreatedAt),
+		Wronger:          int32(o.Wronger),
+		Judge:            o.Judge,
+		JudgeTime:        timeutil.FormatUnixSecond(o.JudgeTime),
+		MerchantNickname: merchantNickname,
 	}
 }
 
-func merchantOrderToProto(o *model.MerchantOrder) *web.UserMerchantOrderItem {
+func merchantOrderSalerIDs(rows []model.MerchantOrder) []int {
+	seen := make(map[int]struct{}, len(rows))
+	ids := make([]int, 0, len(rows))
+	for i := range rows {
+		uid := rows[i].SalerId
+		if uid <= 0 {
+			continue
+		}
+		if _, ok := seen[uid]; ok {
+			continue
+		}
+		seen[uid] = struct{}{}
+		ids = append(ids, uid)
+	}
+	return ids
+}
+
+func merchantOrderToProto(o *model.MerchantOrder) *web.MerchantOrderItem {
 	if o == nil {
 		return nil
 	}
-	return &web.UserMerchantOrderItem{
+	return &web.MerchantOrderItem{
 		Id:           int32(o.Id),
 		OrderId:      o.OrderId,
 		BuyerId:      int32(o.BuyerId),
@@ -66,7 +93,7 @@ func merchantOrderToProto(o *model.MerchantOrder) *web.UserMerchantOrderItem {
 		CancelTime:   int32(o.CancelTime),
 		Wronger:      int32(o.Wronger),
 		Judge:        o.Judge,
-		JudgeTime:    int32(o.JudgeTime),
+		JudgeTime:    timeutil.FormatUnixSecond(o.JudgeTime),
 		CreatedAt:    timeutil.FormatDatetime(o.CreatedAt),
 		UpdatedAt:    timeutil.FormatDatetime(o.UpdatedAt),
 	}
@@ -83,7 +110,7 @@ func (u *User) assertOrderParticipant(o *model.MerchantOrder, uid int) error {
 }
 
 // MerchantOrderCreate 创建订单（可购买不超过挂单剩余 count 的任意数量，事务内扣减 count）
-func (u *User) MerchantOrderCreate(ctx context.Context, in *web.UserMerchantOrderCreateRequest) (*web.UserMerchantOrderCreateResponse, error) {
+func (u *User) MerchantOrderCreate(ctx context.Context, in *web.MerchantOrderCreateRequest) (*web.MerchantOrderCreateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	buyerID := int(session.UserId)
 	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), strings.TrimSpace(in.GetPayType()), int(in.GetBuyType()))
@@ -102,11 +129,11 @@ func (u *User) MerchantOrderCreate(ctx context.Context, in *web.UserMerchantOrde
 			return nil, err
 		}
 	}
-	return &web.UserMerchantOrderCreateResponse{Id: int32(row.Id), OrderId: row.OrderId}, nil
+	return &web.MerchantOrderCreateResponse{Id: int32(row.Id), OrderId: row.OrderId}, nil
 }
 
 // MerchantOrderDetail 订单详情（买卖双方）
-func (u *User) MerchantOrderDetail(ctx context.Context, in *web.UserMerchantOrderDetailRequest) (*web.UserMerchantOrderItem, error) {
+func (u *User) MerchantOrderDetail(ctx context.Context, in *web.MerchantOrderDetailRequest) (*web.MerchantOrderItem, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	o, err := u.MerchantOrderRepo.FindByID(ctx, int(in.GetId()))
@@ -122,8 +149,8 @@ func (u *User) MerchantOrderDetail(ctx context.Context, in *web.UserMerchantOrde
 	return merchantOrderToProto(o), nil
 }
 
-// MerchantOrderCancel 取消订单（买卖双方在待支付/已支付阶段均可发起；挂单恢复待交易）
-func (u *User) MerchantOrderCancel(ctx context.Context, in *web.UserMerchantOrderCancelRequest) (*web.UserMerchantOrderActionResponse, error) {
+// MerchantOrderCancel 取消订单：买家仅可取消本人待支付订单；卖家可取消待支付/已支付订单
+func (u *User) MerchantOrderCancel(ctx context.Context, in *web.MerchantOrderCancelRequest) (*web.MerchantOrderActionResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	o, err := u.MerchantOrderRepo.FindByID(ctx, int(in.GetId()))
@@ -136,18 +163,28 @@ func (u *User) MerchantOrderCancel(ctx context.Context, in *web.UserMerchantOrde
 	if err := u.assertOrderParticipant(o, uid); err != nil {
 		return nil, err
 	}
-	err = u.MerchantOrderRepo.CancelOrderTx(ctx, o.Id, int(in.GetCancelId()), strings.TrimSpace(in.GetRemark()))
+	asBuyer := o.BuyerId == uid
+	if asBuyer && o.Status != model.MerchantOrderStatusPendingPay {
+		return nil, errorx.New(400, "买家仅可取消未支付订单")
+	}
+	if asBuyer && o.IsCancel != 0 {
+		return nil, errorx.New(400, "订单已取消")
+	}
+	err = u.MerchantOrderRepo.CancelOrderTx(ctx, o.Id, int(in.GetCancelId()), strings.TrimSpace(in.GetRemark()), asBuyer)
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderAlreadyCancelled):
 			return nil, errorx.New(400, "订单已取消")
 		case errors.Is(err, repo.ErrMerchantOrderNotCancellable):
+			if asBuyer {
+				return nil, errorx.New(400, "买家仅可取消未支付订单")
+			}
 			return nil, errorx.New(400, "当前订单状态不可取消")
 		default:
 			return nil, err
 		}
 	}
-	return &web.UserMerchantOrderActionResponse{}, nil
+	return &web.MerchantOrderActionResponse{}, nil
 }
 
 // parseMerchantOrderStatusFilter 解析逗号分隔的订单状态，如 "0,1,3"
@@ -183,7 +220,7 @@ func parseMerchantOrderStatusFilter(raw string) ([]int, error) {
 }
 
 // MerchantOrderList 订单分页列表，direct：1 买家（默认），2 卖家；status 逗号分隔筛选
-func (u *User) MerchantOrderList(ctx context.Context, in *web.UserMerchantOrderListRequest) (*web.UserMerchantOrderListResponse, error) {
+func (u *User) MerchantOrderList(ctx context.Context, in *web.MerchantOrderListRequest) (*web.MerchantOrderListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	direct := int(in.GetDirect())
@@ -203,19 +240,20 @@ func (u *User) MerchantOrderList(ctx context.Context, in *web.UserMerchantOrderL
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*web.UserMerchantOrderListItem, 0, len(rows))
+	items := make([]*web.MerchantOrderListItem, 0, len(rows))
+	nickMap, _ := u.merchantNicknamesByUserIDs(ctx, merchantOrderSalerIDs(rows))
 	for i := range rows {
-		items = append(items, merchantOrderToListProto(&rows[i]))
+		items = append(items, merchantOrderToListProto(&rows[i], nickMap[rows[i].SalerId]))
 	}
 	tot := int32(total)
 	if total > math.MaxInt32 {
 		tot = math.MaxInt32
 	}
-	return &web.UserMerchantOrderListResponse{Items: items, Total: tot}, nil
+	return &web.MerchantOrderListResponse{Items: items, Total: tot}, nil
 }
 
 // MerchantOrderConfirmPay 买方确认已支付（上传凭证）
-func (u *User) MerchantOrderConfirmPay(ctx context.Context, in *web.UserMerchantOrderConfirmPayRequest) (*web.UserMerchantOrderActionResponse, error) {
+func (u *User) MerchantOrderConfirmPay(ctx context.Context, in *web.MerchantOrderConfirmPayRequest) (*web.MerchantOrderActionResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	o, err := u.MerchantOrderRepo.FindByID(ctx, int(in.GetId()))
@@ -243,11 +281,11 @@ func (u *User) MerchantOrderConfirmPay(ctx context.Context, in *web.UserMerchant
 	if err != nil {
 		return nil, err
 	}
-	return &web.UserMerchantOrderActionResponse{}, nil
+	return &web.MerchantOrderActionResponse{}, nil
 }
 
 // MerchantOrderUrge 催单（买卖家均可；仅记录日志，不改变订单状态）
-func (u *User) MerchantOrderUrge(ctx context.Context, in *web.UserMerchantOrderIdRequest) (*web.UserMerchantOrderActionResponse, error) {
+func (u *User) MerchantOrderUrge(ctx context.Context, in *web.MerchantOrderIdRequest) (*web.MerchantOrderActionResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	o, err := u.MerchantOrderRepo.FindByID(ctx, int(in.GetId()))
@@ -267,7 +305,7 @@ func (u *User) MerchantOrderUrge(ctx context.Context, in *web.UserMerchantOrderI
 		return nil, errorx.New(400, "当前状态无需催单")
 	}
 	logger.Infof("merchant_order urge: order_id=%d user_id=%d role=%s", o.Id, uid, urgeRoleLabel(o, uid))
-	return &web.UserMerchantOrderActionResponse{}, nil
+	return &web.MerchantOrderActionResponse{}, nil
 }
 
 func urgeRoleLabel(o *model.MerchantOrder, uid int) string {
@@ -278,16 +316,16 @@ func urgeRoleLabel(o *model.MerchantOrder, uid int) string {
 }
 
 // MerchantOrderAppealSeller 卖家（商户）发起申诉
-func (u *User) MerchantOrderAppealSeller(ctx context.Context, in *web.UserMerchantOrderAppealRequest) (*web.UserMerchantOrderActionResponse, error) {
+func (u *User) MerchantOrderAppealSeller(ctx context.Context, in *web.MerchantOrderAppealRequest) (*web.MerchantOrderActionResponse, error) {
 	return u.merchantOrderAppeal(ctx, in, model.MerchantOrderAppealSideSeller)
 }
 
 // MerchantOrderAppealBuyer 买家发起申诉
-func (u *User) MerchantOrderAppealBuyer(ctx context.Context, in *web.UserMerchantOrderAppealRequest) (*web.UserMerchantOrderActionResponse, error) {
+func (u *User) MerchantOrderAppealBuyer(ctx context.Context, in *web.MerchantOrderAppealRequest) (*web.MerchantOrderActionResponse, error) {
 	return u.merchantOrderAppeal(ctx, in, model.MerchantOrderAppealSideBuyer)
 }
 
-func (u *User) merchantOrderAppeal(ctx context.Context, in *web.UserMerchantOrderAppealRequest, side int) (*web.UserMerchantOrderActionResponse, error) {
+func (u *User) merchantOrderAppeal(ctx context.Context, in *web.MerchantOrderAppealRequest, side int) (*web.MerchantOrderActionResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	o, err := u.MerchantOrderRepo.FindByID(ctx, int(in.GetId()))
@@ -303,24 +341,196 @@ func (u *User) merchantOrderAppeal(ctx context.Context, in *web.UserMerchantOrde
 	if side == model.MerchantOrderAppealSideSeller && o.SalerId != uid {
 		return nil, errorx.New(403, "仅卖家可发起卖家申诉")
 	}
-	if o.IsCancel != 0 {
-		return nil, errorx.New(400, "订单已取消，不可申诉")
+	err = u.MerchantOrderRepo.AppealOrderTx(ctx, o.Id, side, strings.TrimSpace(in.GetAppealReason()))
+	if err != nil {
+		switch {
+		case errors.Is(err, repo.ErrMerchantOrderAlreadyAppeal):
+			return nil, errorx.New(400, "该订单已被申诉，不可重复申诉")
+		case errors.Is(err, repo.ErrMerchantOrderNotAppealable):
+			return nil, errorx.New(400, "仅已支付且未申诉的订单可发起申诉")
+		default:
+			return nil, err
+		}
 	}
-	if o.Status != model.MerchantOrderStatusPendingPay && o.Status != model.MerchantOrderStatusPaid {
-		return nil, errorx.New(400, "当前订单状态不可申诉")
+	return &web.MerchantOrderActionResponse{}, nil
+}
+
+// MerchantOrderPay 汇美统一下单：卖家须已开通汇美；已有 pay_url 则直接返回
+func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayRequest) (*web.MerchantOrderPayResponse, error) {
+	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	uid := int(session.UserId)
+
+	mc := u.hmpayConfig()
+	if mc == nil {
+		return nil, errorx.New(500, "汇美支付未配置")
 	}
-	if o.IsAppeal != 0 {
-		return nil, errorx.New(400, "订单已处于申诉中")
+	client := hmpay.GetClient()
+	if client == nil {
+		return nil, errorx.New(500, "汇美支付未配置")
 	}
-	now := int(time.Now().Unix())
-	err = u.MerchantOrderRepo.UpdateByID(ctx, o.Id, map[string]any{
-		"is_appeal":      1,
-		"appeal_id":      side,
-		"appeal_time":    now,
-		"appeal_reason":  strings.TrimSpace(in.GetAppealReason()),
-	})
+
+	orderNo := strings.TrimSpace(in.GetOrderId())
+	if orderNo == "" {
+		return nil, errorx.New(400, "order_id 不能为空")
+	}
+	o, err := u.MerchantOrderRepo.FindByOrderNo(ctx, orderNo)
 	if err != nil {
 		return nil, err
 	}
-	return &web.UserMerchantOrderActionResponse{}, nil
+	if o == nil {
+		return nil, errorx.New(404, "订单不存在")
+	}
+	if o.BuyerId != uid {
+		return nil, errorx.New(403, "仅买家可发起支付")
+	}
+	if o.IsCancel != 0 {
+		return nil, errorx.New(400, "订单已取消")
+	}
+	if o.Status != model.MerchantOrderStatusPendingPay {
+		return nil, errorx.New(400, "当前订单状态不可支付")
+	}
+
+	mch, err := u.MerchantRepo.FindLatestApprovedByUserId(ctx, o.SalerId)
+	if err != nil {
+		return nil, err
+	}
+	if mch == nil || mch.IsHm != 1 {
+		return nil, errorx.New(400, "商户未开通汇美支付")
+	}
+
+	existing, err := u.MerchantHmOrderRepo.FindByOrderNo(ctx, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil && strings.TrimSpace(existing.PayURL) != "" {
+		return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL}, nil
+	}
+
+	submitAmount := formatHmAmount(o.Amount)
+	now := time.Now().Unix()
+	payType := strings.TrimSpace(mc.PayType)
+	if payType == "" {
+		payType = "106"
+	}
+	userIP := middleware.ClientIPFromContext(ctx)
+	req := &hmpay.CreateOrderRequest{
+		SubmitAmount: submitAmount,
+		OrderNo:      orderNo,
+		NotifyURL:    mc.NotifyURL,
+		ReturnURL:    strings.TrimSpace(in.GetReturnUrl()),
+		AppID:        mc.AppID,
+		Time:         now,
+		PayType:      payType,
+		UserIP:       userIP,
+	}
+	data, err := client.CreateOrder(req)
+	if err != nil {
+		return nil, errorx.New(400, err.Error())
+	}
+
+	amt, _ := strconv.ParseFloat(submitAmount, 64)
+	row := &model.MerchantHmOrder{
+		OrderNo:      orderNo,
+		LocalNo:      data.LocalNo,
+		PayURL:       data.PayURL,
+		SubmitAmount: amt,
+	}
+	if existing != nil {
+		err = u.MerchantHmOrderRepo.UpdateByOrderNo(ctx, orderNo, map[string]any{
+			"local_no":      data.LocalNo,
+			"pay_url":       data.PayURL,
+			"submit_amount": amt,
+		})
+	} else {
+		err = u.MerchantHmOrderRepo.Create(ctx, row)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &web.MerchantOrderPayResponse{PayUrl: data.PayURL}, nil
+}
+
+// MerchantOrderNotify 汇美支付回调（返回纯文本 success / fail）
+func (u *User) MerchantOrderNotify(c *gin.Context) {
+	mc := u.hmpayConfig()
+	if mc == nil {
+		c.String(200, "fail")
+		return
+	}
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.String(200, "fail")
+		return
+	}
+	var raw map[string]any
+	if err := json.Unmarshal(body, &raw); err != nil {
+		c.String(200, "fail")
+		return
+	}
+	sign, _ := raw["sign"].(string)
+	params := hmpay.ParamsFromMap(raw)
+	if !hmpay.VerifySign(params, mc.AppSecret, sign) {
+		c.String(200, "fail")
+		return
+	}
+
+	orderNo, _ := raw["order_no"].(string)
+	orderNo = strings.TrimSpace(orderNo)
+	if orderNo == "" {
+		c.String(200, "fail")
+		return
+	}
+
+	status, _ := raw["status"].(string)
+	statusText, _ := raw["status_text"].(string)
+	localNo, _ := raw["local_no"].(string)
+	payedAtStr := ""
+	if v, ok := raw["payed_at"].(string); ok {
+		payedAtStr = v
+	}
+
+	var submitAmount float64
+	switch v := raw["submit_amount"].(type) {
+	case float64:
+		submitAmount = v
+	case string:
+		submitAmount, _ = strconv.ParseFloat(v, 64)
+	}
+
+	hmUpdates := map[string]any{
+		"local_no":      strings.TrimSpace(localNo),
+		"status":        strings.TrimSpace(status),
+		"status_text":   strings.TrimSpace(statusText),
+		"submit_amount": submitAmount,
+	}
+	if t := repo.ParseHmPayedAt(payedAtStr); t != nil {
+		hmUpdates["payed_at"] = t
+	}
+
+	payTimeUnix := int(time.Now().Unix())
+	if t := repo.ParseHmPayedAt(payedAtStr); t != nil {
+		payTimeUnix = int(t.Unix())
+	}
+
+	ctx := c.Request.Context()
+	if err := u.MerchantHmOrderRepo.ApplyNotifyAndMarkOrderPaid(ctx, orderNo, hmUpdates, payTimeUnix); err != nil {
+		c.String(200, "fail")
+		return
+	}
+	c.String(200, "success")
+}
+
+func (u *User) hmpayConfig() *config.Hmpay {
+	if u.Config == nil || u.Config.Hmpay == nil {
+		return nil
+	}
+	m := u.Config.Hmpay
+	if strings.TrimSpace(m.OrderURL) == "" || strings.TrimSpace(m.AppID) == "" || strings.TrimSpace(m.AppSecret) == "" {
+		return nil
+	}
+	return m
+}
+
+func formatHmAmount(amount float64) string {
+	return fmt.Sprintf("%.2f", amount)
 }

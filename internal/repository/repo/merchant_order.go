@@ -20,7 +20,9 @@ var (
 	ErrMerchantOrderInsufficientCount = errors.New("merchant_order: purchase quantity exceeds remaining listing quantity")
 	ErrMerchantOrderAlreadyCancelled  = errors.New("merchant_order: already cancelled")
 	ErrMerchantOrderNotCancellable    = errors.New("merchant_order: not cancellable")
-	ErrMerchantOrderSkipExpire = errors.New("merchant_order: skip expire cancel")
+	ErrMerchantOrderSkipExpire     = errors.New("merchant_order: skip expire cancel")
+	ErrMerchantOrderNotAppealable  = errors.New("merchant_order: not appealable")
+	ErrMerchantOrderAlreadyAppeal  = errors.New("merchant_order: already in appeal")
 )
 
 type MerchantOrder struct {
@@ -173,11 +175,45 @@ func cancelOrderInTx(tx *gorm.DB, o *model.MerchantOrder, cancelID int, remark s
 	return restoreMerchantTaskCountOnCancel(tx, o.TaskId, o.Counts)
 }
 
-// CancelOrderTx 手动取消：待支付/已支付均可；订单状态更新与 count 回滚同一事务
-func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID int, remark string) error {
+// AppealOrderTx 发起申诉：仅已支付、未取消、未申诉的订单（事务 + 条件更新防并发重复申诉）
+func (r *MerchantOrder) AppealOrderTx(ctx context.Context, orderID int, side int, reason string) error {
+	now := int(time.Now().Unix())
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var o model.MerchantOrder
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", orderID).First(&o).Error; err != nil {
+			return err
+		}
+		if o.IsCancel != 0 || o.Status != model.MerchantOrderStatusPaid {
+			return ErrMerchantOrderNotAppealable
+		}
+		if o.IsAppeal != 0 {
+			return ErrMerchantOrderAlreadyAppeal
+		}
+		res := tx.Model(&model.MerchantOrder{}).
+			Where("id = ? AND is_cancel = 0 AND is_appeal = 0 AND status = ?", orderID, model.MerchantOrderStatusPaid).
+			Updates(map[string]any{
+				"is_appeal":     1,
+				"appeal_id":     side,
+				"appeal_time":   now,
+				"appeal_reason": reason,
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return ErrMerchantOrderAlreadyAppeal
+		}
+		return nil
+	})
+}
+
+// CancelOrderTx 取消订单；asBuyer=true 时仅允许待支付，否则买卖家均可取消待支付/已支付
+func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID int, remark string, asBuyer bool) error {
 	allowed := map[int]struct{}{
 		model.MerchantOrderStatusPendingPay: {},
-		model.MerchantOrderStatusPaid:       {},
+	}
+	if !asBuyer {
+		allowed[model.MerchantOrderStatusPaid] = struct{}{}
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var o model.MerchantOrder
@@ -190,7 +226,8 @@ func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID
 
 const (
 	MerchantOrderUnpaidCancelTimeout = 30 * time.Minute
-	MerchantOrderAutoCancelRemark    = "超时未支付自动取消"
+	MerchantOrderExpireCancelID      = -1
+	MerchantOrderExpireCancelRemark  = "订单过期关闭"
 )
 
 // cancelUnpaidExpiredInTx 定时任务用：事务内锁单并校验「待支付 + 已超时」后取消并回滚 count
@@ -238,7 +275,7 @@ func (r *MerchantOrder) CancelExpiredUnpaid(ctx context.Context, timeout time.Du
 		}
 		for _, id := range ids {
 			err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-				return cancelUnpaidExpiredInTx(tx, id, notAfter, 0, MerchantOrderAutoCancelRemark)
+				return cancelUnpaidExpiredInTx(tx, id, notAfter, MerchantOrderExpireCancelID, MerchantOrderExpireCancelRemark)
 			})
 			if err != nil {
 				if errors.Is(err, ErrMerchantOrderSkipExpire) {

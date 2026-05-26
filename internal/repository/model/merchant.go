@@ -29,6 +29,7 @@ type Merchant struct {
 	IsFrozen   int       `gorm:"column:is_frozen;default:0" json:"is_frozen"`
 	FrozenTime int       `gorm:"column:frozen_time;default:0" json:"frozen_time"`
 	IsClose    int       `gorm:"column:is_close;default:0" json:"is_close"`
+	IsHm       int       `gorm:"column:is_hm;not null;default:0" json:"is_hm"` // 是否汇美商户：0-否，1-是
 	CreatedAt  time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt  time.Time `gorm:"column:updated_at" json:"updated_at"`
 }
