@@ -207,13 +207,11 @@ func (r *MerchantOrder) AppealOrderTx(ctx context.Context, orderID int, side int
 	})
 }
 
-// CancelOrderTx 取消订单；asBuyer=true 时仅允许待支付，否则买卖家均可取消待支付/已支付
-func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID int, remark string, asBuyer bool) error {
+// CancelOrderTx 取消订单（待支付/已支付）
+func (r *MerchantOrder) CancelOrderTx(ctx context.Context, orderID int, cancelID int, remark string) error {
 	allowed := map[int]struct{}{
 		model.MerchantOrderStatusPendingPay: {},
-	}
-	if !asBuyer {
-		allowed[model.MerchantOrderStatusPaid] = struct{}{}
+		model.MerchantOrderStatusPaid:       {},
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var o model.MerchantOrder

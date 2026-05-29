@@ -70,7 +70,7 @@ type IUserHandler interface {
 	MerchantOrderAppealSeller(ctx context.Context, in *MerchantOrderAppealRequest) (*MerchantOrderActionResponse, error)
 
 	MerchantOrderAppealBuyer(ctx context.Context, in *MerchantOrderAppealRequest) (*MerchantOrderActionResponse, error)
-	// 汇美支付：获取支付链接
+	// 汇美支付：获取支付链接（买家）
 	MerchantOrderPay(ctx context.Context, in *MerchantOrderPayRequest) (*MerchantOrderPayResponse, error)
 	// 商户订单 C2C 对话：发消息（首条自动建 merchant_session，WebSocket event: im.message.c2c）
 	MerchantChatSend(ctx context.Context, in *MerchantChatSendRequest) (*MerchantChatSendResponse, error)
@@ -151,15 +151,14 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.EmailUpdate(ctx.Request.Context(), &in)
 	}))
 
-	merchantApply := func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in MerchantApplyRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
+
 		return handler.MerchantApply(ctx.Request.Context(), &in)
-	}
-	r.POST("/api/v1/merchant/apply", interceptor.Do(merchantApply))
-	r.POST("/api/v1/user/merchant-apply", interceptor.Do(merchantApply))
+	}))
 
 	r.POST("/api/v1/merchant/status", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in MerchantStatusRequest

@@ -236,4 +236,5 @@ hmpay:
   app_id: "GL"
   app_secret: "JC8WHcGHPZ4tQpAznQpnprQ6wDHsmpf6zYtHCw4szmJpMXD8rmcpNn54cZmPFidc"
   notify_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/notify"
+  pay_type: "106"
 

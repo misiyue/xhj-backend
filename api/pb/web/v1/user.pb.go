@@ -935,10 +935,8 @@ type MerchantStatusResponse struct {
 	IsClose        int32                  `protobuf:"varint,17,opt,name=is_close,json=isClose,proto3" json:"is_close,omitempty"`
 	CreatedAt      string                 `protobuf:"bytes,18,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt      string                 `protobuf:"bytes,19,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	// 是否汇美商户：0-否，1-是
-	IsHm          int32 `protobuf:"varint,20,opt,name=is_hm,json=isHm,proto3" json:"is_hm,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *MerchantStatusResponse) Reset() {
@@ -1102,13 +1100,6 @@ func (x *MerchantStatusResponse) GetUpdatedAt() string {
 		return x.UpdatedAt
 	}
 	return ""
-}
-
-func (x *MerchantStatusResponse) GetIsHm() int32 {
-	if x != nil {
-		return x.IsHm
-	}
-	return 0
 }
 
 type MerchantTaskItem struct {
@@ -4359,7 +4350,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x15MerchantApplyResponse\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\"\x17\n" +
 	"\x15MerchantStatusRequest\"\x18\n" +
-	"\x16MerchantProfileRequest\"\xbb\x04\n" +
+	"\x16MerchantProfileRequest\"\xa6\x04\n" +
 	"\x16MerchantStatusResponse\x12-\n" +
 	"\x0fhas_application\x18\x01 \x01(\bB\x04\xe2A\x01\x02R\x0ehasApplication\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x05R\x02id\x12\x1a\n" +
@@ -4385,8 +4376,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x12 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x13 \x01(\tR\tupdatedAt\x12\x13\n" +
-	"\x05is_hm\x18\x14 \x01(\x05R\x04isHm\"\xda\x03\n" +
+	"updated_at\x18\x13 \x01(\tR\tupdatedAt\"\xda\x03\n" +
 	"\x10MerchantTaskItem\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x1d\n" +
 	"\auser_id\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x06userId\x12)\n" +

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"os"
 	"runtime"
 	"time"
 
@@ -35,20 +36,67 @@ func CreateFileWriter(filePath string) io.Writer {
 	}
 }
 
-func Init(filePath string, level slog.Level, topic string) {
-	handler := slog.NewJSONHandler(CreateFileWriter(filePath), &slog.HandlerOptions{
-		AddSource: true,
-		Level:     level,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			if a.Key == slog.TimeKey {
-				a.Value = slog.StringValue(a.Value.Time().Format("2006-01-02 15:04:05.000"))
-			}
+func formatTimeAttr(groups []string, a slog.Attr) slog.Attr {
+	if a.Key == slog.TimeKey {
+		a.Value = slog.StringValue(a.Value.Time().Format("2006-01-02 15:04:05.000"))
+	}
+	return a
+}
 
-			return a
-		},
-	})
-
+// Init 初始化日志；console 为 true 时同时输出到标准输出（便于本地调试）。
+func Init(filePath string, level slog.Level, topic string, console bool) {
+	opts := &slog.HandlerOptions{
+		AddSource:   true,
+		Level:       level,
+		ReplaceAttr: formatTimeAttr,
+	}
+	fileHandler := slog.NewJSONHandler(CreateFileWriter(filePath), opts)
+	var handler slog.Handler = fileHandler
+	if console {
+		handler = &multiHandler{handlers: []slog.Handler{
+			fileHandler,
+			slog.NewTextHandler(os.Stdout, opts),
+		}}
+	}
 	out = slog.New(handler).With("topic", topic)
+}
+
+type multiHandler struct {
+	handlers []slog.Handler
+}
+
+func (m *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	for _, h := range m.handlers {
+		if h.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *multiHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, h := range m.handlers {
+		if h.Enabled(ctx, r.Level) {
+			_ = h.Handle(ctx, r.Clone())
+		}
+	}
+	return nil
+}
+
+func (m *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	hs := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		hs[i] = h.WithAttrs(attrs)
+	}
+	return &multiHandler{handlers: hs}
+}
+
+func (m *multiHandler) WithGroup(name string) slog.Handler {
+	hs := make([]slog.Handler, len(m.handlers))
+	for i, h := range m.handlers {
+		hs[i] = h.WithGroup(name)
+	}
+	return &multiHandler{handlers: hs}
 }
 
 func InfofContext(ctx context.Context, format string, args ...any) {

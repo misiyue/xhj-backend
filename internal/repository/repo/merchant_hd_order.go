@@ -10,20 +10,20 @@ import (
 	"gorm.io/gorm"
 )
 
-type MerchantHmOrder struct {
+type MerchantHdOrder struct {
 	db *gorm.DB
 }
 
-func NewMerchantHmOrder(db *gorm.DB) *MerchantHmOrder {
-	return &MerchantHmOrder{db: db}
+func NewMerchantHdOrder(db *gorm.DB) *MerchantHdOrder {
+	return &MerchantHdOrder{db: db}
 }
 
-func (r *MerchantHmOrder) FindByOrderNo(ctx context.Context, orderNo string) (*model.MerchantHmOrder, error) {
+func (r *MerchantHdOrder) FindByOrderNo(ctx context.Context, orderNo string) (*model.MerchantHdOrder, error) {
 	orderNo = strings.TrimSpace(orderNo)
 	if orderNo == "" {
 		return nil, nil
 	}
-	var row model.MerchantHmOrder
+	var row model.MerchantHdOrder
 	err := r.db.WithContext(ctx).Where("order_no = ?", orderNo).First(&row).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -34,29 +34,29 @@ func (r *MerchantHmOrder) FindByOrderNo(ctx context.Context, orderNo string) (*m
 	return &row, nil
 }
 
-func (r *MerchantHmOrder) Create(ctx context.Context, row *model.MerchantHmOrder) error {
+func (r *MerchantHdOrder) Create(ctx context.Context, row *model.MerchantHdOrder) error {
 	return r.db.WithContext(ctx).Create(row).Error
 }
 
-func (r *MerchantHmOrder) UpdateByOrderNo(ctx context.Context, orderNo string, updates map[string]any) error {
+func (r *MerchantHdOrder) UpdateByOrderNo(ctx context.Context, orderNo string, updates map[string]any) error {
 	orderNo = strings.TrimSpace(orderNo)
 	if orderNo == "" {
 		return nil
 	}
-	return r.db.WithContext(ctx).Model(&model.MerchantHmOrder{}).Where("order_no = ?", orderNo).Updates(updates).Error
+	return r.db.WithContext(ctx).Model(&model.MerchantHdOrder{}).Where("order_no = ?", orderNo).Updates(updates).Error
 }
 
-// ApplyNotifyAndMarkOrderPaid 更新汇美订单；支付成功时同步 merchant_order 为已支付（幂等）
-func (r *MerchantHmOrder) ApplyNotifyAndMarkOrderPaid(ctx context.Context, orderNo string, hmUpdates map[string]any, payTimeUnix int) error {
+// ApplyNotifyAndMarkOrderPaid 更新宏达支付订单；支付成功时同步 merchant_order 为已支付（幂等）
+func (r *MerchantHdOrder) ApplyNotifyAndMarkOrderPaid(ctx context.Context, orderNo string, hdUpdates map[string]any, payTimeUnix int) error {
 	orderNo = strings.TrimSpace(orderNo)
 	if orderNo == "" {
 		return errors.New("order_no empty")
 	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.MerchantHmOrder{}).Where("order_no = ?", orderNo).Updates(hmUpdates).Error; err != nil {
+		if err := tx.Model(&model.MerchantHdOrder{}).Where("order_no = ?", orderNo).Updates(hdUpdates).Error; err != nil {
 			return err
 		}
-		status, _ := hmUpdates["status"].(string)
+		status, _ := hdUpdates["status"].(string)
 		if status != "success" {
 			return nil
 		}
@@ -81,8 +81,8 @@ func (r *MerchantHmOrder) ApplyNotifyAndMarkOrderPaid(ctx context.Context, order
 	})
 }
 
-// ParsePayedAt 解析回调支付时间
-func ParseHmPayedAt(s string) *time.Time {
+// ParseHdPayedAt 解析回调支付时间
+func ParseHdPayedAt(s string) *time.Time {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return nil

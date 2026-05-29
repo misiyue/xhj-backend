@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -48,6 +49,19 @@ func New(filename string) *Config {
 	var conf Config
 	if err := yaml.Unmarshal(content, &conf); err != nil {
 		panic(fmt.Sprintf("解析 config.yaml 读取错误: %v", err))
+	}
+
+	// 兼容旧配置键 merchant（已更名为 hmpay）
+	if conf.Hmpay == nil {
+		var legacy struct {
+			Merchant *Hmpay `yaml:"merchant"`
+		}
+		if err := yaml.Unmarshal(content, &legacy); err == nil && legacy.Merchant != nil {
+			conf.Hmpay = legacy.Merchant
+		}
+	}
+	if conf.Hmpay != nil && strings.TrimSpace(conf.Hmpay.PayType) == "" {
+		conf.Hmpay.PayType = HmpayDefaultPayType
 	}
 
 	// 如果没有配置安全选项，使用默认配置

@@ -64,20 +64,20 @@ func merchantTaskToProto(t *model.MerchantTask, merchantNickname string) *web.Me
 		return nil
 	}
 	return &web.MerchantTaskItem{
-		Id:                int32(t.Id),
-		UserId:            int32(t.UserId),
-		CurrencyType:      int32(t.CurrencyType),
-		Price:             t.Price,
-		SellCount:         t.Count,
-		SellTotal:         t.Total,
-		Paytype:           t.Paytype,
-		Status:            int32(t.Status),
-		IsUp:              int32(t.IsUp),
-		UpTime:            int32(t.UpTime),
-		IsDeleted:         int32(t.IsDeleted),
-		CreatedAt:         timeutil.FormatDatetime(t.CreatedAt),
-		UpdatedAt:         timeutil.FormatDatetime(t.UpdatedAt),
-		MerchantNickname:  merchantNickname,
+		Id:               int32(t.Id),
+		UserId:           int32(t.UserId),
+		CurrencyType:     int32(t.CurrencyType),
+		Price:            t.Price,
+		SellCount:        t.Count,
+		SellTotal:        t.Total,
+		Paytype:          t.Paytype,
+		Status:           int32(t.Status),
+		IsUp:             int32(t.IsUp),
+		UpTime:           int32(t.UpTime),
+		IsDeleted:        int32(t.IsDeleted),
+		CreatedAt:        timeutil.FormatDatetime(t.CreatedAt),
+		UpdatedAt:        timeutil.FormatDatetime(t.UpdatedAt),
+		MerchantNickname: merchantNickname,
 	}
 }
 

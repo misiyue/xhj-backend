@@ -403,8 +403,6 @@ message MerchantStatusResponse {
   int32 is_close = 17;
   string created_at = 18;
   string updated_at = 19;
-  // 是否汇美商户：0-否，1-是
-  int32 is_hm = 20;
 }
 
 // ---------- 商户挂售任务 merchant_task ----------

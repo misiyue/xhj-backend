@@ -34,10 +34,11 @@ type User struct {
 	MerchantTaskRepo    *repo.MerchantTask
 	MerchantPaytypeRepo *repo.MerchantPaytype
 	MerchantOrderRepo   *repo.MerchantOrder
-	MerchantHmOrderRepo *repo.MerchantHmOrder
+	MerchantHdOrderRepo *repo.MerchantHdOrder
 	MerchantSessionRepo *repo.MerchantSession
 	MerchantMessageRepo *repo.MerchantMessage
 	PushMessage         *logic.PushMessage
+	MessageStorage      *cache.MessageStorage
 	UnreadStorage       *cache.UnreadStorage
 	OrganizeRepo        *repo.Organize
 	UserService         service.IUserService
@@ -313,8 +314,32 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 	return &web.UserEmailUpdateResponse{}, nil
 }
 
-// freezeMerchantSurety 调用钱包冻结保证金；成功时返回 data.bill_id（>0 时应写入 merchant.surety_bill_id）。
-func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64) (billID int, err error) {
+func (u *User) resolveWalletUID(ctx context.Context, uid int) (int, error) {
+	user, err := u.UsersRepo.FindById(ctx, uid)
+	if err != nil || user == nil || user.Id == 0 {
+		return 0, errorx.New(400, "用户不存在")
+	}
+	if u.WalletUserRepo != nil {
+		if wu, werr := u.WalletUserRepo.FindByUserId(ctx, uid); werr == nil && wu != nil && wu.WalletUID != 0 {
+			return wu.WalletUID, nil
+		}
+	}
+	if user.Uuid != 0 {
+		return user.Uuid, nil
+	}
+	return 0, errorx.New(400, "钱包账户未就绪，无法冻结保证金")
+}
+
+func walletFreezeErr(err error) error {
+	msg := strings.TrimSpace(strings.TrimPrefix(err.Error(), "wallet api error: "))
+	if msg == "" {
+		msg = "保证金冻结失败"
+	}
+	return errorx.New(400, msg)
+}
+
+// freezeMerchantSurety 调用钱包冻结保证金，返回 bill_id 写入 merchant.surety_bill_id。
+func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64) (int, error) {
 	if surety < 500 {
 		return 0, errorx.New(400, "保证金不得低于 500 元")
 	}
@@ -322,45 +347,50 @@ func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64
 	if wc == nil {
 		return 0, errorx.New(500, "钱包服务未初始化，请检查配置 wallet.base_url 与 wallet.key")
 	}
-	user, err := u.UsersRepo.FindById(ctx, uid)
-	if err != nil || user == nil || user.Id == 0 {
-		return 0, errorx.New(400, "用户不存在")
-	}
-	walletUID := 0
-	if u.WalletUserRepo != nil {
-		if wu, werr := u.WalletUserRepo.FindByUserId(ctx, uid); werr == nil && wu != nil && wu.WalletUID != 0 {
-			walletUID = wu.WalletUID
-		}
-	}
-	if walletUID == 0 && user.Uuid != 0 {
-		walletUID = user.Uuid
-	}
-	if walletUID == 0 {
-		return 0, errorx.New(400, "钱包账户未就绪，无法冻结保证金")
-	}
-	billID, err = wc.FreezeAccount(fmt.Sprintf("%d", uid), walletUID, surety, 1)
+	walletUID, err := u.resolveWalletUID(ctx, uid)
 	if err != nil {
-		msg := strings.TrimPrefix(err.Error(), "wallet api error: ")
-		msg = strings.TrimSpace(msg)
-		if msg == "" {
-			msg = "冻结保证金失败"
-		}
-		return 0, errorx.New(400, msg)
+		return 0, err
+	}
+	billID, err := wc.FreezeAccount(fmt.Sprintf("%d", uid), walletUID, surety, 1)
+	if err != nil {
+		return 0, walletFreezeErr(err)
+	}
+	if billID <= 0 {
+		return 0, errorx.New(400, "保证金冻结失败")
 	}
 	return billID, nil
 }
 
-// merchantApplyPayload 从请求组装待写入 merchant 表的资料字段。
-func merchantApplyPayload(in *web.MerchantApplyRequest, surety float64) map[string]any {
+func newMerchantApply(uid int, in *web.MerchantApplyRequest, surety float64, billID int) *model.Merchant {
+	return &model.Merchant{
+		UserId:       uid,
+		Nickname:     strings.TrimSpace(in.GetNickname()),
+		Realname:     strings.TrimSpace(in.GetRealname()),
+		Nation:       strings.TrimSpace(in.GetNation()),
+		IdType:       int(in.GetIdType()),
+		Idcard:       strings.TrimSpace(in.GetIdcard()),
+		Image:        strings.TrimSpace(in.GetImage()),
+		Backimage:    strings.TrimSpace(in.GetBackImage()),
+		Surety:       surety,
+		SuretyBillId: billID,
+		Status:       model.MerchantStatusPending,
+		Reason:       "",
+	}
+}
+
+func merchantApplyUpdates(rec *model.Merchant) map[string]any {
 	return map[string]any{
-		"nickname":  strings.TrimSpace(in.GetNickname()),
-		"realname":  strings.TrimSpace(in.GetRealname()),
-		"nation":    strings.TrimSpace(in.GetNation()),
-		"id_type":   int(in.GetIdType()),
-		"idcard":    strings.TrimSpace(in.GetIdcard()),
-		"image":     strings.TrimSpace(in.GetImage()),
-		"backimage": strings.TrimSpace(in.GetBackImage()),
-		"surety":    surety,
+		"nickname":       rec.Nickname,
+		"realname":       rec.Realname,
+		"nation":         rec.Nation,
+		"id_type":        rec.IdType,
+		"idcard":         rec.Idcard,
+		"image":          rec.Image,
+		"backimage":      rec.Backimage,
+		"surety":         rec.Surety,
+		"surety_bill_id": rec.SuretyBillId,
+		"status":         rec.Status,
+		"reason":         rec.Reason,
 	}
 }
 
@@ -387,21 +417,10 @@ func (u *User) MerchantApply(ctx context.Context, in *web.MerchantApplyRequest) 
 		switch latest.Status {
 		case model.MerchantStatusPending:
 			return nil, errorx.New(400, "您有待审核的商户申请，请勿重复提交")
-		case model.MerchantStatusRejected:
-			billID, err := u.freezeMerchantSurety(ctx, uid, surety)
-			if err != nil {
-				return nil, err
-			}
-			updates := merchantApplyPayload(in, surety)
-			updates["status"] = model.MerchantStatusPending
-			updates["reason"] = ""
-			updates["surety_bill_id"] = billID
-			if err := u.MerchantRepo.UpdateById(ctx, latest.Id, updates); err != nil {
-				return nil, err
-			}
-			return &web.MerchantApplyResponse{Id: int32(latest.Id)}, nil
 		case model.MerchantStatusApproved:
 			return nil, errorx.New(400, "您已是认证商户，无法再次申请")
+		case model.MerchantStatusRejected:
+			// 驳回后可重新申请
 		default:
 			return nil, errorx.New(400, "当前申请状态不允许重复提交")
 		}
@@ -411,26 +430,19 @@ func (u *User) MerchantApply(ctx context.Context, in *web.MerchantApplyRequest) 
 	if err != nil {
 		return nil, err
 	}
+	rec := newMerchantApply(uid, in, surety, billID)
 
-	row := &model.Merchant{
-		UserId:    uid,
-		Nickname:  strings.TrimSpace(in.GetNickname()),
-		Realname:  strings.TrimSpace(in.GetRealname()),
-		Nation:    strings.TrimSpace(in.GetNation()),
-		IdType:    int(in.GetIdType()),
-		Idcard:    strings.TrimSpace(in.GetIdcard()),
-		Image:     strings.TrimSpace(in.GetImage()),
-		Backimage: strings.TrimSpace(in.GetBackImage()),
-		Surety:    surety,
-		Status:    model.MerchantStatusPending,
+	if latest != nil && latest.Status == model.MerchantStatusRejected {
+		if err := u.MerchantRepo.UpdateById(ctx, latest.Id, merchantApplyUpdates(rec)); err != nil {
+			return nil, err
+		}
+		return &web.MerchantApplyResponse{Id: int32(latest.Id)}, nil
 	}
-	if billID > 0 {
-		row.SuretyBillId = billID
-	}
-	if err := u.MerchantRepo.Create(ctx, row); err != nil {
+
+	if err := u.MerchantRepo.Create(ctx, rec); err != nil {
 		return nil, err
 	}
-	return &web.MerchantApplyResponse{Id: int32(row.Id)}, nil
+	return &web.MerchantApplyResponse{Id: int32(rec.Id)}, nil
 }
 
 // MerchantStatus 查询本人最近一次商户申请状态
@@ -467,7 +479,6 @@ func merchantToStatusResponse(m *model.Merchant) *web.MerchantStatusResponse {
 		IsClose:        int32(m.IsClose),
 		CreatedAt:      timeutil.FormatDatetime(m.CreatedAt),
 		UpdatedAt:      timeutil.FormatDatetime(m.UpdatedAt),
-		IsHm:           int32(m.IsHm),
 	}
 }
 

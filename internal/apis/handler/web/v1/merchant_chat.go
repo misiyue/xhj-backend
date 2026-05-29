@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/entity"
@@ -15,30 +14,44 @@ import (
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
 	"github.com/gzydong/go-chat/internal/pkg/strutil"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
+	"github.com/gzydong/go-chat/internal/repository/repo"
+	"github.com/gzydong/go-chat/internal/service/message"
 )
 
-func merchantChatPeerUserID(sess *model.MerchantSession, uid int) int {
-	if sess.InviterId == uid {
-		return sess.FriendId
-	}
-	return sess.InviterId
+func merchantChatPeerUserID(sess *model.MerchantSession) int {
+	return sess.FriendId
 }
 
-func merchantChatExtraPreview(extra string) string {
-	s := strings.TrimSpace(extra)
-	if s == "" {
-		return ""
+func (u *User) setMerchantChatLastMessage(ctx context.Context, uid, inboxSessionID int, msgType int, extra string, sendTime time.Time) {
+	if u.MessageStorage == nil || inboxSessionID <= 0 {
+		return
 	}
-	const maxRune = 80
-	if utf8.RuneCountInString(s) <= maxRune {
-		return s
+	preview := message.PreviewText(msgType, extra)
+	msgTime := sendTime.Format(time.DateTime)
+	if sendTime.IsZero() {
+		msgTime = timeutil.FormatDatetime(time.Now())
 	}
-	runes := []rune(s)
-	if len(runes) > maxRune {
-		return string(runes[:maxRune]) + "…"
+	last := &cache.LastCacheMessage{Content: preview, Datetime: msgTime}
+	_ = u.MessageStorage.Set(ctx, entity.ChatMerchantMode, uid, inboxSessionID, last)
+}
+
+func (u *User) merchantChatLastPreview(ctx context.Context, uid, sessionID int, fallback time.Time) (preview, updatedAt string) {
+	preview = "..."
+	updatedAt = timeutil.FormatDatetime(fallback)
+	if u.MessageStorage == nil || sessionID <= 0 {
+		return preview, updatedAt
 	}
-	return s
+	if msg, err := u.MessageStorage.Get(ctx, entity.ChatMerchantMode, uid, sessionID); err == nil && msg != nil {
+		if msg.Content != "" {
+			preview = msg.Content
+		}
+		if strings.TrimSpace(msg.Datetime) != "" {
+			updatedAt = msg.Datetime
+		}
+	}
+	return preview, updatedAt
 }
 
 func (u *User) assertMerchantChatOrder(ctx context.Context, orderID int, uid int) (*model.MerchantOrder, error) {
@@ -77,14 +90,17 @@ func (u *User) assertMerchantChatOrderByOrderNo(ctx context.Context, orderNo str
 	return o, nil
 }
 
-func (u *User) assertMerchantSessionParticipant(sess *model.MerchantSession, uid int) error {
+func (u *User) assertMerchantSessionOwner(sess *model.MerchantSession, uid int) error {
 	if sess == nil {
 		return errorx.New(404, "会话不存在")
 	}
 	if sess.Status != 1 {
 		return errorx.New(400, "会话不可用")
 	}
-	if sess.InviterId != uid && sess.FriendId != uid {
+	if sess.DeleteTime != 0 {
+		return errorx.New(400, "会话已删除")
+	}
+	if sess.InviterId != uid {
 		return errorx.New(403, "无权访问该会话")
 	}
 	return nil
@@ -97,7 +113,16 @@ func (u *User) merchantChatSessionUnread(ctx context.Context, uid, sessionID int
 	return u.UnreadStorage.Get(ctx, uid, entity.ChatMerchantMode, sessionID)
 }
 
-// MerchantChatSend 发送商户 C2C 消息（首条自动创建 merchant_session）
+func merchantChatPushPayload(orderID int, inboxUID, inboxSessionID int, msgJSON string) string {
+	return jsonutil.Encode(entity.SubEventImMessageMerchantPayload{
+		InboxUserId:    inboxUID,
+		InboxSessionId: inboxSessionID,
+		OrderId:        orderID,
+		Message:        msgJSON,
+	})
+}
+
+// MerchantChatSend 发送商户 C2C 消息（参考私聊：双方各一条会话栏，共享 session_id 关联消息）
 func (u *User) MerchantChatSend(ctx context.Context, in *web.MerchantChatSendRequest) (*web.MerchantChatSendResponse, error) {
 	if u.PushMessage == nil || u.UnreadStorage == nil {
 		return nil, errorx.New(500, "消息推送或未读组件未初始化")
@@ -110,36 +135,19 @@ func (u *User) MerchantChatSend(ctx context.Context, in *web.MerchantChatSendReq
 		return nil, err
 	}
 
-	sess, err := u.MerchantSessionRepo.FindByOrderTag(ctx, orderID)
+	peer := ord.SalerId
+	if uid == ord.SalerId {
+		peer = ord.BuyerId
+	}
+
+	mine, peerSess, chatSessionID, err := u.MerchantSessionRepo.EnsurePair(ctx, uid, peer, orderID)
 	if err != nil {
 		return nil, err
 	}
-	if sess == nil {
-		sess = &model.MerchantSession{
-			InviterId:  ord.BuyerId,
-			FriendId:   ord.SalerId,
-			IsTop:      2,
-			Status:     1,
-			Tags:       model.MerchantSessionOrderTag(orderID),
-			DeleteTime: 0,
-		}
-		if err := u.MerchantSessionRepo.Create(ctx, sess); err != nil {
-			if strings.Contains(err.Error(), "Duplicate") {
-				sess, err = u.MerchantSessionRepo.FindByOrderTag(ctx, orderID)
-				if err != nil || sess == nil {
-					return nil, err
-				}
-			} else {
-				return nil, err
-			}
-		}
-	}
-
-	if err := u.assertMerchantSessionParticipant(sess, uid); err != nil {
+	if err := u.assertMerchantSessionOwner(mine, uid); err != nil {
 		return nil, err
 	}
 
-	peer := merchantChatPeerUserID(sess, uid)
 	msgID := strings.TrimSpace(in.GetMsgId())
 	if msgID == "" {
 		msgID = strutil.NewMsgId()
@@ -152,7 +160,7 @@ func (u *User) MerchantChatSend(ctx context.Context, in *web.MerchantChatSendReq
 	row := &model.MerchantMessage{
 		MsgId:      msgID,
 		OrgMsgId:   msgID,
-		SessionId:  sess.Id,
+		SessionId:  chatSessionID,
 		MsgType:    int(in.GetMsgType()),
 		UserId:     uid,
 		ReceiverId: peer,
@@ -166,34 +174,27 @@ func (u *User) MerchantChatSend(ctx context.Context, in *web.MerchantChatSendReq
 	if err := u.MerchantMessageRepo.Create(ctx, row); err != nil {
 		return nil, err
 	}
-	_ = u.MerchantSessionRepo.TouchUpdatedAt(ctx, sess.Id)
 
 	msgJSON, err := json.Marshal(row)
 	if err != nil {
 		return nil, err
 	}
-	sub := entity.SubEventImMessageMerchantPayload{
-		OrderId: orderID,
-		Message: string(msgJSON),
-	}
-	sub.InboxUserId = uid
-	p1 := jsonutil.Encode(sub)
-	sub.InboxUserId = peer
-	p2 := jsonutil.Encode(sub)
 	_ = u.PushMessage.MultiPush(ctx, entity.ImTopicChat, []*entity.SubscribeMessage{
-		{Event: entity.SubEventImMessageMerchant, Payload: p1},
-		{Event: entity.SubEventImMessageMerchant, Payload: p2},
+		{Event: entity.SubEventImMessageMerchant, Payload: merchantChatPushPayload(orderID, uid, mine.Id, string(msgJSON))},
+		{Event: entity.SubEventImMessageMerchant, Payload: merchantChatPushPayload(orderID, peer, peerSess.Id, string(msgJSON))},
 	})
-	u.UnreadStorage.Incr(ctx, peer, entity.ChatMerchantMode, sess.Id)
+	u.UnreadStorage.Incr(ctx, peer, entity.ChatMerchantMode, peerSess.Id)
+	u.setMerchantChatLastMessage(ctx, uid, mine.Id, row.MsgType, row.Extra, row.SendTime)
+	u.setMerchantChatLastMessage(ctx, peer, peerSess.Id, row.MsgType, row.Extra, row.SendTime)
 
 	return &web.MerchantChatSendResponse{
 		MessageDbId: row.Id,
 		MsgId:       row.MsgId,
-		SessionId:   int32(sess.Id),
+		SessionId:   int32(mine.Id),
 	}, nil
 }
 
-// MerchantChatUnread 指定订单（order_no）对应商户会话的未读数；会话按订单主键 id 与 merchant_session.tags 关联，买卖双方即买家与任务发布人（卖方）
+// MerchantChatUnread 当前用户与订单对手方唯一活跃会话的未读数
 func (u *User) MerchantChatUnread(ctx context.Context, in *web.MerchantChatUnreadRequest) (*web.MerchantChatUnreadResponse, error) {
 	if u.UnreadStorage == nil {
 		return nil, errorx.New(500, "未读组件未初始化")
@@ -208,7 +209,11 @@ func (u *User) MerchantChatUnread(ctx context.Context, in *web.MerchantChatUnrea
 	if err != nil {
 		return nil, err
 	}
-	sess, err := u.MerchantSessionRepo.FindByOrderTag(ctx, ord.Id)
+	peer := ord.SalerId
+	if uid == ord.SalerId {
+		peer = ord.BuyerId
+	}
+	sess, err := u.MerchantSessionRepo.FindActiveByOwnerPeer(ctx, uid, peer)
 	if err != nil {
 		return nil, err
 	}
@@ -219,8 +224,7 @@ func (u *User) MerchantChatUnread(ctx context.Context, in *web.MerchantChatUnrea
 	return &web.MerchantChatUnreadResponse{TotalUnread: int32(n)}, nil
 }
 
-// MerchantChatSessionList 商户对话列表（无分页，按更新时间倒序）。
-// 数据来自 merchant_session：inviter_id 或 friend_id 为当前用户且 status=展示。
+// MerchantChatSessionList 商户对话列表（inviter_id=当前用户 且 delete_time=0）
 func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.MerchantChatSessionListRequest) (*web.MerchantChatSessionListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
@@ -230,18 +234,15 @@ func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.MerchantChatS
 	}
 	out := &web.MerchantChatSessionListResponse{Items: make([]*web.MerchantChatSessionItem, 0, len(rows))}
 	for i := range rows {
+		peerID := merchantChatPeerUserID(&rows[i])
 		oid, _ := strconv.Atoi(strings.TrimSpace(rows[i].Tags))
-		peerID := merchantChatPeerUserID(&rows[i], uid)
 		peer, err := u.UsersRepo.FindByIdWithCache(ctx, peerID)
 		nick, ava := "", ""
 		if err == nil && peer != nil {
 			nick = peer.Nickname
 			ava = peer.Avatar
 		}
-		preview := ""
-		if lm, err := u.MerchantMessageRepo.FindLatestBySession(ctx, rows[i].Id); err == nil && lm != nil {
-			preview = merchantChatExtraPreview(lm.Extra)
-		}
+		preview, updatedAt := u.merchantChatLastPreview(ctx, uid, rows[i].Id, rows[i].UpdatedAt)
 		out.Items = append(out.Items, &web.MerchantChatSessionItem{
 			SessionId:    int32(rows[i].Id),
 			OrderId:      int32(oid),
@@ -249,7 +250,7 @@ func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.MerchantChatS
 			PeerNickname: nick,
 			PeerAvatar:   ava,
 			LastPreview:  preview,
-			UpdatedAt:    timeutil.FormatDatetime(rows[i].UpdatedAt),
+			UpdatedAt:    updatedAt,
 			UnreadNum:    int32(u.merchantChatSessionUnread(ctx, uid, rows[i].Id)),
 		})
 	}
@@ -265,11 +266,12 @@ func (u *User) MerchantChatMessageList(ctx context.Context, in *web.MerchantChat
 	if err != nil {
 		return nil, err
 	}
-	if err := u.assertMerchantSessionParticipant(sess, uid); err != nil {
+	if err := u.assertMerchantSessionOwner(sess, uid); err != nil {
 		return nil, err
 	}
+	chatSID := repo.ChatSessionID(sess)
 	page, pageSize := normMerchantTaskPage(int(in.GetPage()), int(in.GetPageSize()))
-	rows, total, err := u.MerchantMessageRepo.ListBySessionDesc(ctx, sid, page, pageSize)
+	rows, total, err := u.MerchantMessageRepo.ListBySessionDesc(ctx, chatSID, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -280,7 +282,7 @@ func (u *User) MerchantChatMessageList(ctx context.Context, in *web.MerchantChat
 			Id:         r.Id,
 			MsgId:      r.MsgId,
 			OrgMsgId:   r.OrgMsgId,
-			SessionId:  int32(r.SessionId),
+			SessionId:  int32(sid),
 			MsgType:    int32(r.MsgType),
 			UserId:     int32(r.UserId),
 			ReceiverId: int32(r.ReceiverId),
@@ -312,7 +314,7 @@ func (u *User) MerchantChatClearUnread(ctx context.Context, in *web.MerchantChat
 	if err != nil {
 		return nil, err
 	}
-	if err := u.assertMerchantSessionParticipant(sess, uid); err != nil {
+	if err := u.assertMerchantSessionOwner(sess, uid); err != nil {
 		return nil, err
 	}
 	u.UnreadStorage.Reset(ctx, uid, entity.ChatMerchantMode, sid)

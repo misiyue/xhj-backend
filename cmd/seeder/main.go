@@ -27,7 +27,7 @@ func main() {
 	conf := config.New("./config.yaml")
 
 	// 2. Init Logger
-	logger.Init(conf.Log.LogFilePath("seeder.log"), logger.LevelInfo, "seeder")
+	logger.Init(conf.Log.LogFilePath("seeder.log"), logger.LevelInfo, "seeder", conf.App.Env == "dev" || conf.App.Debug)
 
 	// 3. Init DB
 	db := provider.NewMySQLClient(conf)

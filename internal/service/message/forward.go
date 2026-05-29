@@ -50,7 +50,7 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 	} else {
 		records := make([]model.TalkUserMessage, 0)
 		var err error
-		
+
 		// 优化方案：使用 session_id 查询
 		if s.TalkSessionRepo != nil {
 			session, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", req.UserId, req.ReceiverId, 1)
@@ -62,7 +62,7 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 			// 降级方案：使用传统方式查询
 			err = db.Model(&model.TalkUserMessage{}).Where("user_id = ? and receiver_id = ? and msg_id in ?", req.UserId, req.ReceiverId, req.MsgIds).Scan(&records).Error
 		}
-		
+
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 			// 更新该群在会话列表中的「最后一条消息」预览，与普通群消息一致
 			recs := make([]model.TalkRecordExtraForwardRecord, 0, len(messageItems))
 			for _, v := range messageItems {
-				recs = append(recs, model.TalkRecordExtraForwardRecord{Content: text(v.MsgType, v.Extra)})
+				recs = append(recs, model.TalkRecordExtraForwardRecord{Content: PreviewText(v.MsgType, v.Extra)})
 			}
 			msgPreview := forwardPreviewFromRecords(recs, 80)
 			msgTime := now.Format(time.DateTime)
@@ -150,7 +150,7 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 		// 构造最近一条转发摘要用于会话列表 msg_text
 		recs := make([]model.TalkRecordExtraForwardRecord, 0, len(messageItems))
 		for _, v := range messageItems {
-			recs = append(recs, model.TalkRecordExtraForwardRecord{Content: text(v.MsgType, v.Extra)})
+			recs = append(recs, model.TalkRecordExtraForwardRecord{Content: PreviewText(v.MsgType, v.Extra)})
 		}
 		msgPreview := forwardPreviewFromRecords(recs, 80)
 		msgTime := now.Format(time.DateTime)
@@ -255,13 +255,13 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 		for _, v := range records {
 			extra.Records = append(extra.Records, model.TalkRecordExtraForwardRecord{
 				Nickname: userNameItems[v.FromId],
-				Content:  text(v.MsgType, v.Extra),
+				Content:  PreviewText(v.MsgType, v.Extra),
 			})
 		}
 	} else {
 		records := make([]model.TalkUserMessage, 0)
 		var err error
-		
+
 		// 优化方案：使用 session_id 查询
 		if s.TalkSessionRepo != nil {
 			session, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", req.UserId, req.ReceiverId, 1)
@@ -273,7 +273,7 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 			// 降级方案：使用传统方式查询
 			err = s.Source.Db().Model(&model.TalkUserMessage{}).Where("user_id = ? and receiver_id = ? and msg_id in ?", req.UserId, req.ReceiverId, req.MsgIds).Order("id asc").Limit(3).Scan(&records).Error
 		}
-		
+
 		if err != nil {
 			return err
 		}
@@ -291,7 +291,7 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 		for _, v := range records {
 			extra.Records = append(extra.Records, model.TalkRecordExtraForwardRecord{
 				Nickname: userNameItems[v.FromId],
-				Content:  text(v.MsgType, v.Extra),
+				Content:  PreviewText(v.MsgType, v.Extra),
 			})
 		}
 	}
@@ -451,7 +451,8 @@ func (s *Service) findUserNameList(ctx context.Context, uids []int) (map[int]str
 	return items, nil
 }
 
-func text(msgType int, extra string) string {
+// PreviewText 会话列表最后一条消息摘要（与 talk session-list 的 MsgText 一致）
+func PreviewText(msgType int, extra string) string {
 	switch msgType {
 	case entity.ChatMsgTypeText:
 		data := model.TalkRecordExtraText{}

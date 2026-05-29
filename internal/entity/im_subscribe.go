@@ -40,9 +40,10 @@ type SubEventImMessagePayload struct {
 
 // SubEventImMessageMerchantPayload 商户 C2C 消息订阅 payload
 type SubEventImMessageMerchantPayload struct {
-	InboxUserId int    `json:"inbox_user_id"` // 该条推送应对哪一方用户投递
-	OrderId     int    `json:"order_id"`      // merchant_order.id
-	Message     string `json:"message"`       // model.MerchantMessage JSON
+	InboxUserId    int    `json:"inbox_user_id"`              // 该条推送应对哪一方用户投递
+	InboxSessionId int    `json:"inbox_session_id,omitempty"` // 接收方会话栏 merchant_session.id
+	OrderId        int    `json:"order_id"`                   // merchant_order.id
+	Message        string `json:"message"`                    // model.MerchantMessage JSON
 }
 
 // SubEventImMessageMentionPayload @提及消息订阅事件payload

@@ -553,6 +553,6 @@ func (s *Service) CreateLoginMessage(ctx context.Context, option CreateLoginMess
 }
 
 func (s *Service) getTextMessage(msgType int, extra string) string {
-	return text(msgType, extra)
+	return PreviewText(msgType, extra)
 }
 

@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gzydong/go-chat/internal/pkg/logger"
 )
 
 var defaultClient *Client
@@ -153,6 +155,7 @@ func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) 
 		"time":          strconv.FormatInt(req.Time, 10),
 		"pay_type":      req.PayType,
 	}
+
 	if req.ReturnURL != "" {
 		params["return_url"] = req.ReturnURL
 	}
@@ -168,6 +171,7 @@ func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) 
 	if req.Extra != "" {
 		params["extra"] = req.Extra
 	}
+	logger.Infof("[hmpay] params: %+v", params)
 	req.Sign = Sign(params, c.AppSecret)
 
 	body, err := json.Marshal(req)
