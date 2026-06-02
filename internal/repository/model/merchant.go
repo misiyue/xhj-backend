@@ -1,12 +1,21 @@
 package model
 
-import "time"
+import (
+	"encoding/json"
+	"strings"
+	"time"
+)
 
 // 商户审核状态
 const (
 	MerchantStatusPending  = 0 // 待审核
 	MerchantStatusApproved = 1 // 审核通过
 	MerchantStatusRejected = 2 // 驳回
+)
+
+const (
+	MerchantPayTypeKeyHd = "hd" // 宏达
+	MerchantPayTypeKeyHm = "hm" // 汇美
 )
 
 // Merchant 对应表 merchant（建表/迁移见 provider/mysql.go、mission/migrate.go 中的 InnoDB table_options）
@@ -29,10 +38,53 @@ type Merchant struct {
 	IsFrozen     int       `gorm:"column:is_frozen;default:0" json:"is_frozen"`
 	FrozenTime   int       `gorm:"column:frozen_time;default:0" json:"frozen_time"`
 	IsClose      int       `gorm:"column:is_close;default:0" json:"is_close"`
+	PayTypes     string    `gorm:"column:pay_types;type:varchar(255)" json:"pay_types"`
 	CreatedAt    time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updated_at"`
 }
 
 func (Merchant) TableName() string {
 	return "merchant"
+}
+
+type merchantPayTypeEntry struct {
+	PayType string `json:"pay_type"`
+}
+
+// MerchantHdChannelPayType 解析 merchant.pay_types，返回宏达通道 pay_type（如 801）
+func MerchantHdChannelPayType(payTypesJSON string) (string, bool) {
+	entry, ok := merchantPayTypeEntryByKey(payTypesJSON, MerchantPayTypeKeyHd)
+	if !ok {
+		return "", false
+	}
+	payType := strings.TrimSpace(entry.PayType)
+	if payType == "" {
+		return "", false
+	}
+	return payType, true
+}
+
+// MerchantHasPayType 是否开通指定支付（hd / hm）
+func MerchantHasPayType(payTypesJSON, key string) bool {
+	_, ok := merchantPayTypeEntryByKey(payTypesJSON, key)
+	return ok
+}
+
+func merchantPayTypeEntryByKey(payTypesJSON, key string) (*merchantPayTypeEntry, bool) {
+	s := strings.TrimSpace(payTypesJSON)
+	if s == "" {
+		return nil, false
+	}
+	var raw map[string]merchantPayTypeEntry
+	if err := json.Unmarshal([]byte(s), &raw); err != nil {
+		return nil, false
+	}
+	entry, ok := raw[key]
+	if !ok {
+		return nil, false
+	}
+	if strings.TrimSpace(entry.PayType) == "" {
+		return nil, false
+	}
+	return &entry, true
 }

@@ -91,7 +91,7 @@ func (r *MerchantOrder) ListByParticipant(ctx context.Context, userId int, asBuy
 }
 
 // CreateFromTask 创建订单：单事务内锁挂单 → 扣减 count → 创建订单（任一步失败整体回滚）
-func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID int, counts float64, payType string, buyType int) (*model.MerchantOrder, error) {
+func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID int, counts float64, payTypeInfo string, payTypeID int, buyType int) (*model.MerchantOrder, error) {
 	var out *model.MerchantOrder
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var task model.MerchantTask
@@ -114,20 +114,21 @@ func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID 
 			return err
 		}
 		amount := math.Round(task.Price*counts*100) / 100
-		payType = strings.TrimSpace(payType)
-		if payType == "" {
-			payType = "0"
+		payTypeInfo = strings.TrimSpace(payTypeInfo)
+		if payTypeInfo == "" {
+			payTypeInfo = "0"
 		}
 		oid := generateMerchantOrderID(time.Now())
 		row := &model.MerchantOrder{
-			OrderId:  oid,
-			BuyerId:  buyerID,
-			SalerId:  task.UserId,
-			Amount:   amount,
-			TaskId:   taskID,
-			Counts:   counts,
-			PayType:  payType,
-			BuyType:  buyType,
+			OrderId:     oid,
+			BuyerId:     buyerID,
+			SalerId:     task.UserId,
+			Amount:      amount,
+			TaskId:      taskID,
+			Counts:      counts,
+			PayTypeInfo: payTypeInfo,
+			PayTypeId:   payTypeID,
+			BuyType:     buyType,
 			Status:   model.MerchantOrderStatusPendingPay,
 			IsCancel: 0,
 			IsAppeal: 0,

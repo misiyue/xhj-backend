@@ -2261,27 +2261,29 @@ func (*MerchantPaytypeInvalidateResponse) Descriptor() ([]byte, []int) {
 
 // 订单列表项（列表页展示必要字段）
 type MerchantOrderListItem struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Id        int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrderId   string                 `protobuf:"bytes,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	BuyerId   int32                  `protobuf:"varint,3,opt,name=buyer_id,json=buyerId,proto3" json:"buyer_id,omitempty"`
-	SalerId   int32                  `protobuf:"varint,4,opt,name=saler_id,json=salerId,proto3" json:"saler_id,omitempty"`
-	Amount    float64                `protobuf:"fixed64,5,opt,name=amount,proto3" json:"amount,omitempty"`
-	TaskId    int32                  `protobuf:"varint,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Counts    float64                `protobuf:"fixed64,7,opt,name=counts,proto3" json:"counts,omitempty"`
-	PayType   string                 `protobuf:"bytes,8,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
-	BuyType   int32                  `protobuf:"varint,9,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
-	Status    int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
-	IsCancel  int32                  `protobuf:"varint,11,opt,name=is_cancel,json=isCancel,proto3" json:"is_cancel,omitempty"`
-	IsAppeal  int32                  `protobuf:"varint,12,opt,name=is_appeal,json=isAppeal,proto3" json:"is_appeal,omitempty"`
-	CreatedAt string                 `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	Wronger   int32                  `protobuf:"varint,14,opt,name=wronger,proto3" json:"wronger,omitempty"`
-	Judge     string                 `protobuf:"bytes,15,opt,name=judge,proto3" json:"judge,omitempty"`
-	JudgeTime string                 `protobuf:"bytes,16,opt,name=judge_time,json=judgeTime,proto3" json:"judge_time,omitempty"`
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Id          int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrderId     string                 `protobuf:"bytes,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	BuyerId     int32                  `protobuf:"varint,3,opt,name=buyer_id,json=buyerId,proto3" json:"buyer_id,omitempty"`
+	SalerId     int32                  `protobuf:"varint,4,opt,name=saler_id,json=salerId,proto3" json:"saler_id,omitempty"`
+	Amount      float64                `protobuf:"fixed64,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	TaskId      int32                  `protobuf:"varint,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Counts      float64                `protobuf:"fixed64,7,opt,name=counts,proto3" json:"counts,omitempty"`
+	PayTypeInfo string                 `protobuf:"bytes,8,opt,name=pay_type_info,json=payTypeInfo,proto3" json:"pay_type_info,omitempty"`
+	BuyType     int32                  `protobuf:"varint,9,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
+	Status      int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
+	IsCancel    int32                  `protobuf:"varint,11,opt,name=is_cancel,json=isCancel,proto3" json:"is_cancel,omitempty"`
+	IsAppeal    int32                  `protobuf:"varint,12,opt,name=is_appeal,json=isAppeal,proto3" json:"is_appeal,omitempty"`
+	CreatedAt   string                 `protobuf:"bytes,13,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Wronger     int32                  `protobuf:"varint,14,opt,name=wronger,proto3" json:"wronger,omitempty"`
+	Judge       string                 `protobuf:"bytes,15,opt,name=judge,proto3" json:"judge,omitempty"`
+	JudgeTime   string                 `protobuf:"bytes,16,opt,name=judge_time,json=judgeTime,proto3" json:"judge_time,omitempty"`
 	// 卖方商户昵称（merchant.nickname，已审核通过记录）
 	MerchantNickname string `protobuf:"bytes,17,opt,name=merchant_nickname,json=merchantNickname,proto3" json:"merchant_nickname,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+	PayTypeId     int32 `protobuf:"varint,18,opt,name=pay_type_id,json=payTypeId,proto3" json:"pay_type_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *MerchantOrderListItem) Reset() {
@@ -2363,9 +2365,9 @@ func (x *MerchantOrderListItem) GetCounts() float64 {
 	return 0
 }
 
-func (x *MerchantOrderListItem) GetPayType() string {
+func (x *MerchantOrderListItem) GetPayTypeInfo() string {
 	if x != nil {
-		return x.PayType
+		return x.PayTypeInfo
 	}
 	return ""
 }
@@ -2433,33 +2435,42 @@ func (x *MerchantOrderListItem) GetMerchantNickname() string {
 	return ""
 }
 
+func (x *MerchantOrderListItem) GetPayTypeId() int32 {
+	if x != nil {
+		return x.PayTypeId
+	}
+	return 0
+}
+
 type MerchantOrderItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	OrderId       string                 `protobuf:"bytes,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
-	BuyerId       int32                  `protobuf:"varint,3,opt,name=buyer_id,json=buyerId,proto3" json:"buyer_id,omitempty"`
-	SalerId       int32                  `protobuf:"varint,4,opt,name=saler_id,json=salerId,proto3" json:"saler_id,omitempty"`
-	Amount        float64                `protobuf:"fixed64,5,opt,name=amount,proto3" json:"amount,omitempty"`
-	TaskId        int32                  `protobuf:"varint,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Counts        float64                `protobuf:"fixed64,7,opt,name=counts,proto3" json:"counts,omitempty"`
-	PayType       string                 `protobuf:"bytes,8,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
-	BuyType       int32                  `protobuf:"varint,9,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
-	Status        int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
-	PayImg        string                 `protobuf:"bytes,11,opt,name=pay_img,json=payImg,proto3" json:"pay_img,omitempty"`
-	IsCancel      int32                  `protobuf:"varint,12,opt,name=is_cancel,json=isCancel,proto3" json:"is_cancel,omitempty"`
-	IsAppeal      int32                  `protobuf:"varint,13,opt,name=is_appeal,json=isAppeal,proto3" json:"is_appeal,omitempty"`
-	AppealId      int32                  `protobuf:"varint,14,opt,name=appeal_id,json=appealId,proto3" json:"appeal_id,omitempty"`
-	AppealTime    int32                  `protobuf:"varint,15,opt,name=appeal_time,json=appealTime,proto3" json:"appeal_time,omitempty"`
-	AppealReason  string                 `protobuf:"bytes,16,opt,name=appeal_reason,json=appealReason,proto3" json:"appeal_reason,omitempty"`
-	CancelId      int32                  `protobuf:"varint,17,opt,name=cancel_id,json=cancelId,proto3" json:"cancel_id,omitempty"`
-	Remark        string                 `protobuf:"bytes,18,opt,name=remark,proto3" json:"remark,omitempty"`
-	PayTime       int32                  `protobuf:"varint,19,opt,name=pay_time,json=payTime,proto3" json:"pay_time,omitempty"`
-	CancelTime    int32                  `protobuf:"varint,20,opt,name=cancel_time,json=cancelTime,proto3" json:"cancel_time,omitempty"`
-	Wronger       int32                  `protobuf:"varint,21,opt,name=wronger,proto3" json:"wronger,omitempty"`
-	Judge         string                 `protobuf:"bytes,22,opt,name=judge,proto3" json:"judge,omitempty"`
-	JudgeTime     string                 `protobuf:"bytes,23,opt,name=judge_time,json=judgeTime,proto3" json:"judge_time,omitempty"`
-	CreatedAt     string                 `protobuf:"bytes,24,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	UpdatedAt     string                 `protobuf:"bytes,25,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	OrderId      string                 `protobuf:"bytes,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	BuyerId      int32                  `protobuf:"varint,3,opt,name=buyer_id,json=buyerId,proto3" json:"buyer_id,omitempty"`
+	SalerId      int32                  `protobuf:"varint,4,opt,name=saler_id,json=salerId,proto3" json:"saler_id,omitempty"`
+	Amount       float64                `protobuf:"fixed64,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	TaskId       int32                  `protobuf:"varint,6,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Counts       float64                `protobuf:"fixed64,7,opt,name=counts,proto3" json:"counts,omitempty"`
+	PayTypeInfo  string                 `protobuf:"bytes,8,opt,name=pay_type_info,json=payTypeInfo,proto3" json:"pay_type_info,omitempty"`
+	BuyType      int32                  `protobuf:"varint,9,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
+	Status       int32                  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
+	PayImg       string                 `protobuf:"bytes,11,opt,name=pay_img,json=payImg,proto3" json:"pay_img,omitempty"`
+	IsCancel     int32                  `protobuf:"varint,12,opt,name=is_cancel,json=isCancel,proto3" json:"is_cancel,omitempty"`
+	IsAppeal     int32                  `protobuf:"varint,13,opt,name=is_appeal,json=isAppeal,proto3" json:"is_appeal,omitempty"`
+	AppealId     int32                  `protobuf:"varint,14,opt,name=appeal_id,json=appealId,proto3" json:"appeal_id,omitempty"`
+	AppealTime   int32                  `protobuf:"varint,15,opt,name=appeal_time,json=appealTime,proto3" json:"appeal_time,omitempty"`
+	AppealReason string                 `protobuf:"bytes,16,opt,name=appeal_reason,json=appealReason,proto3" json:"appeal_reason,omitempty"`
+	CancelId     int32                  `protobuf:"varint,17,opt,name=cancel_id,json=cancelId,proto3" json:"cancel_id,omitempty"`
+	Remark       string                 `protobuf:"bytes,18,opt,name=remark,proto3" json:"remark,omitempty"`
+	PayTime      int32                  `protobuf:"varint,19,opt,name=pay_time,json=payTime,proto3" json:"pay_time,omitempty"`
+	CancelTime   int32                  `protobuf:"varint,20,opt,name=cancel_time,json=cancelTime,proto3" json:"cancel_time,omitempty"`
+	Wronger      int32                  `protobuf:"varint,21,opt,name=wronger,proto3" json:"wronger,omitempty"`
+	Judge        string                 `protobuf:"bytes,22,opt,name=judge,proto3" json:"judge,omitempty"`
+	JudgeTime    string                 `protobuf:"bytes,23,opt,name=judge_time,json=judgeTime,proto3" json:"judge_time,omitempty"`
+	CreatedAt    string                 `protobuf:"bytes,24,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt    string                 `protobuf:"bytes,25,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+	PayTypeId     int32 `protobuf:"varint,26,opt,name=pay_type_id,json=payTypeId,proto3" json:"pay_type_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2543,9 +2554,9 @@ func (x *MerchantOrderItem) GetCounts() float64 {
 	return 0
 }
 
-func (x *MerchantOrderItem) GetPayType() string {
+func (x *MerchantOrderItem) GetPayTypeInfo() string {
 	if x != nil {
-		return x.PayType
+		return x.PayTypeInfo
 	}
 	return ""
 }
@@ -2669,13 +2680,22 @@ func (x *MerchantOrderItem) GetUpdatedAt() string {
 	return ""
 }
 
+func (x *MerchantOrderItem) GetPayTypeId() int32 {
+	if x != nil {
+		return x.PayTypeId
+	}
+	return 0
+}
+
 type MerchantOrderCreateRequest struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	TaskId int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
 	Counts float64                `protobuf:"fixed64,2,opt,name=counts,proto3" json:"counts,omitempty"`
-	// 支付方式 JSON 字符串
-	PayType       string `protobuf:"bytes,3,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
-	BuyType       int32  `protobuf:"varint,4,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
+	// 支付信息 JSON 字符串
+	PayTypeInfo string `protobuf:"bytes,3,opt,name=pay_type_info,json=payTypeInfo,proto3" json:"pay_type_info,omitempty"`
+	BuyType     int32  `protobuf:"varint,4,opt,name=buy_type,json=buyType,proto3" json:"buy_type,omitempty"`
+	// 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+	PayTypeId     int32 `protobuf:"varint,5,opt,name=pay_type_id,json=payTypeId,proto3" json:"pay_type_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2724,9 +2744,9 @@ func (x *MerchantOrderCreateRequest) GetCounts() float64 {
 	return 0
 }
 
-func (x *MerchantOrderCreateRequest) GetPayType() string {
+func (x *MerchantOrderCreateRequest) GetPayTypeInfo() string {
 	if x != nil {
-		return x.PayType
+		return x.PayTypeInfo
 	}
 	return ""
 }
@@ -2734,6 +2754,13 @@ func (x *MerchantOrderCreateRequest) GetPayType() string {
 func (x *MerchantOrderCreateRequest) GetBuyType() int32 {
 	if x != nil {
 		return x.BuyType
+	}
+	return 0
+}
+
+func (x *MerchantOrderCreateRequest) GetPayTypeId() int32 {
+	if x != nil {
+		return x.PayTypeId
 	}
 	return 0
 }
@@ -4460,7 +4487,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x05items\x18\x01 \x03(\v2\x18.web.MerchantPaytypeItemR\x05items\";\n" +
 	" MerchantPaytypeInvalidateRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x02id\"#\n" +
-	"!MerchantPaytypeInvalidateResponse\"\xe4\x03\n" +
+	"!MerchantPaytypeInvalidateResponse\"\x8d\x04\n" +
 	"\x15MerchantOrderListItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\tR\aorderId\x12\x19\n" +
@@ -4468,8 +4495,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\bsaler_id\x18\x04 \x01(\x05R\asalerId\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\x01R\x06amount\x12\x17\n" +
 	"\atask_id\x18\x06 \x01(\x05R\x06taskId\x12\x16\n" +
-	"\x06counts\x18\a \x01(\x01R\x06counts\x12\x19\n" +
-	"\bpay_type\x18\b \x01(\tR\apayType\x12\x19\n" +
+	"\x06counts\x18\a \x01(\x01R\x06counts\x12\"\n" +
+	"\rpay_type_info\x18\b \x01(\tR\vpayTypeInfo\x12\x19\n" +
 	"\bbuy_type\x18\t \x01(\x05R\abuyType\x12\x16\n" +
 	"\x06status\x18\n" +
 	" \x01(\x05R\x06status\x12\x1b\n" +
@@ -4481,7 +4508,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x05judge\x18\x0f \x01(\tR\x05judge\x12\x1d\n" +
 	"\n" +
 	"judge_time\x18\x10 \x01(\tR\tjudgeTime\x12+\n" +
-	"\x11merchant_nickname\x18\x11 \x01(\tR\x10merchantNickname\"\xbf\x05\n" +
+	"\x11merchant_nickname\x18\x11 \x01(\tR\x10merchantNickname\x12\x1e\n" +
+	"\vpay_type_id\x18\x12 \x01(\x05R\tpayTypeId\"\xe8\x05\n" +
 	"\x11MerchantOrderItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\tR\aorderId\x12\x19\n" +
@@ -4489,8 +4517,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\bsaler_id\x18\x04 \x01(\x05R\asalerId\x12\x16\n" +
 	"\x06amount\x18\x05 \x01(\x01R\x06amount\x12\x17\n" +
 	"\atask_id\x18\x06 \x01(\x05R\x06taskId\x12\x16\n" +
-	"\x06counts\x18\a \x01(\x01R\x06counts\x12\x19\n" +
-	"\bpay_type\x18\b \x01(\tR\apayType\x12\x19\n" +
+	"\x06counts\x18\a \x01(\x01R\x06counts\x12\"\n" +
+	"\rpay_type_info\x18\b \x01(\tR\vpayTypeInfo\x12\x19\n" +
 	"\bbuy_type\x18\t \x01(\x05R\abuyType\x12\x16\n" +
 	"\x06status\x18\n" +
 	" \x01(\x05R\x06status\x12\x17\n" +
@@ -4513,12 +4541,14 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x18 \x01(\tR\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x19 \x01(\tR\tupdatedAt\"\xa6\x01\n" +
+	"updated_at\x18\x19 \x01(\tR\tupdatedAt\x12\x1e\n" +
+	"\vpay_type_id\x18\x1a \x01(\x05R\tpayTypeId\"\xda\x01\n" +
 	"\x1aMerchantOrderCreateRequest\x12 \n" +
 	"\atask_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x06taskId\x12&\n" +
-	"\x06counts\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06counts\x12#\n" +
-	"\bpay_type\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\apayType\x12\x19\n" +
-	"\bbuy_type\x18\x04 \x01(\x05R\abuyType\"T\n" +
+	"\x06counts\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06counts\x12,\n" +
+	"\rpay_type_info\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\vpayTypeInfo\x12\x19\n" +
+	"\bbuy_type\x18\x04 \x01(\x05R\abuyType\x12)\n" +
+	"\vpay_type_id\x18\x05 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x01R\tpayTypeId\"T\n" +
 	"\x1bMerchantOrderCreateResponse\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x1f\n" +
 	"\border_id\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\aorderId\"5\n" +

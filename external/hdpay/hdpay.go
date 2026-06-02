@@ -1,4 +1,4 @@
-package hmpay
+package hdpay
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 
 var defaultClient *Client
 
-// Client 汇美支付 HTTP 客户端
+// Client 宏达支付 HTTP 客户端
 type Client struct {
 	OrderURL  string
 	AppID     string
@@ -145,7 +145,7 @@ type CreateOrderResponse struct {
 // CreateOrder 调用统一下单
 func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) {
 	if c == nil || c.OrderURL == "" {
-		return nil, fmt.Errorf("hmpay client not configured")
+		return nil, fmt.Errorf("hdpay client not configured")
 	}
 	params := map[string]string{
 		"submit_amount": req.SubmitAmount,
@@ -171,7 +171,7 @@ func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) 
 	if req.Extra != "" {
 		params["extra"] = req.Extra
 	}
-	logger.Infof("[hmpay] params: %+v", params)
+	logger.Infof("[hdpay] params: %+v", params)
 	req.Sign = Sign(params, c.AppSecret)
 
 	body, err := json.Marshal(req)
@@ -195,7 +195,7 @@ func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) 
 	}
 	var out CreateOrderResponse
 	if err := json.Unmarshal(respBody, &out); err != nil {
-		return nil, fmt.Errorf("hmpay decode: %w, body=%s", err, string(respBody))
+		return nil, fmt.Errorf("hdpay decode: %w, body=%s", err, string(respBody))
 	}
 	if out.Code != 0 {
 		msg := out.Message

@@ -534,7 +534,7 @@ message MerchantOrderListItem {
   double amount = 5;
   int32 task_id = 6;
   double counts = 7;
-  string pay_type = 8;
+  string pay_type_info = 8;
   int32 buy_type = 9;
   int32 status = 10;
   int32 is_cancel = 11;
@@ -545,6 +545,8 @@ message MerchantOrderListItem {
   string judge_time = 16;
   // 卖方商户昵称（merchant.nickname，已审核通过记录）
   string merchant_nickname = 17;
+  // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+  int32 pay_type_id = 18;
 }
 
 message MerchantOrderItem {
@@ -555,7 +557,7 @@ message MerchantOrderItem {
   double amount = 5;
   int32 task_id = 6;
   double counts = 7;
-  string pay_type = 8;
+  string pay_type_info = 8;
   int32 buy_type = 9;
   int32 status = 10;
   string pay_img = 11;
@@ -573,14 +575,18 @@ message MerchantOrderItem {
   string judge_time = 23;
   string created_at = 24;
   string updated_at = 25;
+  // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+  int32 pay_type_id = 26;
 }
 
 message MerchantOrderCreateRequest {
   int32 task_id = 1 [(buf.validate.field).int32.gt = 0];
   double counts = 2 [(buf.validate.field).double = {gt: 0}];
-  // 支付方式 JSON 字符串
-  string pay_type = 3 [(buf.validate.field).string.max_len = 255];
+  // 支付信息 JSON 字符串
+  string pay_type_info = 3 [(buf.validate.field).string.max_len = 255];
   int32 buy_type = 4;
+  // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+  int32 pay_type_id = 5 [(buf.validate.field).int32 = {gte: 1, lte: 5}];
 }
 
 message MerchantOrderCreateResponse {

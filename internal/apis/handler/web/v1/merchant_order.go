@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/config"
-	"github.com/gzydong/go-chat/external/hmpay"
+	"github.com/gzydong/go-chat/external/hdpay"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
@@ -36,7 +36,8 @@ func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *
 		Amount:           o.Amount,
 		TaskId:           int32(o.TaskId),
 		Counts:           o.Counts,
-		PayType:          o.PayType,
+		PayTypeInfo:      o.PayTypeInfo,
+		PayTypeId:        int32(o.PayTypeId),
 		BuyType:          int32(o.BuyType),
 		Status:           int32(o.Status),
 		IsCancel:         int32(o.IsCancel),
@@ -78,7 +79,8 @@ func merchantOrderToProto(o *model.MerchantOrder) *web.MerchantOrderItem {
 		Amount:       o.Amount,
 		TaskId:       int32(o.TaskId),
 		Counts:       o.Counts,
-		PayType:      o.PayType,
+		PayTypeInfo:  o.PayTypeInfo,
+		PayTypeId:    int32(o.PayTypeId),
 		BuyType:      int32(o.BuyType),
 		Status:       int32(o.Status),
 		PayImg:       o.PayImg,
@@ -113,7 +115,7 @@ func (u *User) assertOrderParticipant(o *model.MerchantOrder, uid int) error {
 func (u *User) MerchantOrderCreate(ctx context.Context, in *web.MerchantOrderCreateRequest) (*web.MerchantOrderCreateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	buyerID := int(session.UserId)
-	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), strings.TrimSpace(in.GetPayType()), int(in.GetBuyType()))
+	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), strings.TrimSpace(in.GetPayTypeInfo()), int(in.GetPayTypeId()), int(in.GetBuyType()))
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderSelfBuy):
@@ -345,16 +347,13 @@ func (u *User) merchantOrderAppeal(ctx context.Context, in *web.MerchantOrderApp
 	return &web.MerchantOrderActionResponse{}, nil
 }
 
-// MerchantOrderPay 汇美统一下单：卖家须已开通汇美；已有 pay_url 则直接返回
+// MerchantOrderPay 宏达统一下单：订单 pay_type_id 须为宏达(4)；已有 pay_url 则直接返回
 func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayRequest) (*web.MerchantOrderPayResponse, error) {
-	// session, _ := middleware.FormContext[entity.WebClaims](ctx)
-	// uid := int(session.UserId)
-
-	mc := u.ensureHmPayReady()
+	mc := u.ensureHdPayReady()
 	if mc == nil {
-		return nil, errorx.New(500, "汇美支付未配置")
+		return nil, errorx.New(500, "宏达支付未配置")
 	}
-	client := hmpay.GetClient()
+	client := hdpay.GetClient()
 
 	orderNo := strings.TrimSpace(in.GetOrderId())
 	if orderNo == "" {
@@ -367,15 +366,15 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	if o == nil {
 		return nil, errorx.New(404, "订单不存在")
 	}
-	// if o.BuyerId != uid {
-	// 	return nil, errorx.New(403, "仅买家可发起支付")
-	// }
-	// if o.IsCancel != 0 {
-	// 	return nil, errorx.New(400, "订单已取消")
-	// }
-	// if o.Status != model.MerchantOrderStatusPendingPay {
-	// 	return nil, errorx.New(400, "当前订单状态不可支付")
-	// }
+	if !model.MerchantOrderPayTypeSupportsOnlinePay(o.PayTypeId) {
+		return nil, errorx.New(400, "该订单支付方式不支持在线支付")
+	}
+	if o.IsCancel != 0 {
+		return nil, errorx.New(400, "订单已取消")
+	}
+	if o.Status != model.MerchantOrderStatusPendingPay {
+		return nil, errorx.New(400, "当前订单状态不可支付")
+	}
 
 	mch, err := u.MerchantRepo.FindLatestApprovedByUserId(ctx, o.SalerId)
 	if err != nil {
@@ -383,6 +382,13 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	}
 	if mch == nil {
 		return nil, errorx.New(400, "卖家商户未通过审核")
+	}
+	channelPayType, ok := model.MerchantHdChannelPayType(mch.PayTypes)
+	if !ok {
+		return nil, errorx.New(400, "商户未开通宏达支付")
+	}
+	if !config.IsValidHdpayChannelPayType(channelPayType) {
+		return nil, errorx.New(400, "商户宏达支付通道配置无效")
 	}
 
 	existing, err := u.MerchantHdOrderRepo.FindByOrderNo(ctx, orderNo)
@@ -393,17 +399,17 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 		return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL}, nil
 	}
 
-	submitAmount := formatHmAmount(o.Amount)
+	submitAmount := formatPayAmount(o.Amount)
 	now := time.Now().Unix()
 	userIP := middleware.ClientIPFromContext(ctx)
-	req := &hmpay.CreateOrderRequest{
+	req := &hdpay.CreateOrderRequest{
 		SubmitAmount: submitAmount,
 		OrderNo:      orderNo,
 		NotifyURL:    mc.NotifyURL,
 		ReturnURL:    strings.TrimSpace(in.GetReturnUrl()),
 		AppID:        mc.AppID,
 		Time:         now,
-		PayType:      mc.ChannelPayType(),
+		PayType:      channelPayType,
 		UserIP:       userIP,
 	}
 	data, err := client.CreateOrder(req)
@@ -415,12 +421,14 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	row := &model.MerchantHdOrder{
 		OrderNo:      orderNo,
 		LocalNo:      data.LocalNo,
+		PayType:      channelPayType,
 		PayURL:       data.PayURL,
 		SubmitAmount: amt,
 	}
 	if existing != nil {
 		err = u.MerchantHdOrderRepo.UpdateByOrderNo(ctx, orderNo, map[string]any{
 			"local_no":      data.LocalNo,
+			"pay_type":      channelPayType,
 			"pay_url":       data.PayURL,
 			"submit_amount": amt,
 		})
@@ -433,9 +441,9 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	return &web.MerchantOrderPayResponse{PayUrl: data.PayURL}, nil
 }
 
-// MerchantOrderNotify 汇美支付回调（返回纯文本 success / fail）
+// MerchantOrderNotify 宏达支付回调（返回纯文本 success / fail）
 func (u *User) MerchantOrderNotify(c *gin.Context) {
-	mc := u.hmpayConfig()
+	mc := u.hdpayConfig()
 	if mc == nil {
 		c.String(200, "fail")
 		return
@@ -451,8 +459,8 @@ func (u *User) MerchantOrderNotify(c *gin.Context) {
 		return
 	}
 	sign, _ := raw["sign"].(string)
-	params := hmpay.ParamsFromMap(raw)
-	if !hmpay.VerifySign(params, mc.AppSecret, sign) {
+	params := hdpay.ParamsFromMap(raw)
+	if !hdpay.VerifySign(params, mc.AppSecret, sign) {
 		c.String(200, "fail")
 		return
 	}
@@ -503,32 +511,32 @@ func (u *User) MerchantOrderNotify(c *gin.Context) {
 	c.String(200, "success")
 }
 
-func (u *User) hmpayConfig() *config.Hmpay {
-	if u.Config == nil || u.Config.Hmpay == nil {
+func (u *User) hdpayConfig() *config.Hdpay {
+	if u.Config == nil || u.Config.Hdpay == nil {
 		return nil
 	}
-	m := u.Config.Hmpay
+	m := u.Config.Hdpay
 	if strings.TrimSpace(m.OrderURL) == "" || strings.TrimSpace(m.AppID) == "" || strings.TrimSpace(m.AppSecret) == "" {
 		return nil
 	}
 	return m
 }
 
-// ensureHmPayReady 读取配置并在客户端未初始化时补调 Init（与 main.initHmPay 一致）
-func (u *User) ensureHmPayReady() *config.Hmpay {
-	mc := u.hmpayConfig()
+// ensureHdPayReady 读取配置并在客户端未初始化时补调 Init（与 main.initHdPay 一致）
+func (u *User) ensureHdPayReady() *config.Hdpay {
+	mc := u.hdpayConfig()
 	if mc == nil {
 		return nil
 	}
-	if hmpay.GetClient() == nil {
-		hmpay.Init(mc.OrderURL, mc.AppID, mc.AppSecret)
+	if hdpay.GetClient() == nil {
+		hdpay.Init(mc.OrderURL, mc.AppID, mc.AppSecret)
 	}
-	if hmpay.GetClient() == nil {
+	if hdpay.GetClient() == nil {
 		return nil
 	}
 	return mc
 }
 
-func formatHmAmount(amount float64) string {
+func formatPayAmount(amount float64) string {
 	return fmt.Sprintf("%.2f", amount)
 }

@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -23,7 +22,7 @@ type Config struct {
 	OAuth      *OAuth      `json:"oauth" yaml:"oauth"`
 	Trtc       *Trtc       `json:"trtc" yaml:"trtc"`
 	Wallet     *Wallet     `json:"wallet" yaml:"wallet"`
-	Hmpay      *Hmpay      `json:"hmpay" yaml:"hmpay"`
+	Hdpay      *Hdpay      `json:"hdpay" yaml:"hdpay"`
 	Security   *Security   `json:"security" yaml:"security"`
 }
 
@@ -51,17 +50,19 @@ func New(filename string) *Config {
 		panic(fmt.Sprintf("解析 config.yaml 读取错误: %v", err))
 	}
 
-	// 兼容旧配置键 merchant（已更名为 hmpay）
-	if conf.Hmpay == nil {
+	// 兼容旧配置键 hmpay / merchant（yaml 键名保留，仅作读取兼容）
+	if conf.Hdpay == nil {
 		var legacy struct {
-			Merchant *Hmpay `yaml:"merchant"`
+			LegacyHmpay *Hdpay `yaml:"hmpay"`
+			Merchant    *Hdpay `yaml:"merchant"`
 		}
-		if err := yaml.Unmarshal(content, &legacy); err == nil && legacy.Merchant != nil {
-			conf.Hmpay = legacy.Merchant
+		if err := yaml.Unmarshal(content, &legacy); err == nil {
+			if legacy.LegacyHmpay != nil {
+				conf.Hdpay = legacy.LegacyHmpay
+			} else if legacy.Merchant != nil {
+				conf.Hdpay = legacy.Merchant
+			}
 		}
-	}
-	if conf.Hmpay != nil && strings.TrimSpace(conf.Hmpay.PayType) == "" {
-		conf.Hmpay.PayType = HmpayDefaultPayType
 	}
 
 	// 如果没有配置安全选项，使用默认配置

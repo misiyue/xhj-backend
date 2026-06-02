@@ -7,6 +7,7 @@ type MerchantHdOrder struct {
 	Id           int64      `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
 	OrderNo      string     `gorm:"column:order_no;type:varchar(64);not null;index" json:"order_no"`
 	LocalNo      string     `gorm:"column:local_no;type:varchar(64);not null;default:''" json:"local_no"`
+	PayType      string     `gorm:"column:pay_type;type:varchar(8);not null;default:''" json:"pay_type"`
 	PayURL       string     `gorm:"column:pay_url;type:varchar(255);not null;default:''" json:"pay_url"`
 	SubmitAmount float64    `gorm:"column:submit_amount;type:decimal(10,2);not null;default:0" json:"submit_amount"`
 	Status       string     `gorm:"column:status;type:varchar(16);not null;default:''" json:"status"`

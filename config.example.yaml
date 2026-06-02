@@ -230,11 +230,10 @@ security:
     enabled: true
     max_body_size: 67108864  # 最大请求体大小（字节），默认64MB
 
-# 汇美支付
-hmpay:
+# 宏达支付（商户订单在线支付）
+hdpay:
   order_url: "http://47.83.15.198:10081/sdk/orders"
   app_id: "GL"
   app_secret: "JC8WHcGHPZ4tQpAznQpnprQ6wDHsmpf6zYtHCw4szmJpMXD8rmcpNn54cZmPFidc"
   notify_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/notify"
-  pay_type: "106"
 
