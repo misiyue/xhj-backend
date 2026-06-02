@@ -347,14 +347,8 @@ func (u *User) merchantOrderAppeal(ctx context.Context, in *web.MerchantOrderApp
 	return &web.MerchantOrderActionResponse{}, nil
 }
 
-// MerchantOrderPay 宏达统一下单：订单 pay_type_id 须为宏达(4)；已有 pay_url 则直接返回
+// MerchantOrderPay 第三方统一下单：按订单 pay_type_id 分发；已有 pay_url 则直接返回
 func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayRequest) (*web.MerchantOrderPayResponse, error) {
-	mc := u.ensureHdPayReady()
-	if mc == nil {
-		return nil, errorx.New(500, "宏达支付未配置")
-	}
-	client := hdpay.GetClient()
-
 	orderNo := strings.TrimSpace(in.GetOrderId())
 	if orderNo == "" {
 		return nil, errorx.New(400, "order_id 不能为空")
@@ -366,15 +360,12 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	if o == nil {
 		return nil, errorx.New(404, "订单不存在")
 	}
-	if !model.MerchantOrderPayTypeSupportsOnlinePay(o.PayTypeId) {
-		return nil, errorx.New(400, "该订单支付方式不支持在线支付")
-	}
-	if o.IsCancel != 0 {
-		return nil, errorx.New(400, "订单已取消")
-	}
-	if o.Status != model.MerchantOrderStatusPendingPay {
-		return nil, errorx.New(400, "当前订单状态不可支付")
-	}
+	// if o.IsCancel != 0 {
+	// 	return nil, errorx.New(400, "订单已取消")
+	// }
+	// if o.Status != model.MerchantOrderStatusPendingPay {
+	// 	return nil, errorx.New(400, "当前订单状态不可支付")
+	// }
 
 	mch, err := u.MerchantRepo.FindLatestApprovedByUserId(ctx, o.SalerId)
 	if err != nil {
@@ -383,6 +374,24 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	if mch == nil {
 		return nil, errorx.New(400, "卖家商户未通过审核")
 	}
+
+	switch o.PayTypeId {
+	case model.MerchantPayTypeHd:
+		return u.merchantOrderPayHd(ctx, in, o, mch)
+	default:
+		return nil, errorx.New(400, "该订单支付方式不支持在线支付")
+	}
+}
+
+// merchantOrderPayHd 宏达支付统一下单
+func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayRequest, o *model.MerchantOrder, mch *model.Merchant) (*web.MerchantOrderPayResponse, error) {
+	hdc := u.ensureHdPayReady()
+	if hdc == nil {
+		return nil, errorx.New(500, "宏达支付未配置")
+	}
+	client := hdpay.GetClient()
+	orderNo := o.OrderId
+
 	channelPayType, ok := model.MerchantHdChannelPayType(mch.PayTypes)
 	if !ok {
 		return nil, errorx.New(400, "商户未开通宏达支付")
@@ -405,9 +414,9 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	req := &hdpay.CreateOrderRequest{
 		SubmitAmount: submitAmount,
 		OrderNo:      orderNo,
-		NotifyURL:    mc.NotifyURL,
+		NotifyURL:    hdc.NotifyURL,
 		ReturnURL:    strings.TrimSpace(in.GetReturnUrl()),
-		AppID:        mc.AppID,
+		AppID:        hdc.AppID,
 		Time:         now,
 		PayType:      channelPayType,
 		UserIP:       userIP,

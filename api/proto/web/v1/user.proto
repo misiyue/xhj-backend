@@ -383,6 +383,11 @@ message MerchantStatusRequest {}
 
 message MerchantProfileRequest {}
 
+message MerchantPayTypeLimit {
+  double min = 1;
+  double max = 2;
+}
+
 message MerchantStatusResponse {
   bool has_application = 1 [(google.api.field_behavior) = REQUIRED];
   int32 id = 2;
@@ -403,6 +408,8 @@ message MerchantStatusResponse {
   int32 is_close = 17;
   string created_at = 18;
   string updated_at = 19;
+  // 已开通支付类型及金额区间，如 {"hd":{"min":200,"max":10000}}，依据 pay_types JSON 中 pay_type 映射
+  map<string, MerchantPayTypeLimit> pay_types = 20;
 }
 
 // ---------- 商户挂售任务 merchant_task ----------
