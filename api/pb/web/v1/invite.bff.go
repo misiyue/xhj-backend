@@ -12,14 +12,10 @@ import (
 // IInviteHandler BFF 接口
 type IInviteHandler interface {
 
-	// 生成邀请码
-	GenerateInviteCode(ctx context.Context, in *InviteGenerateRequest) (*InviteGenerateResponse, error)
-	// 获取我的邀请码列表
-	GetMyInviteCodes(ctx context.Context, in *InviteListRequest) (*InviteListResponse, error)
+	// 获取我的邀请码（users.invite_code，为空则自动生成）
+	GetMyInviteCode(ctx context.Context, in *InviteCodeGetRequest) (*InviteCodeGetResponse, error)
 	// 获取邀请统计
 	GetInviteStats(ctx context.Context, in *InviteStatsRequest) (*InviteStatsResponse, error)
-	// 禁用邀请码
-	DisableInviteCode(ctx context.Context, in *InviteDisableRequest) (*InviteDisableResponse, error)
 	// 我邀请注册的好友列表（users.invite_user_id = 当前用户）
 	ListInviteFriends(ctx context.Context, in *InviteFriendListRequest) (*InviteFriendListResponse, error)
 }
@@ -37,22 +33,13 @@ func RegisterInviteHandler(r gin.IRoutes, interceptor interface {
 		panic("handler is nil")
 	}
 
-	r.POST("/api/v1/invite/generate", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in InviteGenerateRequest
+	r.POST("/api/v1/invite/code", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in InviteCodeGetRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
 
-		return handler.GenerateInviteCode(ctx.Request.Context(), &in)
-	}))
-
-	r.POST("/api/v1/invite/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in InviteListRequest
-		if err := interceptor.ShouldProto(ctx, &in); err != nil {
-			return nil, err
-		}
-
-		return handler.GetMyInviteCodes(ctx.Request.Context(), &in)
+		return handler.GetMyInviteCode(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/invite/stats", interceptor.Do(func(ctx *gin.Context) (any, error) {
@@ -62,15 +49,6 @@ func RegisterInviteHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.GetInviteStats(ctx.Request.Context(), &in)
-	}))
-
-	r.POST("/api/v1/invite/disable", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in InviteDisableRequest
-		if err := interceptor.ShouldProto(ctx, &in); err != nil {
-			return nil, err
-		}
-
-		return handler.DisableInviteCode(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/invite/friends", interceptor.Do(func(ctx *gin.Context) (any, error) {

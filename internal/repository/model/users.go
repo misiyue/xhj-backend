@@ -9,8 +9,22 @@ const (
 	UsersStatusDisabled = 2
 )
 
-type Users struct {
-	Id           int       `gorm:"column:id;primary_key;AUTO_INCREMENT" json:"id"` // 新 IM 系统自增 ID
+const UserInviteCodeLen = 6
+
+const inviteCodeAlphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+// DeriveUserInviteCode 根据 user id 运算生成 6 位数字+小写字母邀请码（salt 用于碰撞重试）
+func DeriveUserInviteCode(userID int, salt int) string {
+	var out [UserInviteCodeLen]byte
+	x := uint64(userID)*2654435761 + uint64(salt)*2246822519 + 97531
+	for i := 0; i < UserInviteCodeLen; i++ {
+		x = x*6364136223846793005 + 1
+		out[i] = inviteCodeAlphabet[x%uint64(len(inviteCodeAlphabet))]
+	}
+	return string(out[:])
+}
+
+type Users struct {	Id           int       `gorm:"column:id;primary_key;AUTO_INCREMENT" json:"id"` // 新 IM 系统自增 ID
 	UserId       int       `gorm:"column:user_id;type:int(11);not null" json:"user_id"`
 	Username     string    `gorm:"column:username;type:varchar(100)" json:"username"`         // 登录用户名（新的登录名）
 	Mobile       *string   `gorm:"column:mobile;type:varchar(32);index" json:"mobile"`        // 手机号
@@ -29,7 +43,8 @@ type Users struct {
 	IsTrans      int       `gorm:"column:is_trans;type:int(11);default:0" json:"is_trans"`    // 是否已设置交易密码 0/1
 	IsRobot      int       `gorm:"column:is_robot;" json:"is_robot"`                          // 是否机器人[1:否;2:是;]
 	Status       int       `gorm:"column:status;" json:"status"`                              // 用户状态[1:正常;2:停用;3:注销]
-	InviteUserId int       `gorm:"column:invite_user_id;default:0" json:"invite_user_id"`     // 邀请人用户 id（invite_code.user_id）
+	InviteUserId int       `gorm:"column:invite_user_id;default:0" json:"invite_user_id"`     // 邀请人 users.id
+	InviteCode   string    `gorm:"column:invite_code;type:varchar(6);uniqueIndex" json:"invite_code"` // 邀请码（6位数字+小写字母）
 	DeviceCode   string    `gorm:"column:device_code;type:varchar(128)" json:"device_code"`   // 客户端设备码
 	CreatedAt    time.Time `gorm:"column:created_at;" json:"created_at"`                      // 注册时间
 	UpdatedAt    time.Time `gorm:"column:updated_at;" json:"updated_at"`                      // 更新时间

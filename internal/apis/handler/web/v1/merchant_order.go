@@ -24,6 +24,8 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
+const merchantHdPayURLExpire = 2 * time.Minute
+
 func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *web.MerchantOrderListItem {
 	if o == nil {
 		return nil
@@ -347,7 +349,7 @@ func (u *User) merchantOrderAppeal(ctx context.Context, in *web.MerchantOrderApp
 	return &web.MerchantOrderActionResponse{}, nil
 }
 
-// MerchantOrderPay 第三方统一下单：按订单 pay_type_id 分发；已有 pay_url 则直接返回
+// MerchantOrderPay 第三方统一下单：按订单 pay_type_id 分发；宏达支付未过期 pay_url 则直接返回
 func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayRequest) (*web.MerchantOrderPayResponse, error) {
 	orderNo := strings.TrimSpace(in.GetOrderId())
 	if orderNo == "" {
@@ -405,7 +407,9 @@ func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayR
 		return nil, err
 	}
 	if existing != nil && strings.TrimSpace(existing.PayURL) != "" {
-		return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL}, nil
+		if time.Since(existing.CreatedAt) < merchantHdPayURLExpire {
+			return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL}, nil
+		}
 	}
 
 	submitAmount := formatPayAmount(o.Amount)
@@ -440,6 +444,7 @@ func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayR
 			"pay_type":      channelPayType,
 			"pay_url":       data.PayURL,
 			"submit_amount": amt,
+			"created_at":    time.Now(),
 		})
 	} else {
 		err = u.MerchantHdOrderRepo.Create(ctx, row)

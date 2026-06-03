@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/gzydong/go-chat/internal/pkg/core"
@@ -115,4 +116,70 @@ func (u *Users) PaginationByInviteUserId(ctx context.Context, inviterId int, pag
 	return u.Repo.Pagination(ctx, page, pageSize, func(tx *gorm.DB) *gorm.DB {
 		return tx.Where("invite_user_id = ?", inviterId).Order("id DESC")
 	})
+}
+
+// CountByInviteUserId 统计被我邀请注册的用户数
+func (u *Users) CountByInviteUserId(ctx context.Context, inviterId int) (int64, error) {
+	var n int64
+	err := u.Repo.Db.WithContext(ctx).Model(&model.Users{}).
+		Where("invite_user_id = ?", inviterId).
+		Count(&n).Error
+	return n, err
+}
+
+// FindByInviteCode 按 users.invite_code 查邀请人
+func (u *Users) FindByInviteCode(ctx context.Context, code string) (*model.Users, error) {
+	code = strings.TrimSpace(strings.ToLower(code))
+	if code == "" {
+		return nil, nil
+	}
+	return u.Repo.FindByWhere(ctx, "invite_code = ?", code)
+}
+
+// EnsureInviteCode 返回用户邀请码；为空则生成并写入（唯一）
+func (u *Users) EnsureInviteCode(ctx context.Context, userID int) (string, error) {
+	user, err := u.Repo.FindById(ctx, userID)
+	if err != nil {
+		return "", err
+	}
+	if user == nil {
+		return "", errors.New("user not found")
+	}
+	if c := strings.TrimSpace(user.InviteCode); c != "" {
+		return c, nil
+	}
+	db := u.Repo.Db.WithContext(ctx)
+	for attempt := 0; attempt < 32; attempt++ {
+		code := model.DeriveUserInviteCode(userID, attempt)
+		res := db.Model(&model.Users{}).
+			Where("id = ? AND (invite_code IS NULL OR invite_code = '')", userID).
+			Updates(map[string]any{"invite_code": code})
+		if res.Error != nil {
+			if isDuplicateKey(res.Error) {
+				continue
+			}
+			return "", res.Error
+		}
+		if res.RowsAffected > 0 {
+			_ = u.ClearTableCache(ctx, userID)
+			return code, nil
+		}
+		// 并发下可能已被其它请求写入，重新读取
+		user, err = u.Repo.FindById(ctx, userID)
+		if err != nil {
+			return "", err
+		}
+		if user != nil && strings.TrimSpace(user.InviteCode) != "" {
+			return strings.TrimSpace(user.InviteCode), nil
+		}
+	}
+	return "", errors.New("invite code generate failed")
+}
+
+func isDuplicateKey(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate") || strings.Contains(msg, "1062")
 }

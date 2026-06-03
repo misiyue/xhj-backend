@@ -38,6 +38,8 @@ type IUserHandler interface {
 	MerchantTaskMarketList(ctx context.Context, in *MerchantTaskMarketListRequest) (*MerchantTaskListResponse, error)
 	// 任务详情（按 id）
 	MerchantTaskDetail(ctx context.Context, in *MerchantTaskDetailRequest) (*MerchantTaskItem, error)
+	// 买家：按挂单 task_id 查看对应商户公开信息
+	MerchantInfoByTask(ctx context.Context, in *MerchantInfoByTaskRequest) (*MerchantInfoForBuyerResponse, error)
 	// 修改自己的任务（仅待交易且未删除）
 	MerchantTaskUpdate(ctx context.Context, in *MerchantTaskUpdateRequest) (*MerchantTaskUpdateResponse, error)
 	// 上架自己的任务
@@ -212,6 +214,15 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.MerchantTaskDetail(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/merchant/task/merchant-info", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantInfoByTaskRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.MerchantInfoByTask(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/merchant/task/update", interceptor.Do(func(ctx *gin.Context) (any, error) {

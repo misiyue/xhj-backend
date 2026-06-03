@@ -44,7 +44,6 @@ type Auth struct {
 	EmailService        service.IEmailService
 	UserService         service.IUserService
 	ArticleClassService service.IArticleClassService
-	InviteCodeService   service.IInviteCodeService
 	Rsa                 rsautil.IRsa
 	OauthService        service.IOAuthService
 	AesUtil             aesutil.IAesUtil
@@ -179,17 +178,17 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		return nil, errorx.New(400, "邀请码不能为空")
 	}
 	if in.InviteCode != "" {
-		ok, inviterId, err := a.InviteCodeService.ResolveInviter(ctx, in.InviteCode)
+		code := strings.TrimSpace(strings.ToLower(in.InviteCode))
+		inviter, err := a.UsersRepo.FindByInviteCode(ctx, code)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
+		if inviter == nil || inviter.IsDisabled() {
 			if a.Config.App.RequireInviteCode {
-				return nil, errorx.New(400, "邀请码无效或已过期")
+				return nil, errorx.New(400, "邀请码无效")
 			}
-			// 非必填场景：无效邀请码忽略，不记录邀请人
 		} else {
-			inviteUserId = inviterId
+			inviteUserId = inviter.Id
 		}
 	}
 
@@ -269,7 +268,7 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		Email:        in.Email,
 		Password:     string(password),
 		Platform:     in.Platform,
-		InviteUserId: inviteUserId,
+	InviteUserId: inviteUserId,
 		DeviceCode:   deviceCode,
 		// Username 没有前端字段时，内部会自动用 mobile/email/nickname 生成
 	})
@@ -282,16 +281,6 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 			releaseDev(ctx)
 		}
 		return nil, err
-	}
-
-	// 使用邀请码（如果提供了）
-	if in.InviteCode != "" {
-		if err := a.InviteCodeService.UseInviteCode(ctx, in.InviteCode, user.Id); err != nil {
-			logger.ErrorWithFields("使用邀请码失败", err, map[string]interface{}{
-				"invite_code": in.InviteCode,
-				"user_id":     user.Id,
-			})
-		}
 	}
 
 	// 删除短信验证码（如果使用了）

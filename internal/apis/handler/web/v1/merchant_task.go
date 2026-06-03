@@ -176,6 +176,30 @@ func (u *User) MerchantTaskDetail(ctx context.Context, in *web.MerchantTaskDetai
 	return merchantTaskToProto(t, nickMap[t.UserId]), nil
 }
 
+// MerchantInfoByTask 买家按挂单 id 查看对应商户公开信息
+func (u *User) MerchantInfoByTask(ctx context.Context, in *web.MerchantInfoByTaskRequest) (*web.MerchantInfoForBuyerResponse, error) {
+	taskID := int(in.GetTaskId())
+	t, err := u.MerchantTaskRepo.FindByID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if t == nil || t.IsDeleted != 0 {
+		return nil, errorx.New(404, "挂单不存在")
+	}
+	m, err := u.MerchantRepo.FindLatestApprovedByUserId(ctx, t.UserId)
+	if err != nil {
+		return nil, err
+	}
+	if m == nil {
+		return nil, errorx.New(404, "商户未通过审核")
+	}
+	return &web.MerchantInfoForBuyerResponse{
+		TaskId:   int32(taskID),
+		Nickname: m.Nickname,
+		PayTypes: merchantPayTypesToProto(m.PayTypes),
+	}, nil
+}
+
 // MerchantTaskUpdate 修改自己的任务
 func (u *User) MerchantTaskUpdate(ctx context.Context, in *web.MerchantTaskUpdateRequest) (*web.MerchantTaskUpdateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)

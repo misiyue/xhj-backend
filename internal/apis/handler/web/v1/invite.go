@@ -9,94 +9,34 @@ import (
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/repository/repo"
-	"github.com/gzydong/go-chat/internal/service"
 )
 
 type Invite struct {
-	InviteCodeService service.IInviteCodeService
-	UsersRepo         *repo.Users
+	UsersRepo *repo.Users
 }
 
-// GenerateInviteCode 生成邀请码
-func (i *Invite) GenerateInviteCode(ctx context.Context, req *pb.InviteGenerateRequest) (*pb.InviteGenerateResponse, error) {
+// GetMyInviteCode 获取当前用户邀请码（users.invite_code，为空则生成并保存）
+func (i *Invite) GetMyInviteCode(ctx context.Context, _ *pb.InviteCodeGetRequest) (*pb.InviteCodeGetResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
-
-	expireDays := req.ExpireDays
-	if expireDays <= 0 {
-		expireDays = 36500 // 默认100年（长期）
-	}
-
-	// maxUsage := req.MaxUsage
-	// if maxUsage <= 0 {
-	// 	maxUsage = 1 // 默认1次
-	// }
-	maxUsage := 0
-
-	inviteCode, err := i.InviteCodeService.GenerateInviteCode(ctx, int(session.UserId), int(expireDays), int(maxUsage))
+	code, err := i.UsersRepo.EnsureInviteCode(ctx, int(session.UserId))
 	if err != nil {
 		return nil, err
 	}
-
-	return &pb.InviteGenerateResponse{
-		Code:          inviteCode.Code,
-		ExpireAt:      inviteCode.ExpireAt.Format("2006-01-02 15:04:05"),
-		MaxUsageCount: int32(inviteCode.MaxUsageCount),
-	}, nil
-}
-
-// GetMyInviteCodes 获取我的邀请码列表
-func (i *Invite) GetMyInviteCodes(ctx context.Context, req *pb.InviteListRequest) (*pb.InviteListResponse, error) {
-	session, _ := middleware.FormContext[entity.WebClaims](ctx)
-
-	codes, err := i.InviteCodeService.GetUserInviteCodes(ctx, int(session.UserId))
-	if err != nil {
-		return nil, err
-	}
-
-	items := make([]*pb.InviteCodeItem, 0, len(codes))
-	for _, code := range codes {
-		items = append(items, &pb.InviteCodeItem{
-			Id:            int32(code.Id),
-			Code:          code.Code,
-			Status:        int32(code.Status),
-			ExpireAt:      code.ExpireAt.Format("2006-01-02 15:04:05"),
-			MaxUsageCount: int32(code.MaxUsageCount),
-			UsageCount:    int32(code.UsageCount),
-			CreatedAt:     code.CreatedAt.Format("2006-01-02 15:04:05"),
-		})
-	}
-
-	return &pb.InviteListResponse{
-		Items: items,
-	}, nil
+	return &pb.InviteCodeGetResponse{Code: code}, nil
 }
 
 // GetInviteStats 获取邀请统计
-func (i *Invite) GetInviteStats(ctx context.Context, req *pb.InviteStatsRequest) (*pb.InviteStatsResponse, error) {
+func (i *Invite) GetInviteStats(ctx context.Context, _ *pb.InviteStatsRequest) (*pb.InviteStatsResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
-
-	stats, err := i.InviteCodeService.GetInviteStats(ctx, int(session.UserId))
+	n, err := i.UsersRepo.CountByInviteUserId(ctx, int(session.UserId))
 	if err != nil {
 		return nil, err
 	}
-
-	return &pb.InviteStatsResponse{
-		TotalCodes:       int32(stats["total_codes"]),
-		AvailableCodes:   int32(stats["available_codes"]),
-		UsedCodes:        int32(stats["used_codes"]),
-		TotalInvitations: int32(stats["total_invitations"]),
-	}, nil
-}
-
-// DisableInviteCode 禁用邀请码
-func (i *Invite) DisableInviteCode(ctx context.Context, req *pb.InviteDisableRequest) (*pb.InviteDisableResponse, error) {
-	session, _ := middleware.FormContext[entity.WebClaims](ctx)
-
-	if err := i.InviteCodeService.DisableInviteCode(ctx, req.Code, int(session.UserId)); err != nil {
-		return nil, err
+	total := int32(n)
+	if n > math.MaxInt32 {
+		total = math.MaxInt32
 	}
-
-	return &pb.InviteDisableResponse{}, nil
+	return &pb.InviteStatsResponse{TotalInvitations: total}, nil
 }
 
 // ListInviteFriends 我邀请注册的好友列表（users.invite_user_id = 当前用户），支持分页

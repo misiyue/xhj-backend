@@ -109,6 +109,13 @@ service User {
       body: "*"
     };
   }
+  // 买家：按挂单 task_id 查看对应商户公开信息
+  rpc MerchantInfoByTask(MerchantInfoByTaskRequest) returns (MerchantInfoForBuyerResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/merchant/task/merchant-info"
+      body: "*"
+    };
+  }
   // 修改自己的任务（仅待交易且未删除）
   rpc MerchantTaskUpdate(MerchantTaskUpdateRequest) returns (MerchantTaskUpdateResponse) {
     option (google.api.http) = {
@@ -410,6 +417,17 @@ message MerchantStatusResponse {
   string updated_at = 19;
   // 已开通支付类型及金额区间，如 {"hd":{"min":200,"max":10000}}，依据 pay_types JSON 中 pay_type 映射
   map<string, MerchantPayTypeLimit> pay_types = 20;
+}
+
+// 买家查看挂单对应商户的公开信息
+message MerchantInfoByTaskRequest {
+  int32 task_id = 1 [(buf.validate.field).int32.gt = 0];
+}
+
+message MerchantInfoForBuyerResponse {
+  int32 task_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string nickname = 2 [(google.api.field_behavior) = REQUIRED];
+  map<string, MerchantPayTypeLimit> pay_types = 3;
 }
 
 // ---------- 商户挂售任务 merchant_task ----------

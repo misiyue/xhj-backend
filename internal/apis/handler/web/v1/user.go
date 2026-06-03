@@ -458,12 +458,16 @@ func (u *User) MerchantStatus(ctx context.Context, _ *web.MerchantStatusRequest)
 	return merchantToStatusResponse(latest), nil
 }
 
-func merchantToStatusResponse(m *model.Merchant) *web.MerchantStatusResponse {
-	limits := model.MerchantPayTypesLimits(m.PayTypes)
+func merchantPayTypesToProto(payTypesJSON string) map[string]*web.MerchantPayTypeLimit {
+	limits := model.MerchantPayTypesLimits(payTypesJSON)
 	payTypes := make(map[string]*web.MerchantPayTypeLimit, len(limits))
 	for k, v := range limits {
 		payTypes[k] = &web.MerchantPayTypeLimit{Min: v.Min, Max: v.Max}
 	}
+	return payTypes
+}
+
+func merchantToStatusResponse(m *model.Merchant) *web.MerchantStatusResponse {
 	return &web.MerchantStatusResponse{
 		HasApplication: true,
 		Id:             int32(m.Id),
@@ -484,7 +488,7 @@ func merchantToStatusResponse(m *model.Merchant) *web.MerchantStatusResponse {
 		IsClose:        int32(m.IsClose),
 		CreatedAt:      timeutil.FormatDatetime(m.CreatedAt),
 		UpdatedAt:      timeutil.FormatDatetime(m.UpdatedAt),
-		PayTypes:       payTypes,
+		PayTypes:       merchantPayTypesToProto(m.PayTypes),
 	}
 }
 
