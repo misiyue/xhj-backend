@@ -26,6 +26,36 @@ import (
 
 const merchantHdPayURLExpire = 2 * time.Minute
 
+func encodeAppealMaterials(urls []string) string {
+	trimmed := make([]string, 0, len(urls))
+	for _, u := range urls {
+		u = strings.TrimSpace(u)
+		if u != "" {
+			trimmed = append(trimmed, u)
+		}
+	}
+	if len(trimmed) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(trimmed)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func decodeAppealMaterials(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var out []string
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return nil
+	}
+	return out
+}
+
 func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *web.MerchantOrderListItem {
 	if o == nil {
 		return nil
@@ -49,6 +79,9 @@ func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *
 		Judge:            o.Judge,
 		JudgeTime:        timeutil.FormatUnixSecond(o.JudgeTime),
 		MerchantNickname: merchantNickname,
+		AppealMaterials:  decodeAppealMaterials(o.AppealMaterials),
+		CancelReason:     o.CancelReason,
+		Remark:           o.Remark,
 	}
 }
 
@@ -90,10 +123,12 @@ func merchantOrderToProto(o *model.MerchantOrder) *web.MerchantOrderItem {
 		IsAppeal:     int32(o.IsAppeal),
 		AppealId:     int32(o.AppealId),
 		AppealTime:   int32(o.AppealTime),
-		AppealReason: o.AppealReason,
-		CancelId:     int32(o.CancelId),
-		Remark:       o.Remark,
-		PayTime:      int32(o.PayTime),
+		AppealReason:    o.AppealReason,
+		AppealMaterials: decodeAppealMaterials(o.AppealMaterials),
+		CancelId:        int32(o.CancelId),
+		CancelReason:    o.CancelReason,
+		Remark:          o.Remark,
+		PayTime:         int32(o.PayTime),
 		CancelTime:   int32(o.CancelTime),
 		Wronger:      int32(o.Wronger),
 		Judge:        o.Judge,
@@ -117,7 +152,7 @@ func (u *User) assertOrderParticipant(o *model.MerchantOrder, uid int) error {
 func (u *User) MerchantOrderCreate(ctx context.Context, in *web.MerchantOrderCreateRequest) (*web.MerchantOrderCreateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	buyerID := int(session.UserId)
-	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), strings.TrimSpace(in.GetPayTypeInfo()), int(in.GetPayTypeId()), int(in.GetBuyType()))
+	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), strings.TrimSpace(in.GetPayTypeInfo()), int(in.GetPayTypeId()), int(in.GetBuyType()), strings.TrimSpace(in.GetRemark()))
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderSelfBuy):
@@ -167,7 +202,7 @@ func (u *User) MerchantOrderCancel(ctx context.Context, in *web.MerchantOrderCan
 	if o.BuyerId != uid {
 		return nil, errorx.New(403, "仅买家可取消订单")
 	}
-	err = u.MerchantOrderRepo.CancelOrderTx(ctx, o.Id, int(in.GetCancelId()), strings.TrimSpace(in.GetRemark()))
+	err = u.MerchantOrderRepo.CancelOrderTx(ctx, o.Id, int(in.GetCancelId()), strings.TrimSpace(in.GetCancelReason()))
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderAlreadyCancelled):
@@ -213,7 +248,7 @@ func parseMerchantOrderStatusFilter(raw string) ([]int, error) {
 	return out, nil
 }
 
-// MerchantOrderList 订单分页列表，direct：1 买家（默认），2 卖家；status 逗号分隔筛选
+// MerchantOrderList 订单分页列表，direct：1 买家（默认），2 卖家；status 逗号分隔筛选；is_appeal=1 筛选申诉中未裁定
 func (u *User) MerchantOrderList(ctx context.Context, in *web.MerchantOrderListRequest) (*web.MerchantOrderListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
@@ -228,9 +263,10 @@ func (u *User) MerchantOrderList(ctx context.Context, in *web.MerchantOrderListR
 	if err != nil {
 		return nil, err
 	}
+	appealPending := in.GetIsAppeal() == 1
 	asBuyer := direct == 1
 	page, pageSize := normMerchantTaskPage(int(in.GetPage()), int(in.GetPageSize()))
-	rows, total, err := u.MerchantOrderRepo.ListByParticipant(ctx, uid, asBuyer, statuses, page, pageSize)
+	rows, total, err := u.MerchantOrderRepo.ListByParticipant(ctx, uid, asBuyer, statuses, appealPending, page, pageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +371,7 @@ func (u *User) merchantOrderAppeal(ctx context.Context, in *web.MerchantOrderApp
 	if side == model.MerchantOrderAppealSideSeller && o.SalerId != uid {
 		return nil, errorx.New(403, "仅卖家可发起卖家申诉")
 	}
-	err = u.MerchantOrderRepo.AppealOrderTx(ctx, o.Id, side, strings.TrimSpace(in.GetAppealReason()))
+	err = u.MerchantOrderRepo.AppealOrderTx(ctx, o.Id, side, strings.TrimSpace(in.GetAppealReason()), encodeAppealMaterials(in.GetAppealMaterials()))
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderAlreadyAppeal):
@@ -362,12 +398,12 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	if o == nil {
 		return nil, errorx.New(404, "订单不存在")
 	}
-	// if o.IsCancel != 0 {
-	// 	return nil, errorx.New(400, "订单已取消")
-	// }
-	// if o.Status != model.MerchantOrderStatusPendingPay {
-	// 	return nil, errorx.New(400, "当前订单状态不可支付")
-	// }
+	if o.IsCancel != 0 {
+		return nil, errorx.New(400, "订单已取消")
+	}
+	if o.Status != model.MerchantOrderStatusPendingPay {
+		return nil, errorx.New(400, "当前订单状态不可支付")
+	}
 
 	mch, err := u.MerchantRepo.FindLatestApprovedByUserId(ctx, o.SalerId)
 	if err != nil {

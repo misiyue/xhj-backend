@@ -288,6 +288,7 @@ message UserDetailResponse{
   string user_code = 12 [(google.api.field_behavior) = REQUIRED];
   // 是否已设置交易密码（0/1）
   int32 is_trans = 13 [(google.api.field_behavior) = REQUIRED];
+  string created_at = 14 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 用户配置信息请求参数
@@ -380,6 +381,8 @@ message MerchantApplyRequest {
   string back_image = 7 [(buf.validate.field).string.max_len = 255];
   // 保证金（元），最低 500；提交时会调用钱包冻结接口
   double surety = 8 [(buf.validate.field).double = {gte: 500}];
+  // 交易密码（必填，与 users.salt + trans 校验）
+  string password = 9 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
 message MerchantApplyResponse {
@@ -513,6 +516,7 @@ message MerchantPaytypeItem {
   int32 is_delete = 7 [(google.api.field_behavior) = REQUIRED];
   string created_at = 8;
   string updated_at = 9;
+  string phone = 10;
 }
 
 message MerchantPaytypeCreateRequest {
@@ -520,6 +524,8 @@ message MerchantPaytypeCreateRequest {
   string account = 2 [(buf.validate.field).string.max_len = 100];
   string nickname = 3 [(buf.validate.field).string.max_len = 100];
   string open_bank = 4 [(buf.validate.field).string.max_len = 255];
+  // 手机号，选填
+  string phone = 5 [(buf.validate.field).string.max_len = 16];
 }
 
 message MerchantPaytypeCreateResponse {
@@ -572,6 +578,12 @@ message MerchantOrderListItem {
   string merchant_nickname = 17;
   // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
   int32 pay_type_id = 18;
+  // 申诉材料文件 URL 列表
+  repeated string appeal_materials = 19;
+  // 订单取消原因
+  string cancel_reason = 20;
+  // 下单备注
+  string remark = 21;
 }
 
 message MerchantOrderItem {
@@ -592,7 +604,7 @@ message MerchantOrderItem {
   int32 appeal_time = 15;
   string appeal_reason = 16;
   int32 cancel_id = 17;
-  string remark = 18;
+  string cancel_reason = 18;
   int32 pay_time = 19;
   int32 cancel_time = 20;
   int32 wronger = 21;
@@ -602,6 +614,10 @@ message MerchantOrderItem {
   string updated_at = 25;
   // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
   int32 pay_type_id = 26;
+  // 申诉材料文件 URL 列表
+  repeated string appeal_materials = 27;
+  // 下单备注
+  string remark = 28;
 }
 
 message MerchantOrderCreateRequest {
@@ -612,6 +628,8 @@ message MerchantOrderCreateRequest {
   int32 buy_type = 4;
   // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
   int32 pay_type_id = 5 [(buf.validate.field).int32 = {gte: 1, lte: 5}];
+  // 下单备注，选填
+  string remark = 6 [(buf.validate.field).string.max_len = 255];
 }
 
 message MerchantOrderCreateResponse {
@@ -626,7 +644,7 @@ message MerchantOrderDetailRequest {
 message MerchantOrderCancelRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   int32 cancel_id = 2 [(buf.validate.field).int32.gte = 0];
-  string remark = 3 [(buf.validate.field).string.max_len = 255];
+  string cancel_reason = 3 [(buf.validate.field).string.max_len = 255];
 }
 
 message MerchantOrderIdRequest {
@@ -641,6 +659,8 @@ message MerchantOrderConfirmPayRequest {
 message MerchantOrderAppealRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   string appeal_reason = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  // 申诉材料文件 URL 列表，入库为 JSON 数组
+  repeated string appeal_materials = 3;
 }
 
 message MerchantOrderListRequest {
@@ -650,6 +670,8 @@ message MerchantOrderListRequest {
   int32 page_size = 3 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
   // 订单状态筛选，多个用英文逗号分隔：0待支付 1已支付待放币 2已完成 3已取消；空表示不限
   string status = 4 [(buf.validate.field).string.max_len = 64];
+  // 申诉筛选：1 表示申诉中未裁定（is_appeal=1 且 judge_time=0）；0 或不传表示不限
+  int32 is_appeal = 5 [(buf.validate.field).int32 = {in: [0, 1]}];
 }
 
 message MerchantOrderListResponse {

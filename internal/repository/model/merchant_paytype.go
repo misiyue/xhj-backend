@@ -11,6 +11,7 @@ type MerchantPaytype struct {
 	Nickname  string    `gorm:"column:nickname;type:varchar(100)" json:"nickname"`
 	OpenBank  string    `gorm:"column:open_bank;type:varchar(255)" json:"open_bank"`
 	IsDelete  int       `gorm:"column:is_delete;not null;default:0" json:"is_delete"`
+	Phone     string    `gorm:"column:phone;type:varchar(16)" json:"phone"`
 	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
 }

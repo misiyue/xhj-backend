@@ -268,7 +268,7 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		Email:        in.Email,
 		Password:     string(password),
 		Platform:     in.Platform,
-	InviteUserId: inviteUserId,
+		InviteUserId: inviteUserId,
 		DeviceCode:   deviceCode,
 		// Username 没有前端字段时，内部会自动用 mobile/email/nickname 生成
 	})

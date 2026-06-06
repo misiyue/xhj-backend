@@ -9,6 +9,7 @@ import (
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/pkg/utils"
 	"github.com/gzydong/go-chat/internal/repository/model"
 )
 
@@ -24,6 +25,7 @@ func merchantPaytypeToProto(p *model.MerchantPaytype) *web.MerchantPaytypeItem {
 		Nickname:  p.Nickname,
 		OpenBank:  p.OpenBank,
 		IsDelete:  int32(p.IsDelete),
+		Phone:     p.Phone,
 		CreatedAt: timeutil.FormatDatetime(p.CreatedAt),
 		UpdatedAt: timeutil.FormatDatetime(p.UpdatedAt),
 	}
@@ -36,12 +38,17 @@ func (u *User) MerchantPaytypeCreate(ctx context.Context, in *web.MerchantPaytyp
 	if _, err := u.requireEffectiveMerchant(ctx, uid, "无法管理收款方式"); err != nil {
 		return nil, err
 	}
+	phone := strings.TrimSpace(in.GetPhone())
+	if phone != "" && !utils.IsMobile(phone) {
+		return nil, errorx.New(400, "手机号格式不正确")
+	}
 	row := &model.MerchantPaytype{
 		UserId:   uid,
 		TypeId:   int(in.GetTypeId()),
 		Account:  strings.TrimSpace(in.GetAccount()),
 		Nickname: strings.TrimSpace(in.GetNickname()),
 		OpenBank: strings.TrimSpace(in.GetOpenBank()),
+		Phone:    phone,
 		IsDelete: 0,
 	}
 	if err := u.MerchantPaytypeRepo.Create(ctx, row); err != nil {

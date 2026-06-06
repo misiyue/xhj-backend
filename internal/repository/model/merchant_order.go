@@ -53,14 +53,16 @@ type MerchantOrder struct {
 	IsAppeal     int       `gorm:"column:is_appeal;not null;default:0" json:"is_appeal"`
 	AppealId     int       `gorm:"column:appeal_id;not null;default:0" json:"appeal_id"`
 	AppealTime   int       `gorm:"column:appeal_time;not null;default:0" json:"appeal_time"`
-	AppealReason string    `gorm:"column:appeal_reason;type:varchar(255)" json:"appeal_reason"`
-	CancelId     int       `gorm:"column:cancel_id;not null;default:0" json:"cancel_id"`
-	Remark       string    `gorm:"column:remark;type:varchar(255)" json:"remark"`
-	PayTime      int       `gorm:"column:pay_time;default:0" json:"pay_time"`
-	CancelTime   int       `gorm:"column:cancel_time;default:0" json:"cancel_time"`
-	Wronger      int       `gorm:"column:wronger;not null;default:0" json:"wronger"`
-	Judge        string    `gorm:"column:judge;type:varchar(255)" json:"judge"`
-	JudgeTime    int       `gorm:"column:judge_time;not null;default:0" json:"judge_time"`
+	AppealReason     string    `gorm:"column:appeal_reason;type:varchar(255)" json:"appeal_reason"`
+	AppealMaterials string    `gorm:"column:appeal_materials;type:text" json:"appeal_materials"`
+	CancelId        int       `gorm:"column:cancel_id;not null;default:0" json:"cancel_id"`
+	CancelReason    string    `gorm:"column:cancel_reason;type:varchar(255)" json:"cancel_reason"`
+	PayTime         int       `gorm:"column:pay_time;default:0" json:"pay_time"`
+	CancelTime      int       `gorm:"column:cancel_time;default:0" json:"cancel_time"`
+	Wronger         int       `gorm:"column:wronger;not null;default:0" json:"wronger"`
+	Judge           string    `gorm:"column:judge;type:varchar(255)" json:"judge"`
+	JudgeTime       int       `gorm:"column:judge_time;not null;default:0" json:"judge_time"`
+	Remark          string    `gorm:"column:remark;type:varchar(255)" json:"remark"`
 	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updated_at"`
 	CreatedAt    time.Time `gorm:"column:created_at" json:"created_at"`
 }

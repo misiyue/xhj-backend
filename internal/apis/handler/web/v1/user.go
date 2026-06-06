@@ -78,8 +78,9 @@ func (u *User) Detail(ctx context.Context, _ *web.UserDetailRequest) (*web.UserD
 		Email:    user.Email,
 		Birthday: user.Birthday,
 		Uuid:     int32(user.Uuid),
-		UserCode: user.UserCode,
-		IsTrans:  int32(user.IsTrans),
+		UserCode:  user.UserCode,
+		IsTrans:   int32(user.IsTrans),
+		CreatedAt: timeutil.FormatDatetime(user.CreatedAt),
 	}, nil
 }
 
@@ -399,6 +400,25 @@ func merchantApplyUpdates(rec *model.Merchant) map[string]any {
 func (u *User) MerchantApply(ctx context.Context, in *web.MerchantApplyRequest) (*web.MerchantApplyResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
+
+	password := strings.TrimSpace(in.GetPassword())
+	if password == "" {
+		return nil, errorx.New(400, "密码不能为空")
+	}
+	user, err := u.UsersRepo.FindById(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errorx.New(404, "用户不存在")
+	}
+	if strings.TrimSpace(user.Trans) == "" {
+		return nil, errorx.New(400, "请先设置交易密码")
+	}
+	if !encrypt.VerifyPassword(user.Trans, password, user.Salt) {
+		return nil, errorx.New(400, "交易密码错误")
+	}
+
 	surety := in.GetSurety()
 
 	hasApproved, err := u.MerchantRepo.HasApprovedByUserId(ctx, uid)
