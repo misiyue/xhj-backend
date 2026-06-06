@@ -96,6 +96,9 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.MerchantHdOrder{},
 		&model.MerchantSession{},
 		&model.MerchantMessage{},
+
+		// 系统通知
+		&model.SysNotice{},
 	)
 	
 	if err != nil {

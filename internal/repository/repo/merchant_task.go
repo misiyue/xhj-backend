@@ -73,14 +73,17 @@ func (r *MerchantTask) SumListedActiveCount(ctx context.Context, userId int, exc
 	return sum, nil
 }
 
-// ListByUserID 本人挂单列表；isUpFilter：0-不限，1-已上架(is_up=1)，2-已下架(is_up=0)
-func (r *MerchantTask) ListByUserID(ctx context.Context, userId int, page, pageSize int, isUpFilter int) ([]model.MerchantTask, int64, error) {
+// ListByUserID 本人挂单列表；isUpFilter：0-不限，1-已上架(is_up=1)，2-已下架(is_up=0)；statusFilter 为 nil 时不按 status 筛选
+func (r *MerchantTask) ListByUserID(ctx context.Context, userId int, page, pageSize int, isUpFilter int, statusFilter *int) ([]model.MerchantTask, int64, error) {
 	q := r.db.WithContext(ctx).Model(&model.MerchantTask{}).Where("user_id = ?", userId)
 	switch isUpFilter {
 	case 1:
 		q = q.Where("is_up = ?", 1)
 	case 2:
 		q = q.Where("is_up = ?", 0)
+	}
+	if statusFilter != nil {
+		q = q.Where("status = ?", *statusFilter)
 	}
 	var total int64
 	if err := q.Count(&total).Error; err != nil {

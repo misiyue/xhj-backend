@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/config"
@@ -339,6 +340,8 @@ func walletFreezeErr(err error) error {
 	return errorx.New(400, msg)
 }
 
+const merchantSuretyFreezeTimeout = 5 * time.Second
+
 // freezeMerchantSurety 调用钱包冻结保证金，返回 bill_id 写入 merchant.surety_bill_id。
 func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64) (int, error) {
 	if surety < 500 {
@@ -352,14 +355,32 @@ func (u *User) freezeMerchantSurety(ctx context.Context, uid int, surety float64
 	if err != nil {
 		return 0, err
 	}
-	billID, err := wc.FreezeAccount(fmt.Sprintf("%d", uid), walletUID, surety, 1)
-	if err != nil {
-		return 0, walletFreezeErr(err)
+
+	freezeCtx, cancel := context.WithTimeout(ctx, merchantSuretyFreezeTimeout)
+	defer cancel()
+
+	type freezeResult struct {
+		billID int
+		err    error
 	}
-	if billID <= 0 {
+	ch := make(chan freezeResult, 1)
+	go func() {
+		billID, err := wc.FreezeAccount(fmt.Sprintf("%d", uid), walletUID, surety, 1)
+		ch <- freezeResult{billID: billID, err: err}
+	}()
+
+	select {
+	case <-freezeCtx.Done():
 		return 0, errorx.New(400, "保证金冻结失败")
+	case res := <-ch:
+		if res.err != nil {
+			return 0, walletFreezeErr(res.err)
+		}
+		if res.billID <= 0 {
+			return 0, errorx.New(400, "保证金冻结失败")
+		}
+		return res.billID, nil
 	}
-	return billID, nil
 }
 
 func newMerchantApply(uid int, in *web.MerchantApplyRequest, surety float64, billID int) *model.Merchant {

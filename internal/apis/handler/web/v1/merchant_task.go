@@ -124,7 +124,12 @@ func (u *User) MerchantTaskCreate(ctx context.Context, in *web.MerchantTaskCreat
 func (u *User) MerchantTaskMyList(ctx context.Context, in *web.MerchantTaskMyListRequest) (*web.MerchantTaskListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	page, pageSize := normMerchantTaskPage(int(in.GetPage()), int(in.GetPageSize()))
-	rows, total, err := u.MerchantTaskRepo.ListByUserID(ctx, int(session.UserId), page, pageSize, int(in.GetIsUp()))
+	var statusFilter *int
+	if in.Status != nil {
+		v := int(*in.Status)
+		statusFilter = &v
+	}
+	rows, total, err := u.MerchantTaskRepo.ListByUserID(ctx, int(session.UserId), page, pageSize, int(in.GetIsUp()), statusFilter)
 	if err != nil {
 		return nil, err
 	}

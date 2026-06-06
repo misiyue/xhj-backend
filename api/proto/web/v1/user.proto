@@ -470,6 +470,8 @@ message MerchantTaskMyListRequest {
   int32 page_size = 2;
   // 上下架筛选：0-不限（默认），1-已上架，2-已下架
   int32 is_up = 3 [(buf.validate.field).int32 = {in: [0, 1, 2]}];
+  // 任务状态：0-待交易，1-交易中，2-完成交易；不传则不按 status 筛选
+  optional int32 status = 4 [(buf.validate.field).int32 = {gte: 0, lte: 2}];
 }
 
 message MerchantTaskMarketListRequest {
@@ -618,6 +620,8 @@ message MerchantOrderItem {
   repeated string appeal_materials = 27;
   // 下单备注
   string remark = 28;
+  // 卖方 users 表头像（saler_id 对应用户）
+  string saler_avatar = 29;
 }
 
 message MerchantOrderCreateRequest {
@@ -736,9 +740,11 @@ message MerchantChatSessionListResponse {
 }
 
 message MerchantChatMessageListRequest {
-  int32 session_id = 1 [(buf.validate.field).int32.gt = 0];
-  int32 page = 2 [(buf.validate.field).int32.gte = 0];
-  int32 page_size = 3 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+  // 对手方用户 id（与 /api/v1/message/records 的 receiver_id 一致）
+  int32 receiver_id = 1 [(buf.validate.field).int32.gt = 0];
+  // 游标：首次传 0；翻页传上一页最后一条消息的 id
+  int32 cursor = 2;
+  int32 limit = 3 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
 }
 
 message MerchantChatMessageItem {
@@ -760,7 +766,8 @@ message MerchantChatMessageItem {
 
 message MerchantChatMessageListResponse {
   repeated MerchantChatMessageItem items = 1;
-  int32 total = 2 [(google.api.field_behavior) = REQUIRED];
+  // 下一页游标；为 0 表示没有更多历史消息
+  int32 cursor = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message MerchantChatClearUnreadRequest {

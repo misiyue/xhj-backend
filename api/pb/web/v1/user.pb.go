@@ -1552,7 +1552,9 @@ type MerchantTaskMyListRequest struct {
 	Page     int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
 	PageSize int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// 上下架筛选：0-不限（默认），1-已上架，2-已下架
-	IsUp          int32 `protobuf:"varint,3,opt,name=is_up,json=isUp,proto3" json:"is_up,omitempty"`
+	IsUp int32 `protobuf:"varint,3,opt,name=is_up,json=isUp,proto3" json:"is_up,omitempty"`
+	// 任务状态：0-待交易，1-交易中，2-完成交易；不传则不按 status 筛选
+	Status        *int32 `protobuf:"varint,4,opt,name=status,proto3,oneof" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1604,6 +1606,13 @@ func (x *MerchantTaskMyListRequest) GetPageSize() int32 {
 func (x *MerchantTaskMyListRequest) GetIsUp() int32 {
 	if x != nil {
 		return x.IsUp
+	}
+	return 0
+}
+
+func (x *MerchantTaskMyListRequest) GetStatus() int32 {
+	if x != nil && x.Status != nil {
+		return *x.Status
 	}
 	return 0
 }
@@ -2701,7 +2710,9 @@ type MerchantOrderItem struct {
 	// 申诉材料文件 URL 列表
 	AppealMaterials []string `protobuf:"bytes,27,rep,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
 	// 下单备注
-	Remark        string `protobuf:"bytes,28,opt,name=remark,proto3" json:"remark,omitempty"`
+	Remark string `protobuf:"bytes,28,opt,name=remark,proto3" json:"remark,omitempty"`
+	// 卖方 users 表头像（saler_id 对应用户）
+	SalerAvatar   string `protobuf:"bytes,29,opt,name=saler_avatar,json=salerAvatar,proto3" json:"saler_avatar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2928,6 +2939,13 @@ func (x *MerchantOrderItem) GetAppealMaterials() []string {
 func (x *MerchantOrderItem) GetRemark() string {
 	if x != nil {
 		return x.Remark
+	}
+	return ""
+}
+
+func (x *MerchantOrderItem) GetSalerAvatar() string {
+	if x != nil {
+		return x.SalerAvatar
 	}
 	return ""
 }
@@ -4004,10 +4022,12 @@ func (x *MerchantChatSessionListResponse) GetItems() []*MerchantChatSessionItem 
 }
 
 type MerchantChatMessageListRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	SessionId     int32                  `protobuf:"varint,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	Page          int32                  `protobuf:"varint,2,opt,name=page,proto3" json:"page,omitempty"`
-	PageSize      int32                  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 对手方用户 id（与 /api/v1/message/records 的 receiver_id 一致）
+	ReceiverId int32 `protobuf:"varint,1,opt,name=receiver_id,json=receiverId,proto3" json:"receiver_id,omitempty"`
+	// 游标：首次传 0；翻页传上一页最后一条消息的 id
+	Cursor        int32 `protobuf:"varint,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
+	Limit         int32 `protobuf:"varint,3,opt,name=limit,proto3" json:"limit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4042,23 +4062,23 @@ func (*MerchantChatMessageListRequest) Descriptor() ([]byte, []int) {
 	return file_web_v1_user_proto_rawDescGZIP(), []int{61}
 }
 
-func (x *MerchantChatMessageListRequest) GetSessionId() int32 {
+func (x *MerchantChatMessageListRequest) GetReceiverId() int32 {
 	if x != nil {
-		return x.SessionId
+		return x.ReceiverId
 	}
 	return 0
 }
 
-func (x *MerchantChatMessageListRequest) GetPage() int32 {
+func (x *MerchantChatMessageListRequest) GetCursor() int32 {
 	if x != nil {
-		return x.Page
+		return x.Cursor
 	}
 	return 0
 }
 
-func (x *MerchantChatMessageListRequest) GetPageSize() int32 {
+func (x *MerchantChatMessageListRequest) GetLimit() int32 {
 	if x != nil {
-		return x.PageSize
+		return x.Limit
 	}
 	return 0
 }
@@ -4212,9 +4232,10 @@ func (x *MerchantChatMessageItem) GetCreatedAt() string {
 }
 
 type MerchantChatMessageListResponse struct {
-	state         protoimpl.MessageState     `protogen:"open.v1"`
-	Items         []*MerchantChatMessageItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
-	Total         int32                      `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	state protoimpl.MessageState     `protogen:"open.v1"`
+	Items []*MerchantChatMessageItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	// 下一页游标；为 0 表示没有更多历史消息
+	Cursor        int32 `protobuf:"varint,2,opt,name=cursor,proto3" json:"cursor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -4256,9 +4277,9 @@ func (x *MerchantChatMessageListResponse) GetItems() []*MerchantChatMessageItem 
 	return nil
 }
 
-func (x *MerchantChatMessageListResponse) GetTotal() int32 {
+func (x *MerchantChatMessageListResponse) GetCursor() int32 {
 	if x != nil {
-		return x.Total
+		return x.Cursor
 	}
 	return 0
 }
@@ -4723,11 +4744,13 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"sell_count\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\tsellCount\x12\"\n" +
 	"\apaytype\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\apaytype\"2\n" +
 	"\x1aMerchantTaskCreateResponse\x12\x14\n" +
-	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\"n\n" +
+	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\"\xa1\x01\n" +
 	"\x19MerchantTaskMyListRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\x12\x1b\n" +
 	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12 \n" +
-	"\x05is_up\x18\x03 \x01(\x05B\v\xbaH\b\x1a\x060\x000\x010\x02R\x04isUp\"d\n" +
+	"\x05is_up\x18\x03 \x01(\x05B\v\xbaH\b\x1a\x060\x000\x010\x02R\x04isUp\x12&\n" +
+	"\x06status\x18\x04 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x02(\x00H\x00R\x06status\x88\x01\x01B\t\n" +
+	"\a_status\"d\n" +
 	"\x1dMerchantTaskMarketListRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\"c\n" +
@@ -4806,7 +4829,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\vpay_type_id\x18\x12 \x01(\x05R\tpayTypeId\x12)\n" +
 	"\x10appeal_materials\x18\x13 \x03(\tR\x0fappealMaterials\x12#\n" +
 	"\rcancel_reason\x18\x14 \x01(\tR\fcancelReason\x12\x16\n" +
-	"\x06remark\x18\x15 \x01(\tR\x06remark\"\xb8\x06\n" +
+	"\x06remark\x18\x15 \x01(\tR\x06remark\"\xdb\x06\n" +
 	"\x11MerchantOrderItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\tR\aorderId\x12\x19\n" +
@@ -4841,7 +4864,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"updated_at\x18\x19 \x01(\tR\tupdatedAt\x12\x1e\n" +
 	"\vpay_type_id\x18\x1a \x01(\x05R\tpayTypeId\x12)\n" +
 	"\x10appeal_materials\x18\x1b \x03(\tR\x0fappealMaterials\x12\x16\n" +
-	"\x06remark\x18\x1c \x01(\tR\x06remark\"\xfc\x01\n" +
+	"\x06remark\x18\x1c \x01(\tR\x06remark\x12!\n" +
+	"\fsaler_avatar\x18\x1d \x01(\tR\vsalerAvatar\"\xfc\x01\n" +
 	"\x1aMerchantOrderCreateRequest\x12 \n" +
 	"\atask_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x06taskId\x12&\n" +
 	"\x06counts\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06counts\x12,\n" +
@@ -4916,12 +4940,12 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"unread_num\x18\b \x01(\x05R\tunreadNum\"U\n" +
 	"\x1fMerchantChatSessionListResponse\x122\n" +
-	"\x05items\x18\x01 \x03(\v2\x1c.web.MerchantChatSessionItemR\x05items\"\x8d\x01\n" +
-	"\x1eMerchantChatMessageListRequest\x12&\n" +
-	"\n" +
-	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\tsessionId\x12\x1b\n" +
-	"\x04page\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
-	"\tpage_size\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\"\x91\x03\n" +
+	"\x05items\x18\x01 \x03(\v2\x1c.web.MerchantChatSessionItemR\x05items\"\x83\x01\n" +
+	"\x1eMerchantChatMessageListRequest\x12(\n" +
+	"\vreceiver_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\n" +
+	"receiverId\x12\x16\n" +
+	"\x06cursor\x18\x02 \x01(\x05R\x06cursor\x12\x1f\n" +
+	"\x05limit\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\x05limit\"\x91\x03\n" +
 	"\x17MerchantChatMessageItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x15\n" +
 	"\x06msg_id\x18\x02 \x01(\tR\x05msgId\x12\x1c\n" +
@@ -4943,10 +4967,10 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x05quote\x18\f \x01(\tR\x05quote\x12\x1b\n" +
 	"\tsend_time\x18\r \x01(\tR\bsendTime\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x0e \x01(\tR\tcreatedAt\"q\n" +
+	"created_at\x18\x0e \x01(\tR\tcreatedAt\"s\n" +
 	"\x1fMerchantChatMessageListResponse\x122\n" +
-	"\x05items\x18\x01 \x03(\v2\x1c.web.MerchantChatMessageItemR\x05items\x12\x1a\n" +
-	"\x05total\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x05total\"H\n" +
+	"\x05items\x18\x01 \x03(\v2\x1c.web.MerchantChatMessageItemR\x05items\x12\x1c\n" +
+	"\x06cursor\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x06cursor\"H\n" +
 	"\x1eMerchantChatClearUnreadRequest\x12&\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\tsessionId\"!\n" +
@@ -5171,6 +5195,7 @@ func file_web_v1_user_proto_init() {
 	if File_web_v1_user_proto != nil {
 		return
 	}
+	file_web_v1_user_proto_msgTypes[23].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

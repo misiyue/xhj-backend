@@ -95,6 +95,7 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 	}
 
 	web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
+	web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
 
 	registerCustomApiRouter(resp, router, api, handler)
 }

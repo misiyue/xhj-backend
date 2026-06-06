@@ -257,24 +257,31 @@ func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.MerchantChatS
 	return out, nil
 }
 
-// MerchantChatMessageList 会话内消息分页（id 倒序，最新在前）
+// MerchantChatMessageList 会话内消息（参考 /api/v1/message/records：receiver_id + cursor + limit）
 func (u *User) MerchantChatMessageList(ctx context.Context, in *web.MerchantChatMessageListRequest) (*web.MerchantChatMessageListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
-	sid := int(in.GetSessionId())
-	sess, err := u.MerchantSessionRepo.FindByID(ctx, sid)
+	receiverID := int(in.GetReceiverId())
+	sess, err := u.MerchantSessionRepo.FindActiveByOwnerPeer(ctx, uid, receiverID)
 	if err != nil {
 		return nil, err
+	}
+	if sess == nil {
+		return &web.MerchantChatMessageListResponse{Items: []*web.MerchantChatMessageItem{}}, nil
 	}
 	if err := u.assertMerchantSessionOwner(sess, uid); err != nil {
 		return nil, err
 	}
 	chatSID := repo.ChatSessionID(sess)
-	page, pageSize := normMerchantTaskPage(int(in.GetPage()), int(in.GetPageSize()))
-	rows, total, err := u.MerchantMessageRepo.ListBySessionDesc(ctx, chatSID, page, pageSize)
+	limit := int(in.GetLimit())
+	if limit <= 0 {
+		limit = 30
+	}
+	rows, err := u.MerchantMessageRepo.ListBySessionBeforeCursor(ctx, chatSID, int64(in.GetCursor()), limit)
 	if err != nil {
 		return nil, err
 	}
+	inboxSID := sess.Id
 	items := make([]*web.MerchantChatMessageItem, 0, len(rows))
 	for i := range rows {
 		r := &rows[i]
@@ -282,7 +289,7 @@ func (u *User) MerchantChatMessageList(ctx context.Context, in *web.MerchantChat
 			Id:         r.Id,
 			MsgId:      r.MsgId,
 			OrgMsgId:   r.OrgMsgId,
-			SessionId:  int32(sid),
+			SessionId:  int32(inboxSID),
 			MsgType:    int32(r.MsgType),
 			UserId:     int32(r.UserId),
 			ReceiverId: int32(r.ReceiverId),
@@ -295,11 +302,13 @@ func (u *User) MerchantChatMessageList(ctx context.Context, in *web.MerchantChat
 			CreatedAt:  timeutil.FormatDatetime(r.CreatedAt),
 		})
 	}
-	tot := int32(total)
-	if total > 1<<31-1 {
-		tot = 1<<31 - 1
+	var nextCursor int32
+	if n := len(rows); n > 0 {
+		if n >= limit {
+			nextCursor = int32(rows[n-1].Id)
+		}
 	}
-	return &web.MerchantChatMessageListResponse{Items: items, Total: tot}, nil
+	return &web.MerchantChatMessageListResponse{Items: items, Cursor: nextCursor}, nil
 }
 
 // MerchantChatClearUnread 清除当前用户在指定商户会话下的未读计数（Redis），并推送 im.session.unread.cleared（talk_mode=3，receiver_id 为 session_id）

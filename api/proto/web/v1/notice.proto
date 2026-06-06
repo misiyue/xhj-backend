@@ -1,0 +1,63 @@
+syntax = "proto3";
+package web;
+
+option go_package = "web/v1;web";
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+
+// 系统通知服务
+service Notice {
+  // 系统通知列表（按时间倒序，默认每页 15 条）
+  rpc ListNotice(NoticeListRequest) returns (NoticeListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/notice/list"
+      body: "*"
+    };
+  }
+
+  // 未读通知数
+  rpc GetUnreadCount(NoticeUnreadCountRequest) returns (NoticeUnreadCountResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/notice/unread-count"
+      body: "*"
+    };
+  }
+
+  // 清除未读（全部标记为已读）
+  rpc ClearUnread(NoticeClearUnreadRequest) returns (NoticeClearUnreadResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/notice/clear-unread"
+      body: "*"
+    };
+  }
+}
+
+message NoticeListRequest {
+  // 页码，从 1 开始；未传或 0 时服务端按 1 处理
+  int32 page = 1;
+}
+
+message NoticeListResponse {
+  repeated NoticeItem items = 1;
+  int32 total = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message NoticeItem {
+  int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+  string title = 2;
+  string content = 3;
+  string url = 4;
+  int32 is_read = 5; // 0-未读，1-已读
+  string created_at = 6;
+}
+
+message NoticeUnreadCountRequest {}
+
+message NoticeUnreadCountResponse {
+  int32 count = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message NoticeClearUnreadRequest {}
+
+message NoticeClearUnreadResponse {}

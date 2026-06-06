@@ -102,7 +102,7 @@ func merchantOrderSalerIDs(rows []model.MerchantOrder) []int {
 	return ids
 }
 
-func merchantOrderToProto(o *model.MerchantOrder) *web.MerchantOrderItem {
+func merchantOrderToProto(o *model.MerchantOrder, salerAvatar string) *web.MerchantOrderItem {
 	if o == nil {
 		return nil
 	}
@@ -111,6 +111,7 @@ func merchantOrderToProto(o *model.MerchantOrder) *web.MerchantOrderItem {
 		OrderId:      o.OrderId,
 		BuyerId:      int32(o.BuyerId),
 		SalerId:      int32(o.SalerId),
+		SalerAvatar:  salerAvatar,
 		Amount:       o.Amount,
 		TaskId:       int32(o.TaskId),
 		Counts:       o.Counts,
@@ -185,7 +186,13 @@ func (u *User) MerchantOrderDetail(ctx context.Context, in *web.MerchantOrderDet
 	if err := u.assertOrderParticipant(o, uid); err != nil {
 		return nil, err
 	}
-	return merchantOrderToProto(o), nil
+	salerAvatar := ""
+	if o.SalerId > 0 {
+		if saler, err := u.UsersRepo.FindByIdWithCache(ctx, o.SalerId); err == nil && saler != nil {
+			salerAvatar = saler.Avatar
+		}
+	}
+	return merchantOrderToProto(o, salerAvatar), nil
 }
 
 // MerchantOrderCancel 取消订单：仅买家可取消待支付/已支付订单
