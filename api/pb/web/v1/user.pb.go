@@ -2711,8 +2711,10 @@ type MerchantOrderItem struct {
 	AppealMaterials []string `protobuf:"bytes,27,rep,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
 	// 下单备注
 	Remark string `protobuf:"bytes,28,opt,name=remark,proto3" json:"remark,omitempty"`
-	// 卖方 users 表头像（saler_id 对应用户）
-	SalerAvatar   string `protobuf:"bytes,29,opt,name=saler_avatar,json=salerAvatar,proto3" json:"saler_avatar,omitempty"`
+	// 对方 users 表头像（买家看卖家，卖家看买家）
+	Avatar string `protobuf:"bytes,29,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	// 对方 users 表昵称
+	Nickname      string `protobuf:"bytes,30,opt,name=nickname,proto3" json:"nickname,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2943,9 +2945,16 @@ func (x *MerchantOrderItem) GetRemark() string {
 	return ""
 }
 
-func (x *MerchantOrderItem) GetSalerAvatar() string {
+func (x *MerchantOrderItem) GetAvatar() string {
 	if x != nil {
-		return x.SalerAvatar
+		return x.Avatar
+	}
+	return ""
+}
+
+func (x *MerchantOrderItem) GetNickname() string {
+	if x != nil {
+		return x.Nickname
 	}
 	return ""
 }
@@ -4829,7 +4838,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\vpay_type_id\x18\x12 \x01(\x05R\tpayTypeId\x12)\n" +
 	"\x10appeal_materials\x18\x13 \x03(\tR\x0fappealMaterials\x12#\n" +
 	"\rcancel_reason\x18\x14 \x01(\tR\fcancelReason\x12\x16\n" +
-	"\x06remark\x18\x15 \x01(\tR\x06remark\"\xdb\x06\n" +
+	"\x06remark\x18\x15 \x01(\tR\x06remark\"\xec\x06\n" +
 	"\x11MerchantOrderItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\tR\aorderId\x12\x19\n" +
@@ -4864,8 +4873,9 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"updated_at\x18\x19 \x01(\tR\tupdatedAt\x12\x1e\n" +
 	"\vpay_type_id\x18\x1a \x01(\x05R\tpayTypeId\x12)\n" +
 	"\x10appeal_materials\x18\x1b \x03(\tR\x0fappealMaterials\x12\x16\n" +
-	"\x06remark\x18\x1c \x01(\tR\x06remark\x12!\n" +
-	"\fsaler_avatar\x18\x1d \x01(\tR\vsalerAvatar\"\xfc\x01\n" +
+	"\x06remark\x18\x1c \x01(\tR\x06remark\x12\x16\n" +
+	"\x06avatar\x18\x1d \x01(\tR\x06avatar\x12\x1a\n" +
+	"\bnickname\x18\x1e \x01(\tR\bnickname\"\xfc\x01\n" +
 	"\x1aMerchantOrderCreateRequest\x12 \n" +
 	"\atask_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x06taskId\x12&\n" +
 	"\x06counts\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06counts\x12,\n" +

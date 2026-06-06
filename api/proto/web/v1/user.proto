@@ -620,8 +620,10 @@ message MerchantOrderItem {
   repeated string appeal_materials = 27;
   // 下单备注
   string remark = 28;
-  // 卖方 users 表头像（saler_id 对应用户）
-  string saler_avatar = 29;
+  // 对方 users 表头像（买家看卖家，卖家看买家）
+  string avatar = 29;
+  // 对方 users 表昵称
+  string nickname = 30;
 }
 
 message MerchantOrderCreateRequest {

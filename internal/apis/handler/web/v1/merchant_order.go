@@ -102,7 +102,7 @@ func merchantOrderSalerIDs(rows []model.MerchantOrder) []int {
 	return ids
 }
 
-func merchantOrderToProto(o *model.MerchantOrder, salerAvatar string) *web.MerchantOrderItem {
+func merchantOrderToProto(o *model.MerchantOrder, avatar, nickname string) *web.MerchantOrderItem {
 	if o == nil {
 		return nil
 	}
@@ -111,7 +111,8 @@ func merchantOrderToProto(o *model.MerchantOrder, salerAvatar string) *web.Merch
 		OrderId:      o.OrderId,
 		BuyerId:      int32(o.BuyerId),
 		SalerId:      int32(o.SalerId),
-		SalerAvatar:  salerAvatar,
+		Avatar:       avatar,
+		Nickname:     nickname,
 		Amount:       o.Amount,
 		TaskId:       int32(o.TaskId),
 		Counts:       o.Counts,
@@ -186,13 +187,18 @@ func (u *User) MerchantOrderDetail(ctx context.Context, in *web.MerchantOrderDet
 	if err := u.assertOrderParticipant(o, uid); err != nil {
 		return nil, err
 	}
-	salerAvatar := ""
-	if o.SalerId > 0 {
-		if saler, err := u.UsersRepo.FindByIdWithCache(ctx, o.SalerId); err == nil && saler != nil {
-			salerAvatar = saler.Avatar
+	peerID := o.SalerId
+	if uid == o.SalerId {
+		peerID = o.BuyerId
+	}
+	avatar, nickname := "", ""
+	if peerID > 0 {
+		if peer, err := u.UsersRepo.FindByIdWithCache(ctx, peerID); err == nil && peer != nil {
+			avatar = peer.Avatar
+			nickname = peer.Nickname
 		}
 	}
-	return merchantOrderToProto(o, salerAvatar), nil
+	return merchantOrderToProto(o, avatar, nickname), nil
 }
 
 // MerchantOrderCancel 取消订单：仅买家可取消待支付/已支付订单
