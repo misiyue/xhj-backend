@@ -51,11 +51,12 @@ func (n *Notice) ListNotice(ctx context.Context, req *pb.NoticeListRequest) (*pb
 	return &pb.NoticeListResponse{Items: items, Total: total32}, nil
 }
 
-// GetUnreadCount 未读通知数
+// GetUnreadCount 未读通知数，并返回最新一条通知摘要
 func (n *Notice) GetUnreadCount(ctx context.Context, _ *pb.NoticeUnreadCountRequest) (*pb.NoticeUnreadCountResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	userID := int(session.UserId)
 
-	nUnread, err := n.SysNoticeRepo.CountUnread(ctx, int(session.UserId))
+	nUnread, err := n.SysNoticeRepo.CountUnread(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,18 @@ func (n *Notice) GetUnreadCount(ctx context.Context, _ *pb.NoticeUnreadCountRequ
 		count = math.MaxInt32
 	}
 
-	return &pb.NoticeUnreadCountResponse{Count: count}, nil
+	resp := &pb.NoticeUnreadCountResponse{Count: count}
+	latest, err := n.SysNoticeRepo.FindLatestByUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if latest != nil {
+		resp.Title = latest.Title
+		resp.Content = latest.Content
+		resp.CreatedAt = timeutil.FormatDatetime(latest.CreatedAt)
+	}
+
+	return resp, nil
 }
 
 // ClearUnread 清除未读（全部标记为已读）

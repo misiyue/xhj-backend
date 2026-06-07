@@ -56,6 +56,10 @@ message NoticeUnreadCountRequest {}
 
 message NoticeUnreadCountResponse {
   int32 count = 1 [(google.api.field_behavior) = REQUIRED];
+  // 最新一条通知
+  string title = 2;
+  string content = 3;
+  string created_at = 4;
 }
 
 message NoticeClearUnreadRequest {}

@@ -580,8 +580,8 @@ message MerchantOrderListItem {
   string merchant_nickname = 17;
   // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
   int32 pay_type_id = 18;
-  // 申诉材料文件 URL 列表
-  repeated string appeal_materials = 19;
+  // 申诉材料
+  string appeal_materials = 19;
   // 订单取消原因
   string cancel_reason = 20;
   // 下单备注
@@ -616,8 +616,8 @@ message MerchantOrderItem {
   string updated_at = 25;
   // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
   int32 pay_type_id = 26;
-  // 申诉材料文件 URL 列表
-  repeated string appeal_materials = 27;
+  // 申诉材料
+  string appeal_materials = 27;
   // 下单备注
   string remark = 28;
   // 对方 users 表头像（买家看卖家，卖家看买家）
@@ -665,8 +665,8 @@ message MerchantOrderConfirmPayRequest {
 message MerchantOrderAppealRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   string appeal_reason = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
-  // 申诉材料文件 URL 列表，入库为 JSON 数组
-  repeated string appeal_materials = 3;
+  // 申诉材料，直接存储
+  string appeal_materials = 3 [(buf.validate.field).string.max_len = 65535];
 }
 
 message MerchantOrderListRequest {

@@ -2491,8 +2491,8 @@ type MerchantOrderListItem struct {
 	MerchantNickname string `protobuf:"bytes,17,opt,name=merchant_nickname,json=merchantNickname,proto3" json:"merchant_nickname,omitempty"`
 	// 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
 	PayTypeId int32 `protobuf:"varint,18,opt,name=pay_type_id,json=payTypeId,proto3" json:"pay_type_id,omitempty"`
-	// 申诉材料文件 URL 列表
-	AppealMaterials []string `protobuf:"bytes,19,rep,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
+	// 申诉材料
+	AppealMaterials string `protobuf:"bytes,19,opt,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
 	// 订单取消原因
 	CancelReason string `protobuf:"bytes,20,opt,name=cancel_reason,json=cancelReason,proto3" json:"cancel_reason,omitempty"`
 	// 下单备注
@@ -2657,11 +2657,11 @@ func (x *MerchantOrderListItem) GetPayTypeId() int32 {
 	return 0
 }
 
-func (x *MerchantOrderListItem) GetAppealMaterials() []string {
+func (x *MerchantOrderListItem) GetAppealMaterials() string {
 	if x != nil {
 		return x.AppealMaterials
 	}
-	return nil
+	return ""
 }
 
 func (x *MerchantOrderListItem) GetCancelReason() string {
@@ -2707,8 +2707,8 @@ type MerchantOrderItem struct {
 	UpdatedAt    string                 `protobuf:"bytes,25,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
 	PayTypeId int32 `protobuf:"varint,26,opt,name=pay_type_id,json=payTypeId,proto3" json:"pay_type_id,omitempty"`
-	// 申诉材料文件 URL 列表
-	AppealMaterials []string `protobuf:"bytes,27,rep,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
+	// 申诉材料
+	AppealMaterials string `protobuf:"bytes,27,opt,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
 	// 下单备注
 	Remark string `protobuf:"bytes,28,opt,name=remark,proto3" json:"remark,omitempty"`
 	// 对方 users 表头像（买家看卖家，卖家看买家）
@@ -2931,11 +2931,11 @@ func (x *MerchantOrderItem) GetPayTypeId() int32 {
 	return 0
 }
 
-func (x *MerchantOrderItem) GetAppealMaterials() []string {
+func (x *MerchantOrderItem) GetAppealMaterials() string {
 	if x != nil {
 		return x.AppealMaterials
 	}
-	return nil
+	return ""
 }
 
 func (x *MerchantOrderItem) GetRemark() string {
@@ -3302,8 +3302,8 @@ type MerchantOrderAppealRequest struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Id           int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	AppealReason string                 `protobuf:"bytes,2,opt,name=appeal_reason,json=appealReason,proto3" json:"appeal_reason,omitempty"`
-	// 申诉材料文件 URL 列表，入库为 JSON 数组
-	AppealMaterials []string `protobuf:"bytes,3,rep,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
+	// 申诉材料，直接存储
+	AppealMaterials string `protobuf:"bytes,3,opt,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -3352,11 +3352,11 @@ func (x *MerchantOrderAppealRequest) GetAppealReason() string {
 	return ""
 }
 
-func (x *MerchantOrderAppealRequest) GetAppealMaterials() []string {
+func (x *MerchantOrderAppealRequest) GetAppealMaterials() string {
 	if x != nil {
 		return x.AppealMaterials
 	}
-	return nil
+	return ""
 }
 
 type MerchantOrderListRequest struct {
@@ -4836,7 +4836,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"judge_time\x18\x10 \x01(\tR\tjudgeTime\x12+\n" +
 	"\x11merchant_nickname\x18\x11 \x01(\tR\x10merchantNickname\x12\x1e\n" +
 	"\vpay_type_id\x18\x12 \x01(\x05R\tpayTypeId\x12)\n" +
-	"\x10appeal_materials\x18\x13 \x03(\tR\x0fappealMaterials\x12#\n" +
+	"\x10appeal_materials\x18\x13 \x01(\tR\x0fappealMaterials\x12#\n" +
 	"\rcancel_reason\x18\x14 \x01(\tR\fcancelReason\x12\x16\n" +
 	"\x06remark\x18\x15 \x01(\tR\x06remark\"\xec\x06\n" +
 	"\x11MerchantOrderItem\x12\x0e\n" +
@@ -4872,7 +4872,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x19 \x01(\tR\tupdatedAt\x12\x1e\n" +
 	"\vpay_type_id\x18\x1a \x01(\x05R\tpayTypeId\x12)\n" +
-	"\x10appeal_materials\x18\x1b \x03(\tR\x0fappealMaterials\x12\x16\n" +
+	"\x10appeal_materials\x18\x1b \x01(\tR\x0fappealMaterials\x12\x16\n" +
 	"\x06remark\x18\x1c \x01(\tR\x06remark\x12\x16\n" +
 	"\x06avatar\x18\x1d \x01(\tR\x06avatar\x12\x1a\n" +
 	"\bnickname\x18\x1e \x01(\tR\bnickname\"\xfc\x01\n" +
@@ -4897,12 +4897,12 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x1eMerchantOrderConfirmPayRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x02id\x12#\n" +
 	"\apay_img\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x06payImg\"\x91\x01\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x06payImg\"\x9c\x01\n" +
 	"\x1aMerchantOrderAppealRequest\x12\x17\n" +
 	"\x02id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x02id\x12/\n" +
 	"\rappeal_reason\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\fappealReason\x12)\n" +
-	"\x10appeal_materials\x18\x03 \x03(\tR\x0fappealMaterials\"\xcd\x01\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\fappealReason\x124\n" +
+	"\x10appeal_materials\x18\x03 \x01(\tB\t\xbaH\x06r\x04\x18\xff\xff\x03R\x0fappealMaterials\"\xcd\x01\n" +
 	"\x18MerchantOrderListRequest\x12#\n" +
 	"\x06direct\x18\x01 \x01(\x05B\v\xbaH\b\x1a\x060\x000\x010\x02R\x06direct\x12\x1b\n" +
 	"\x04page\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +

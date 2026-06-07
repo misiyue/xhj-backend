@@ -240,8 +240,12 @@ func (*NoticeUnreadCountRequest) Descriptor() ([]byte, []int) {
 }
 
 type NoticeUnreadCountResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Count         int32                  `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Count int32                  `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	// 最新一条通知
+	Title         string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Content       string `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	CreatedAt     string `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -281,6 +285,27 @@ func (x *NoticeUnreadCountResponse) GetCount() int32 {
 		return x.Count
 	}
 	return 0
+}
+
+func (x *NoticeUnreadCountResponse) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *NoticeUnreadCountResponse) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *NoticeUnreadCountResponse) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
 }
 
 type NoticeClearUnreadRequest struct {
@@ -374,9 +399,13 @@ const file_web_v1_notice_proto_rawDesc = "" +
 	"\ais_read\x18\x05 \x01(\x05R\x06isRead\x12\x1d\n" +
 	"\n" +
 	"created_at\x18\x06 \x01(\tR\tcreatedAt\"\x1a\n" +
-	"\x18NoticeUnreadCountRequest\"7\n" +
+	"\x18NoticeUnreadCountRequest\"\x86\x01\n" +
 	"\x19NoticeUnreadCountResponse\x12\x1a\n" +
-	"\x05count\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x05count\"\x1a\n" +
+	"\x05count\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x05count\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\x1a\n" +
 	"\x18NoticeClearUnreadRequest\"\x1b\n" +
 	"\x19NoticeClearUnreadResponse2\xd6\x02\n" +
 	"\x06Notice\x12]\n" +

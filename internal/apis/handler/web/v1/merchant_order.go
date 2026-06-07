@@ -26,36 +26,6 @@ import (
 
 const merchantHdPayURLExpire = 2 * time.Minute
 
-func encodeAppealMaterials(urls []string) string {
-	trimmed := make([]string, 0, len(urls))
-	for _, u := range urls {
-		u = strings.TrimSpace(u)
-		if u != "" {
-			trimmed = append(trimmed, u)
-		}
-	}
-	if len(trimmed) == 0 {
-		return ""
-	}
-	b, err := json.Marshal(trimmed)
-	if err != nil {
-		return ""
-	}
-	return string(b)
-}
-
-func decodeAppealMaterials(raw string) []string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return nil
-	}
-	var out []string
-	if err := json.Unmarshal([]byte(raw), &out); err != nil {
-		return nil
-	}
-	return out
-}
-
 func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *web.MerchantOrderListItem {
 	if o == nil {
 		return nil
@@ -79,7 +49,7 @@ func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *
 		Judge:            o.Judge,
 		JudgeTime:        timeutil.FormatUnixSecond(o.JudgeTime),
 		MerchantNickname: merchantNickname,
-		AppealMaterials:  decodeAppealMaterials(o.AppealMaterials),
+		AppealMaterials:  o.AppealMaterials,
 		CancelReason:     o.CancelReason,
 		Remark:           o.Remark,
 	}
@@ -126,7 +96,7 @@ func merchantOrderToProto(o *model.MerchantOrder, avatar, nickname string) *web.
 		AppealId:     int32(o.AppealId),
 		AppealTime:   int32(o.AppealTime),
 		AppealReason:    o.AppealReason,
-		AppealMaterials: decodeAppealMaterials(o.AppealMaterials),
+		AppealMaterials: o.AppealMaterials,
 		CancelId:        int32(o.CancelId),
 		CancelReason:    o.CancelReason,
 		Remark:          o.Remark,
@@ -384,7 +354,7 @@ func (u *User) merchantOrderAppeal(ctx context.Context, in *web.MerchantOrderApp
 	if side == model.MerchantOrderAppealSideSeller && o.SalerId != uid {
 		return nil, errorx.New(403, "仅卖家可发起卖家申诉")
 	}
-	err = u.MerchantOrderRepo.AppealOrderTx(ctx, o.Id, side, strings.TrimSpace(in.GetAppealReason()), encodeAppealMaterials(in.GetAppealMaterials()))
+	err = u.MerchantOrderRepo.AppealOrderTx(ctx, o.Id, side, strings.TrimSpace(in.GetAppealReason()), strings.TrimSpace(in.GetAppealMaterials()))
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderAlreadyAppeal):

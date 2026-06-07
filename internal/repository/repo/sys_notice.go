@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"gorm.io/gorm"
@@ -48,4 +49,20 @@ func (r *SysNotice) MarkAllRead(ctx context.Context, userId int) error {
 	return r.db.WithContext(ctx).Model(&model.SysNotice{}).
 		Where("user_id = ? AND is_read = ?", userId, model.SysNoticeUnread).
 		Update("is_read", model.SysNoticeRead).Error
+}
+
+// FindLatestByUser 查询用户最新一条通知
+func (r *SysNotice) FindLatestByUser(ctx context.Context, userId int) (*model.SysNotice, error) {
+	var row model.SysNotice
+	err := r.db.WithContext(ctx).Where("user_id = ?", userId).
+		Order("created_at DESC, id DESC").
+		Limit(1).
+		First(&row).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &row, nil
 }
