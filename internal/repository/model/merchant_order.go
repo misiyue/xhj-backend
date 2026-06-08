@@ -37,23 +37,23 @@ func MerchantOrderPayTypeSupportsOnlinePay(payTypeID int) bool {
 
 // MerchantOrder 商户订单 merchant_order
 type MerchantOrder struct {
-	Id           int       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	OrderId      string    `gorm:"column:order_id;type:varchar(64);not null;uniqueIndex" json:"order_id"`
-	BuyerId      int       `gorm:"column:buyer_id;index;not null" json:"buyer_id"`
-	SalerId      int       `gorm:"column:saler_id;index;not null" json:"saler_id"`
-	Amount       float64   `gorm:"column:amount;type:decimal(10,2);not null;default:0" json:"amount"`
-	TaskId       int       `gorm:"column:task_id;index;not null;default:0" json:"task_id"`
-	Counts       float64   `gorm:"column:counts;type:float(12,4);not null;default:0" json:"counts"`
-	PayTypeInfo  string    `gorm:"column:pay_type_info;type:varchar(255);default:0" json:"pay_type_info"`
-	PayTypeId    int       `gorm:"column:pay_type_id;not null;default:0" json:"pay_type_id"`
-	BuyType      int       `gorm:"column:buy_type;not null;default:0" json:"buy_type"`
-	Status       int       `gorm:"column:status;not null;default:0" json:"status"`
-	PayImg       string    `gorm:"column:pay_img;type:varchar(255)" json:"pay_img"`
-	IsCancel     int       `gorm:"column:is_cancel;default:0" json:"is_cancel"`
-	IsAppeal     int       `gorm:"column:is_appeal;not null;default:0" json:"is_appeal"`
-	AppealId     int       `gorm:"column:appeal_id;not null;default:0" json:"appeal_id"`
-	AppealTime   int       `gorm:"column:appeal_time;not null;default:0" json:"appeal_time"`
-	AppealReason     string    `gorm:"column:appeal_reason;type:varchar(255)" json:"appeal_reason"`
+	Id              int       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	OrderId         string    `gorm:"column:order_id;type:varchar(64);not null;uniqueIndex" json:"order_id"`
+	BuyerId         int       `gorm:"column:buyer_id;index;not null" json:"buyer_id"`
+	SalerId         int       `gorm:"column:saler_id;index;not null" json:"saler_id"`
+	Amount          float64   `gorm:"column:amount;type:decimal(10,2);not null;default:0" json:"amount"`
+	TaskId          int       `gorm:"column:task_id;index;not null;default:0" json:"task_id"`
+	Counts          float64   `gorm:"column:counts;type:float(12,4);not null;default:0" json:"counts"`
+	PayTypeInfo     string    `gorm:"column:pay_type_info;type:varchar(255);default:0" json:"pay_type_info"`
+	PayTypeId       int       `gorm:"column:pay_type_id;not null;default:0" json:"pay_type_id"`
+	BuyType         int       `gorm:"column:buy_type;not null;default:0" json:"buy_type"`
+	Status          int       `gorm:"column:status;not null;default:0" json:"status"`
+	PayImg          string    `gorm:"column:pay_img;type:varchar(255)" json:"pay_img"`
+	IsCancel        int       `gorm:"column:is_cancel;default:0" json:"is_cancel"`
+	IsAppeal        int       `gorm:"column:is_appeal;not null;default:0" json:"is_appeal"`
+	AppealId        int       `gorm:"column:appeal_id;not null;default:0" json:"appeal_id"`
+	AppealTime      int       `gorm:"column:appeal_time;not null;default:0" json:"appeal_time"`
+	AppealReason    string    `gorm:"column:appeal_reason;type:varchar(255)" json:"appeal_reason"`
 	AppealMaterials string    `gorm:"column:appeal_materials;type:text" json:"appeal_materials"`
 	CancelId        int       `gorm:"column:cancel_id;not null;default:0" json:"cancel_id"`
 	CancelReason    string    `gorm:"column:cancel_reason;type:varchar(255)" json:"cancel_reason"`
@@ -63,8 +63,8 @@ type MerchantOrder struct {
 	Judge           string    `gorm:"column:judge;type:varchar(255)" json:"judge"`
 	JudgeTime       int       `gorm:"column:judge_time;not null;default:0" json:"judge_time"`
 	Remark          string    `gorm:"column:remark;type:varchar(255)" json:"remark"`
-	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updated_at"`
-	CreatedAt    time.Time `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt       time.Time `gorm:"column:updated_at" json:"updated_at"`
+	CreatedAt       time.Time `gorm:"column:created_at" json:"created_at"`
 }
 
 func (MerchantOrder) TableName() string {

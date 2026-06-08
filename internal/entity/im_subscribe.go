@@ -17,6 +17,7 @@ const (
 	SubEventImCallReject           = "sub.im.call.reject"            // 拒绝通话通知
 	SubEventImCallHangup           = "sub.im.call.hangup"            // 挂断通话通知
 	SubEventImCallCancel           = "sub.im.call.cancel"            // 取消通话通知
+	SubEventSysNotice              = "sub.im.sys.notice"             // 系统通知
 )
 
 type SubEventImCallPayload struct {
@@ -104,4 +105,14 @@ type SubEventImSessionUnreadClearedPayload struct {
 	TalkMode   int `json:"talk_mode"`
 	ReceiverId int `json:"receiver_id"`
 	UnreadNum  int `json:"unread_num"`
+}
+
+// SubEventSysNoticePayload 系统通知订阅 payload（queue -> comet）
+type SubEventSysNoticePayload struct {
+	UserId    int    `json:"user_id"`
+	Id        int    `json:"id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Url       string `json:"url"`
+	CreatedAt string `json:"created_at"`
 }

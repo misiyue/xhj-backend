@@ -16,6 +16,11 @@ func NewSysNotice(db *gorm.DB) *SysNotice {
 	return &SysNotice{db: db}
 }
 
+// Create 创建系统通知
+func (r *SysNotice) Create(ctx context.Context, row *model.SysNotice) error {
+	return r.db.WithContext(ctx).Create(row).Error
+}
+
 // ListByUserDesc 分页查询用户系统通知，按创建时间倒序
 func (r *SysNotice) ListByUserDesc(ctx context.Context, userId int, page, pageSize int) ([]model.SysNotice, int64, error) {
 	base := r.db.WithContext(ctx).Model(&model.SysNotice{}).Where("user_id = ?", userId)

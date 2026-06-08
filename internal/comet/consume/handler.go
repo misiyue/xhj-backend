@@ -41,6 +41,7 @@ func (h *Handler) init() {
 	handlers[entity.SubEventContactApplyResult] = h.onConsumeContactApplyResult
 	handlers[entity.SubEventGroupJoin] = h.onConsumeGroupJoin
 	handlers[entity.SubEventGroupApply] = h.onConsumeGroupApply
+	handlers[entity.SubEventSysNotice] = h.onConsumeSysNotice
 
 	// Call Signaling
 	handlers[entity.SubEventImCallInvite] = func(ctx context.Context, data []byte) {

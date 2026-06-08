@@ -8,6 +8,8 @@ import (
 	pb "github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
+	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
@@ -23,6 +25,38 @@ func (i *Invite) GetMyInviteCode(ctx context.Context, _ *pb.InviteCodeGetRequest
 		return nil, err
 	}
 	return &pb.InviteCodeGetResponse{Code: code}, nil
+}
+
+// ListInviteCodes 邀请码列表（仅 users.invite_code 第一条，未生成则 items 为空）
+func (i *Invite) ListInviteCodes(ctx context.Context, _ *pb.InviteListRequest) (*pb.InviteListResponse, error) {
+	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	user, err := i.UsersRepo.FindByIdWithCache(ctx, int(session.UserId))
+	if err != nil {
+		return nil, err
+	}
+	if user == nil || strings.TrimSpace(user.InviteCode) == "" {
+		return &pb.InviteListResponse{Items: []*pb.InviteCodeItem{}}, nil
+	}
+	return &pb.InviteListResponse{
+		Items: []*pb.InviteCodeItem{
+			{
+				Id:        int32(user.Id),
+				Code:      strings.TrimSpace(user.InviteCode),
+				Status:    model.InviteCodeStatusAvailable,
+				CreatedAt: timeutil.FormatDatetime(user.CreatedAt),
+			},
+		},
+	}, nil
+}
+
+// GenerateInviteCode 生成邀请码（users.invite_code；已存在则直接返回）
+func (i *Invite) GenerateInviteCode(ctx context.Context, _ *pb.InviteGenerateRequest) (*pb.InviteGenerateResponse, error) {
+	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	code, err := i.UsersRepo.EnsureInviteCode(ctx, int(session.UserId))
+	if err != nil {
+		return nil, err
+	}
+	return &pb.InviteGenerateResponse{Code: code}, nil
 }
 
 // GetInviteStats 获取邀请统计

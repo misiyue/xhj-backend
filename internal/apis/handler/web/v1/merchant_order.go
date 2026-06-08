@@ -72,41 +72,84 @@ func merchantOrderSalerIDs(rows []model.MerchantOrder) []int {
 	return ids
 }
 
-func merchantOrderToProto(o *model.MerchantOrder, avatar, nickname string) *web.MerchantOrderItem {
+type merchantOrderUserExtras struct {
+	SalerUserNickname     string
+	SalerUserAvatar       string
+	SalerMerchantNickname string
+	BuyerUserNickname     string
+	BuyerUserAvatar       string
+	BuyerMerchantNickname string
+}
+
+func (u *User) loadMerchantOrderUserExtras(ctx context.Context, buyerID, salerID int) merchantOrderUserExtras {
+	var out merchantOrderUserExtras
+	userIDs := make([]int, 0, 2)
+	if buyerID > 0 {
+		userIDs = append(userIDs, buyerID)
+	}
+	if salerID > 0 {
+		userIDs = append(userIDs, salerID)
+	}
+	if len(userIDs) == 0 {
+		return out
+	}
+	merchantNickMap, _ := u.merchantNicknamesByUserIDs(ctx, userIDs)
+	if buyerID > 0 {
+		if buyer, err := u.UsersRepo.FindByIdWithCache(ctx, buyerID); err == nil && buyer != nil {
+			out.BuyerUserNickname = buyer.Nickname
+			out.BuyerUserAvatar = buyer.Avatar
+		}
+		out.BuyerMerchantNickname = merchantNickMap[buyerID]
+	}
+	if salerID > 0 {
+		if saler, err := u.UsersRepo.FindByIdWithCache(ctx, salerID); err == nil && saler != nil {
+			out.SalerUserNickname = saler.Nickname
+			out.SalerUserAvatar = saler.Avatar
+		}
+		out.SalerMerchantNickname = merchantNickMap[salerID]
+	}
+	return out
+}
+
+func merchantOrderToProto(o *model.MerchantOrder, extras merchantOrderUserExtras) *web.MerchantOrderItem {
 	if o == nil {
 		return nil
 	}
 	return &web.MerchantOrderItem{
-		Id:           int32(o.Id),
-		OrderId:      o.OrderId,
-		BuyerId:      int32(o.BuyerId),
-		SalerId:      int32(o.SalerId),
-		Avatar:       avatar,
-		Nickname:     nickname,
-		Amount:       o.Amount,
-		TaskId:       int32(o.TaskId),
-		Counts:       o.Counts,
-		PayTypeInfo:  o.PayTypeInfo,
-		PayTypeId:    int32(o.PayTypeId),
-		BuyType:      int32(o.BuyType),
-		Status:       int32(o.Status),
-		PayImg:       o.PayImg,
-		IsCancel:     int32(o.IsCancel),
-		IsAppeal:     int32(o.IsAppeal),
-		AppealId:     int32(o.AppealId),
-		AppealTime:   int32(o.AppealTime),
+		Id:                    int32(o.Id),
+		OrderId:               o.OrderId,
+		BuyerId:               int32(o.BuyerId),
+		SalerId:               int32(o.SalerId),
+		SalerUserNickname:     extras.SalerUserNickname,
+		SalerUserAvatar:       extras.SalerUserAvatar,
+		SalerMerchantNickname: extras.SalerMerchantNickname,
+		BuyerUserNickname:     extras.BuyerUserNickname,
+		BuyerUserAvatar:       extras.BuyerUserAvatar,
+		BuyerMerchantNickname: extras.BuyerMerchantNickname,
+		Amount:          o.Amount,
+		TaskId:          int32(o.TaskId),
+		Counts:          o.Counts,
+		PayTypeInfo:     o.PayTypeInfo,
+		PayTypeId:       int32(o.PayTypeId),
+		BuyType:         int32(o.BuyType),
+		Status:          int32(o.Status),
+		PayImg:          o.PayImg,
+		IsCancel:        int32(o.IsCancel),
+		IsAppeal:        int32(o.IsAppeal),
+		AppealId:        int32(o.AppealId),
+		AppealTime:      int32(o.AppealTime),
 		AppealReason:    o.AppealReason,
 		AppealMaterials: o.AppealMaterials,
 		CancelId:        int32(o.CancelId),
 		CancelReason:    o.CancelReason,
 		Remark:          o.Remark,
 		PayTime:         int32(o.PayTime),
-		CancelTime:   int32(o.CancelTime),
-		Wronger:      int32(o.Wronger),
-		Judge:        o.Judge,
-		JudgeTime:    timeutil.FormatUnixSecond(o.JudgeTime),
-		CreatedAt:    timeutil.FormatDatetime(o.CreatedAt),
-		UpdatedAt:    timeutil.FormatDatetime(o.UpdatedAt),
+		CancelTime:      int32(o.CancelTime),
+		Wronger:         int32(o.Wronger),
+		Judge:           o.Judge,
+		JudgeTime:       timeutil.FormatUnixSecond(o.JudgeTime),
+		CreatedAt:       timeutil.FormatDatetime(o.CreatedAt),
+		UpdatedAt:       timeutil.FormatDatetime(o.UpdatedAt),
 	}
 }
 
@@ -157,18 +200,8 @@ func (u *User) MerchantOrderDetail(ctx context.Context, in *web.MerchantOrderDet
 	if err := u.assertOrderParticipant(o, uid); err != nil {
 		return nil, err
 	}
-	peerID := o.SalerId
-	if uid == o.SalerId {
-		peerID = o.BuyerId
-	}
-	avatar, nickname := "", ""
-	if peerID > 0 {
-		if peer, err := u.UsersRepo.FindByIdWithCache(ctx, peerID); err == nil && peer != nil {
-			avatar = peer.Avatar
-			nickname = peer.Nickname
-		}
-	}
-	return merchantOrderToProto(o, avatar, nickname), nil
+	extras := u.loadMerchantOrderUserExtras(ctx, o.BuyerId, o.SalerId)
+	return merchantOrderToProto(o, extras), nil
 }
 
 // MerchantOrderCancel 取消订单：仅买家可取消待支付/已支付订单
@@ -429,6 +462,14 @@ func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayR
 		if time.Since(existing.CreatedAt) < merchantHdPayURLExpire {
 			return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL}, nil
 		}
+	}
+	if existing != nil {
+		newOrderNo, err := u.MerchantOrderRepo.RefreshOrderNoForHdPay(ctx, o.Id, orderNo)
+		if err != nil {
+			return nil, err
+		}
+		orderNo = newOrderNo
+		o.OrderId = newOrderNo
 	}
 
 	submitAmount := formatPayAmount(o.Amount)

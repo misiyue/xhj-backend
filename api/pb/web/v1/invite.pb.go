@@ -102,6 +102,275 @@ func (x *InviteCodeGetResponse) GetCode() string {
 	return ""
 }
 
+type InviteListRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InviteListRequest) Reset() {
+	*x = InviteListRequest{}
+	mi := &file_web_v1_invite_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InviteListRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InviteListRequest) ProtoMessage() {}
+
+func (x *InviteListRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_invite_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InviteListRequest.ProtoReflect.Descriptor instead.
+func (*InviteListRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{2}
+}
+
+type InviteCodeItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Status        int32                  `protobuf:"varint,3,opt,name=status,proto3" json:"status,omitempty"`
+	ExpireAt      string                 `protobuf:"bytes,4,opt,name=expire_at,json=expireAt,proto3" json:"expire_at,omitempty"`
+	MaxUsageCount int32                  `protobuf:"varint,5,opt,name=max_usage_count,json=maxUsageCount,proto3" json:"max_usage_count,omitempty"`
+	UsageCount    int32                  `protobuf:"varint,6,opt,name=usage_count,json=usageCount,proto3" json:"usage_count,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InviteCodeItem) Reset() {
+	*x = InviteCodeItem{}
+	mi := &file_web_v1_invite_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InviteCodeItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InviteCodeItem) ProtoMessage() {}
+
+func (x *InviteCodeItem) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_invite_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InviteCodeItem.ProtoReflect.Descriptor instead.
+func (*InviteCodeItem) Descriptor() ([]byte, []int) {
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *InviteCodeItem) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *InviteCodeItem) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *InviteCodeItem) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *InviteCodeItem) GetExpireAt() string {
+	if x != nil {
+		return x.ExpireAt
+	}
+	return ""
+}
+
+func (x *InviteCodeItem) GetMaxUsageCount() int32 {
+	if x != nil {
+		return x.MaxUsageCount
+	}
+	return 0
+}
+
+func (x *InviteCodeItem) GetUsageCount() int32 {
+	if x != nil {
+		return x.UsageCount
+	}
+	return 0
+}
+
+func (x *InviteCodeItem) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type InviteListResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*InviteCodeItem      `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InviteListResponse) Reset() {
+	*x = InviteListResponse{}
+	mi := &file_web_v1_invite_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InviteListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InviteListResponse) ProtoMessage() {}
+
+func (x *InviteListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_invite_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InviteListResponse.ProtoReflect.Descriptor instead.
+func (*InviteListResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *InviteListResponse) GetItems() []*InviteCodeItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+type InviteGenerateRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 兼容旧参数，users.invite_code 模式下忽略
+	ExpireDays    int32 `protobuf:"varint,1,opt,name=expire_days,json=expireDays,proto3" json:"expire_days,omitempty"`
+	MaxUsage      int32 `protobuf:"varint,2,opt,name=max_usage,json=maxUsage,proto3" json:"max_usage,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InviteGenerateRequest) Reset() {
+	*x = InviteGenerateRequest{}
+	mi := &file_web_v1_invite_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InviteGenerateRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InviteGenerateRequest) ProtoMessage() {}
+
+func (x *InviteGenerateRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_invite_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InviteGenerateRequest.ProtoReflect.Descriptor instead.
+func (*InviteGenerateRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *InviteGenerateRequest) GetExpireDays() int32 {
+	if x != nil {
+		return x.ExpireDays
+	}
+	return 0
+}
+
+func (x *InviteGenerateRequest) GetMaxUsage() int32 {
+	if x != nil {
+		return x.MaxUsage
+	}
+	return 0
+}
+
+type InviteGenerateResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InviteGenerateResponse) Reset() {
+	*x = InviteGenerateResponse{}
+	mi := &file_web_v1_invite_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InviteGenerateResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InviteGenerateResponse) ProtoMessage() {}
+
+func (x *InviteGenerateResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_invite_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InviteGenerateResponse.ProtoReflect.Descriptor instead.
+func (*InviteGenerateResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *InviteGenerateResponse) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
 // 获取邀请统计请求
 type InviteStatsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -111,7 +380,7 @@ type InviteStatsRequest struct {
 
 func (x *InviteStatsRequest) Reset() {
 	*x = InviteStatsRequest{}
-	mi := &file_web_v1_invite_proto_msgTypes[2]
+	mi := &file_web_v1_invite_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -123,7 +392,7 @@ func (x *InviteStatsRequest) String() string {
 func (*InviteStatsRequest) ProtoMessage() {}
 
 func (x *InviteStatsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_invite_proto_msgTypes[2]
+	mi := &file_web_v1_invite_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -136,7 +405,7 @@ func (x *InviteStatsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InviteStatsRequest.ProtoReflect.Descriptor instead.
 func (*InviteStatsRequest) Descriptor() ([]byte, []int) {
-	return file_web_v1_invite_proto_rawDescGZIP(), []int{2}
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{7}
 }
 
 // 获取邀请统计响应
@@ -149,7 +418,7 @@ type InviteStatsResponse struct {
 
 func (x *InviteStatsResponse) Reset() {
 	*x = InviteStatsResponse{}
-	mi := &file_web_v1_invite_proto_msgTypes[3]
+	mi := &file_web_v1_invite_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -161,7 +430,7 @@ func (x *InviteStatsResponse) String() string {
 func (*InviteStatsResponse) ProtoMessage() {}
 
 func (x *InviteStatsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_invite_proto_msgTypes[3]
+	mi := &file_web_v1_invite_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -174,7 +443,7 @@ func (x *InviteStatsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InviteStatsResponse.ProtoReflect.Descriptor instead.
 func (*InviteStatsResponse) Descriptor() ([]byte, []int) {
-	return file_web_v1_invite_proto_rawDescGZIP(), []int{3}
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *InviteStatsResponse) GetTotalInvitations() int32 {
@@ -197,7 +466,7 @@ type InviteFriendListRequest struct {
 
 func (x *InviteFriendListRequest) Reset() {
 	*x = InviteFriendListRequest{}
-	mi := &file_web_v1_invite_proto_msgTypes[4]
+	mi := &file_web_v1_invite_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -209,7 +478,7 @@ func (x *InviteFriendListRequest) String() string {
 func (*InviteFriendListRequest) ProtoMessage() {}
 
 func (x *InviteFriendListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_invite_proto_msgTypes[4]
+	mi := &file_web_v1_invite_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -222,7 +491,7 @@ func (x *InviteFriendListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InviteFriendListRequest.ProtoReflect.Descriptor instead.
 func (*InviteFriendListRequest) Descriptor() ([]byte, []int) {
-	return file_web_v1_invite_proto_rawDescGZIP(), []int{4}
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *InviteFriendListRequest) GetPage() int32 {
@@ -251,7 +520,7 @@ type InviteFriendListResponse struct {
 
 func (x *InviteFriendListResponse) Reset() {
 	*x = InviteFriendListResponse{}
-	mi := &file_web_v1_invite_proto_msgTypes[5]
+	mi := &file_web_v1_invite_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -263,7 +532,7 @@ func (x *InviteFriendListResponse) String() string {
 func (*InviteFriendListResponse) ProtoMessage() {}
 
 func (x *InviteFriendListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_invite_proto_msgTypes[5]
+	mi := &file_web_v1_invite_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -276,7 +545,7 @@ func (x *InviteFriendListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InviteFriendListResponse.ProtoReflect.Descriptor instead.
 func (*InviteFriendListResponse) Descriptor() ([]byte, []int) {
-	return file_web_v1_invite_proto_rawDescGZIP(), []int{5}
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *InviteFriendListResponse) GetItems() []*InviteFriendItem {
@@ -308,7 +577,7 @@ type InviteFriendItem struct {
 
 func (x *InviteFriendItem) Reset() {
 	*x = InviteFriendItem{}
-	mi := &file_web_v1_invite_proto_msgTypes[6]
+	mi := &file_web_v1_invite_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -320,7 +589,7 @@ func (x *InviteFriendItem) String() string {
 func (*InviteFriendItem) ProtoMessage() {}
 
 func (x *InviteFriendItem) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_invite_proto_msgTypes[6]
+	mi := &file_web_v1_invite_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -333,7 +602,7 @@ func (x *InviteFriendItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InviteFriendItem.ProtoReflect.Descriptor instead.
 func (*InviteFriendItem) Descriptor() ([]byte, []int) {
-	return file_web_v1_invite_proto_rawDescGZIP(), []int{6}
+	return file_web_v1_invite_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *InviteFriendItem) GetUserId() int32 {
@@ -385,6 +654,25 @@ const file_web_v1_invite_proto_rawDesc = "" +
 	"\x13web/v1/invite.proto\x12\x03web\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\x16\n" +
 	"\x14InviteCodeGetRequest\"1\n" +
 	"\x15InviteCodeGetResponse\x12\x18\n" +
+	"\x04code\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x04code\"\x13\n" +
+	"\x11InviteListRequest\"\xd1\x01\n" +
+	"\x0eInviteCodeItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\x05R\x06status\x12\x1b\n" +
+	"\texpire_at\x18\x04 \x01(\tR\bexpireAt\x12&\n" +
+	"\x0fmax_usage_count\x18\x05 \x01(\x05R\rmaxUsageCount\x12\x1f\n" +
+	"\vusage_count\x18\x06 \x01(\x05R\n" +
+	"usageCount\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\a \x01(\tR\tcreatedAt\"?\n" +
+	"\x12InviteListResponse\x12)\n" +
+	"\x05items\x18\x01 \x03(\v2\x13.web.InviteCodeItemR\x05items\"U\n" +
+	"\x15InviteGenerateRequest\x12\x1f\n" +
+	"\vexpire_days\x18\x01 \x01(\x05R\n" +
+	"expireDays\x12\x1b\n" +
+	"\tmax_usage\x18\x02 \x01(\x05R\bmaxUsage\"2\n" +
+	"\x16InviteGenerateResponse\x12\x18\n" +
 	"\x04code\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x04code\"\x14\n" +
 	"\x12InviteStatsRequest\"B\n" +
 	"\x13InviteStatsResponse\x12+\n" +
@@ -402,9 +690,11 @@ const file_web_v1_invite_proto_rawDesc = "" +
 	"\x06mobile\x18\x04 \x01(\tR\x06mobile\x12\x14\n" +
 	"\x05email\x18\x05 \x01(\tR\x05email\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\tR\tcreatedAt2\xcd\x02\n" +
+	"created_at\x18\x06 \x01(\tR\tcreatedAt2\xa4\x04\n" +
 	"\x06Invite\x12h\n" +
-	"\x0fGetMyInviteCode\x12\x19.web.InviteCodeGetRequest\x1a\x1a.web.InviteCodeGetResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/invite/code\x12d\n" +
+	"\x0fGetMyInviteCode\x12\x19.web.InviteCodeGetRequest\x1a\x1a.web.InviteCodeGetResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/invite/code\x12b\n" +
+	"\x0fListInviteCodes\x12\x16.web.InviteListRequest\x1a\x17.web.InviteListResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/invite/list\x12q\n" +
+	"\x12GenerateInviteCode\x12\x1a.web.InviteGenerateRequest\x1a\x1b.web.InviteGenerateResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/invite/generate\x12d\n" +
 	"\x0eGetInviteStats\x12\x17.web.InviteStatsRequest\x1a\x18.web.InviteStatsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/invite/stats\x12s\n" +
 	"\x11ListInviteFriends\x12\x1c.web.InviteFriendListRequest\x1a\x1d.web.InviteFriendListResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/invite/friendsB\fZ\n" +
 	"web/v1;webb\x06proto3"
@@ -421,29 +711,39 @@ func file_web_v1_invite_proto_rawDescGZIP() []byte {
 	return file_web_v1_invite_proto_rawDescData
 }
 
-var file_web_v1_invite_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_web_v1_invite_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_web_v1_invite_proto_goTypes = []any{
 	(*InviteCodeGetRequest)(nil),     // 0: web.InviteCodeGetRequest
 	(*InviteCodeGetResponse)(nil),    // 1: web.InviteCodeGetResponse
-	(*InviteStatsRequest)(nil),       // 2: web.InviteStatsRequest
-	(*InviteStatsResponse)(nil),      // 3: web.InviteStatsResponse
-	(*InviteFriendListRequest)(nil),  // 4: web.InviteFriendListRequest
-	(*InviteFriendListResponse)(nil), // 5: web.InviteFriendListResponse
-	(*InviteFriendItem)(nil),         // 6: web.InviteFriendItem
+	(*InviteListRequest)(nil),        // 2: web.InviteListRequest
+	(*InviteCodeItem)(nil),           // 3: web.InviteCodeItem
+	(*InviteListResponse)(nil),       // 4: web.InviteListResponse
+	(*InviteGenerateRequest)(nil),    // 5: web.InviteGenerateRequest
+	(*InviteGenerateResponse)(nil),   // 6: web.InviteGenerateResponse
+	(*InviteStatsRequest)(nil),       // 7: web.InviteStatsRequest
+	(*InviteStatsResponse)(nil),      // 8: web.InviteStatsResponse
+	(*InviteFriendListRequest)(nil),  // 9: web.InviteFriendListRequest
+	(*InviteFriendListResponse)(nil), // 10: web.InviteFriendListResponse
+	(*InviteFriendItem)(nil),         // 11: web.InviteFriendItem
 }
 var file_web_v1_invite_proto_depIdxs = []int32{
-	6, // 0: web.InviteFriendListResponse.items:type_name -> web.InviteFriendItem
-	0, // 1: web.Invite.GetMyInviteCode:input_type -> web.InviteCodeGetRequest
-	2, // 2: web.Invite.GetInviteStats:input_type -> web.InviteStatsRequest
-	4, // 3: web.Invite.ListInviteFriends:input_type -> web.InviteFriendListRequest
-	1, // 4: web.Invite.GetMyInviteCode:output_type -> web.InviteCodeGetResponse
-	3, // 5: web.Invite.GetInviteStats:output_type -> web.InviteStatsResponse
-	5, // 6: web.Invite.ListInviteFriends:output_type -> web.InviteFriendListResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	3,  // 0: web.InviteListResponse.items:type_name -> web.InviteCodeItem
+	11, // 1: web.InviteFriendListResponse.items:type_name -> web.InviteFriendItem
+	0,  // 2: web.Invite.GetMyInviteCode:input_type -> web.InviteCodeGetRequest
+	2,  // 3: web.Invite.ListInviteCodes:input_type -> web.InviteListRequest
+	5,  // 4: web.Invite.GenerateInviteCode:input_type -> web.InviteGenerateRequest
+	7,  // 5: web.Invite.GetInviteStats:input_type -> web.InviteStatsRequest
+	9,  // 6: web.Invite.ListInviteFriends:input_type -> web.InviteFriendListRequest
+	1,  // 7: web.Invite.GetMyInviteCode:output_type -> web.InviteCodeGetResponse
+	4,  // 8: web.Invite.ListInviteCodes:output_type -> web.InviteListResponse
+	6,  // 9: web.Invite.GenerateInviteCode:output_type -> web.InviteGenerateResponse
+	8,  // 10: web.Invite.GetInviteStats:output_type -> web.InviteStatsResponse
+	10, // 11: web.Invite.ListInviteFriends:output_type -> web.InviteFriendListResponse
+	7,  // [7:12] is the sub-list for method output_type
+	2,  // [2:7] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_web_v1_invite_proto_init() }
@@ -457,7 +757,7 @@ func file_web_v1_invite_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_invite_proto_rawDesc), len(file_web_v1_invite_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

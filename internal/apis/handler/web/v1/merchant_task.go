@@ -272,6 +272,9 @@ func (u *User) MerchantTaskUp(ctx context.Context, in *web.MerchantTaskIdRequest
 	if t.IsUp != 0 {
 		return nil, errorx.New(400, "任务已处于上架状态")
 	}
+	if !model.MerchantTaskPaytypeConfigured(t.Paytype) {
+		return nil, errorx.New(400, "未配置支付方式，无法上架")
+	}
 	if err := u.assertListedSellCountWithinSurety(ctx, uid, t.Id, t.Count, m.Surety); err != nil {
 		return nil, err
 	}

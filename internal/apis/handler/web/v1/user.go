@@ -503,7 +503,7 @@ func merchantPayTypesToProto(payTypesJSON string) map[string]*web.MerchantPayTyp
 	limits := model.MerchantPayTypesLimits(payTypesJSON)
 	payTypes := make(map[string]*web.MerchantPayTypeLimit, len(limits))
 	for k, v := range limits {
-		payTypes[k] = &web.MerchantPayTypeLimit{Min: v.Min, Max: v.Max}
+		payTypes[k] = &web.MerchantPayTypeLimit{Min: v.Min, Max: v.Max, PayType: v.PayType}
 	}
 	return payTypes
 }

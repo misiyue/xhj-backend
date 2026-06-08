@@ -23,6 +23,7 @@ const (
 	PushEventImCallReject           = "im.call.reject"            // 拒绝通话
 	PushEventImCallHangup           = "im.call.hangup"            // 挂断通话
 	PushEventImCallCancel           = "im.call.cancel"            // 取消通话
+	PushEventSysNotice              = "im.sys.notice"             // 系统通知
 )
 
 // IM消息类型

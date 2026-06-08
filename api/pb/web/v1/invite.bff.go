@@ -14,6 +14,10 @@ type IInviteHandler interface {
 
 	// 获取我的邀请码（users.invite_code，为空则自动生成）
 	GetMyInviteCode(ctx context.Context, in *InviteCodeGetRequest) (*InviteCodeGetResponse, error)
+	// 获取我的邀请码列表（仅返回 users.invite_code 第一条，未生成则 items 为空）
+	ListInviteCodes(ctx context.Context, in *InviteListRequest) (*InviteListResponse, error)
+	// 生成邀请码（users.invite_code；已存在则直接返回 code）
+	GenerateInviteCode(ctx context.Context, in *InviteGenerateRequest) (*InviteGenerateResponse, error)
 	// 获取邀请统计
 	GetInviteStats(ctx context.Context, in *InviteStatsRequest) (*InviteStatsResponse, error)
 	// 我邀请注册的好友列表（users.invite_user_id = 当前用户）
@@ -40,6 +44,24 @@ func RegisterInviteHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.GetMyInviteCode(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/invite/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in InviteListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.ListInviteCodes(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/invite/generate", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in InviteGenerateRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.GenerateInviteCode(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/invite/stats", interceptor.Do(func(ctx *gin.Context) (any, error) {

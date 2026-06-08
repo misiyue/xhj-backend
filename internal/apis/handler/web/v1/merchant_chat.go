@@ -233,6 +233,11 @@ func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.MerchantChatS
 		return nil, err
 	}
 	out := &web.MerchantChatSessionListResponse{Items: make([]*web.MerchantChatSessionItem, 0, len(rows))}
+	peerIDs := make([]int, 0, len(rows))
+	for i := range rows {
+		peerIDs = append(peerIDs, merchantChatPeerUserID(&rows[i]))
+	}
+	merchantNickMap, _ := u.merchantNicknamesByUserIDs(ctx, peerIDs)
 	for i := range rows {
 		peerID := merchantChatPeerUserID(&rows[i])
 		oid, _ := strconv.Atoi(strings.TrimSpace(rows[i].Tags))
@@ -244,14 +249,15 @@ func (u *User) MerchantChatSessionList(ctx context.Context, _ *web.MerchantChatS
 		}
 		preview, updatedAt := u.merchantChatLastPreview(ctx, uid, rows[i].Id, rows[i].UpdatedAt)
 		out.Items = append(out.Items, &web.MerchantChatSessionItem{
-			SessionId:    int32(rows[i].Id),
-			OrderId:      int32(oid),
-			PeerUserId:   int32(peerID),
-			PeerNickname: nick,
-			PeerAvatar:   ava,
-			LastPreview:  preview,
-			UpdatedAt:    updatedAt,
-			UnreadNum:    int32(u.merchantChatSessionUnread(ctx, uid, rows[i].Id)),
+			SessionId:        int32(rows[i].Id),
+			OrderId:          int32(oid),
+			PeerUserId:       int32(peerID),
+			PeerNickname:     nick,
+			PeerAvatar:       ava,
+			MerchantNickname: merchantNickMap[peerID],
+			LastPreview:      preview,
+			UpdatedAt:        updatedAt,
+			UnreadNum:        int32(u.merchantChatSessionUnread(ctx, uid, rows[i].Id)),
 		})
 	}
 	return out, nil

@@ -114,3 +114,13 @@ type ImMessageMentionPayload struct {
 	Count     int      `json:"count"`      // 未读提及消息数量
 	AtAll     bool     `json:"at_all"`     // 是否@所有人
 }
+
+// ImSysNoticePayload im.sys.notice - 系统通知推送
+type ImSysNoticePayload struct {
+	Id        int    `json:"id"`
+	UserId    int    `json:"user_id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Url       string `json:"url"`
+	CreatedAt string `json:"created_at"`
+}

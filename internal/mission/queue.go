@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/mission/queue"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/redis/go-redis/v9"
@@ -16,7 +17,7 @@ type QueueProvider struct {
 }
 
 func Queue(ctx *cli.Context, app *QueueProvider) error {
-	topics := []string{"im.user.login"}
+	topics := []string{entity.LoginTopic, entity.SysNoticeTopic}
 
 	sub := app.Redis.Subscribe(ctx.Context, topics...)
 
@@ -27,8 +28,10 @@ func Queue(ctx *cli.Context, app *QueueProvider) error {
 
 	for data := range sub.Channel(redis.WithChannelHealthCheckInterval(10 * time.Second)) {
 		switch data.Channel {
-		case "im.user.login":
+		case entity.LoginTopic:
 			_ = app.Consumers.UserLoginConsumer.Do(context.Background(), []byte(data.Payload), 1)
+		case entity.SysNoticeTopic:
+			_ = app.Consumers.SysNoticeConsumer.Do(context.Background(), []byte(data.Payload))
 		}
 	}
 

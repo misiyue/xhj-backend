@@ -935,6 +935,7 @@ type MerchantPayTypeLimit struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Min           float64                `protobuf:"fixed64,1,opt,name=min,proto3" json:"min,omitempty"`
 	Max           float64                `protobuf:"fixed64,2,opt,name=max,proto3" json:"max,omitempty"`
+	PayType       string                 `protobuf:"bytes,3,opt,name=pay_type,json=payType,proto3" json:"pay_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -981,6 +982,13 @@ func (x *MerchantPayTypeLimit) GetMax() float64 {
 		return x.Max
 	}
 	return 0
+}
+
+func (x *MerchantPayTypeLimit) GetPayType() string {
+	if x != nil {
+		return x.PayType
+	}
+	return ""
 }
 
 type MerchantStatusResponse struct {
@@ -1226,9 +1234,10 @@ func (x *MerchantInfoByTaskRequest) GetTaskId() int32 {
 }
 
 type MerchantInfoForBuyerResponse struct {
-	state         protoimpl.MessageState           `protogen:"open.v1"`
-	TaskId        int32                            `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
-	Nickname      string                           `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	TaskId   int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`
+	Nickname string                 `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	// 商户 pay_types JSON 解析结果，如 {"hd":{"pay_type":"801","min":200,"max":1000}}
 	PayTypes      map[string]*MerchantPayTypeLimit `protobuf:"bytes,3,rep,name=pay_types,json=payTypes,proto3" json:"pay_types,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2711,12 +2720,20 @@ type MerchantOrderItem struct {
 	AppealMaterials string `protobuf:"bytes,27,opt,name=appeal_materials,json=appealMaterials,proto3" json:"appeal_materials,omitempty"`
 	// 下单备注
 	Remark string `protobuf:"bytes,28,opt,name=remark,proto3" json:"remark,omitempty"`
-	// 对方 users 表头像（买家看卖家，卖家看买家）
-	Avatar string `protobuf:"bytes,29,opt,name=avatar,proto3" json:"avatar,omitempty"`
-	// 对方 users 表昵称
-	Nickname      string `protobuf:"bytes,30,opt,name=nickname,proto3" json:"nickname,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// 卖家 users 表昵称
+	SalerUserNickname string `protobuf:"bytes,29,opt,name=saler_user_nickname,json=salerUserNickname,proto3" json:"saler_user_nickname,omitempty"`
+	// 卖家 users 表头像
+	SalerUserAvatar string `protobuf:"bytes,30,opt,name=saler_user_avatar,json=salerUserAvatar,proto3" json:"saler_user_avatar,omitempty"`
+	// 卖家 merchant 表昵称（已审核通过）
+	SalerMerchantNickname string `protobuf:"bytes,31,opt,name=saler_merchant_nickname,json=salerMerchantNickname,proto3" json:"saler_merchant_nickname,omitempty"`
+	// 买家 users 表昵称
+	BuyerUserNickname string `protobuf:"bytes,32,opt,name=buyer_user_nickname,json=buyerUserNickname,proto3" json:"buyer_user_nickname,omitempty"`
+	// 买家 users 表头像
+	BuyerUserAvatar string `protobuf:"bytes,33,opt,name=buyer_user_avatar,json=buyerUserAvatar,proto3" json:"buyer_user_avatar,omitempty"`
+	// 买家 merchant 表昵称（已审核通过，非商户为空）
+	BuyerMerchantNickname string `protobuf:"bytes,34,opt,name=buyer_merchant_nickname,json=buyerMerchantNickname,proto3" json:"buyer_merchant_nickname,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *MerchantOrderItem) Reset() {
@@ -2945,16 +2962,44 @@ func (x *MerchantOrderItem) GetRemark() string {
 	return ""
 }
 
-func (x *MerchantOrderItem) GetAvatar() string {
+func (x *MerchantOrderItem) GetSalerUserNickname() string {
 	if x != nil {
-		return x.Avatar
+		return x.SalerUserNickname
 	}
 	return ""
 }
 
-func (x *MerchantOrderItem) GetNickname() string {
+func (x *MerchantOrderItem) GetSalerUserAvatar() string {
 	if x != nil {
-		return x.Nickname
+		return x.SalerUserAvatar
+	}
+	return ""
+}
+
+func (x *MerchantOrderItem) GetSalerMerchantNickname() string {
+	if x != nil {
+		return x.SalerMerchantNickname
+	}
+	return ""
+}
+
+func (x *MerchantOrderItem) GetBuyerUserNickname() string {
+	if x != nil {
+		return x.BuyerUserNickname
+	}
+	return ""
+}
+
+func (x *MerchantOrderItem) GetBuyerUserAvatar() string {
+	if x != nil {
+		return x.BuyerUserAvatar
+	}
+	return ""
+}
+
+func (x *MerchantOrderItem) GetBuyerMerchantNickname() string {
+	if x != nil {
+		return x.BuyerMerchantNickname
 	}
 	return ""
 }
@@ -3895,9 +3940,11 @@ type MerchantChatSessionItem struct {
 	LastPreview  string                 `protobuf:"bytes,6,opt,name=last_preview,json=lastPreview,proto3" json:"last_preview,omitempty"`
 	UpdatedAt    string                 `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// 当前用户在该商户会话下的未读条数（Redis，与 MerchantChatUnread 汇总口径一致）
-	UnreadNum     int32 `protobuf:"varint,8,opt,name=unread_num,json=unreadNum,proto3" json:"unread_num,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	UnreadNum int32 `protobuf:"varint,8,opt,name=unread_num,json=unreadNum,proto3" json:"unread_num,omitempty"`
+	// 对方 merchant.nickname（已审核通过）
+	MerchantNickname string `protobuf:"bytes,9,opt,name=merchant_nickname,json=merchantNickname,proto3" json:"merchant_nickname,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *MerchantChatSessionItem) Reset() {
@@ -3984,6 +4031,13 @@ func (x *MerchantChatSessionItem) GetUnreadNum() int32 {
 		return x.UnreadNum
 	}
 	return 0
+}
+
+func (x *MerchantChatSessionItem) GetMerchantNickname() string {
+	if x != nil {
+		return x.MerchantNickname
+	}
+	return ""
 }
 
 type MerchantChatSessionListResponse struct {
@@ -4682,10 +4736,11 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x15MerchantApplyResponse\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\"\x17\n" +
 	"\x15MerchantStatusRequest\"\x18\n" +
-	"\x16MerchantProfileRequest\":\n" +
+	"\x16MerchantProfileRequest\"U\n" +
 	"\x14MerchantPayTypeLimit\x12\x10\n" +
 	"\x03min\x18\x01 \x01(\x01R\x03min\x12\x10\n" +
-	"\x03max\x18\x02 \x01(\x01R\x03max\"\xc6\x05\n" +
+	"\x03max\x18\x02 \x01(\x01R\x03max\x12\x19\n" +
+	"\bpay_type\x18\x03 \x01(\tR\apayType\"\xc6\x05\n" +
 	"\x16MerchantStatusResponse\x12-\n" +
 	"\x0fhas_application\x18\x01 \x01(\bB\x04\xe2A\x01\x02R\x0ehasApplication\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\x05R\x02id\x12\x1a\n" +
@@ -4838,7 +4893,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\vpay_type_id\x18\x12 \x01(\x05R\tpayTypeId\x12)\n" +
 	"\x10appeal_materials\x18\x13 \x01(\tR\x0fappealMaterials\x12#\n" +
 	"\rcancel_reason\x18\x14 \x01(\tR\fcancelReason\x12\x16\n" +
-	"\x06remark\x18\x15 \x01(\tR\x06remark\"\xec\x06\n" +
+	"\x06remark\x18\x15 \x01(\tR\x06remark\"\xe0\b\n" +
 	"\x11MerchantOrderItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x19\n" +
 	"\border_id\x18\x02 \x01(\tR\aorderId\x12\x19\n" +
@@ -4873,9 +4928,13 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"updated_at\x18\x19 \x01(\tR\tupdatedAt\x12\x1e\n" +
 	"\vpay_type_id\x18\x1a \x01(\x05R\tpayTypeId\x12)\n" +
 	"\x10appeal_materials\x18\x1b \x01(\tR\x0fappealMaterials\x12\x16\n" +
-	"\x06remark\x18\x1c \x01(\tR\x06remark\x12\x16\n" +
-	"\x06avatar\x18\x1d \x01(\tR\x06avatar\x12\x1a\n" +
-	"\bnickname\x18\x1e \x01(\tR\bnickname\"\xfc\x01\n" +
+	"\x06remark\x18\x1c \x01(\tR\x06remark\x12.\n" +
+	"\x13saler_user_nickname\x18\x1d \x01(\tR\x11salerUserNickname\x12*\n" +
+	"\x11saler_user_avatar\x18\x1e \x01(\tR\x0fsalerUserAvatar\x126\n" +
+	"\x17saler_merchant_nickname\x18\x1f \x01(\tR\x15salerMerchantNickname\x12.\n" +
+	"\x13buyer_user_nickname\x18  \x01(\tR\x11buyerUserNickname\x12*\n" +
+	"\x11buyer_user_avatar\x18! \x01(\tR\x0fbuyerUserAvatar\x126\n" +
+	"\x17buyer_merchant_nickname\x18\" \x01(\tR\x15buyerMerchantNickname\"\xfc\x01\n" +
 	"\x1aMerchantOrderCreateRequest\x12 \n" +
 	"\atask_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\x06taskId\x12&\n" +
 	"\x06counts\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x06counts\x12,\n" +
@@ -4934,7 +4993,7 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\border_no\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\aorderNo\"E\n" +
 	"\x1aMerchantChatUnreadResponse\x12'\n" +
 	"\ftotal_unread\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\vtotalUnread\" \n" +
-	"\x1eMerchantChatSessionListRequest\"\xae\x02\n" +
+	"\x1eMerchantChatSessionListRequest\"\xdb\x02\n" +
 	"\x17MerchantChatSessionItem\x12#\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\tsessionId\x12\x1f\n" +
@@ -4948,7 +5007,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\a \x01(\tR\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"unread_num\x18\b \x01(\x05R\tunreadNum\"U\n" +
+	"unread_num\x18\b \x01(\x05R\tunreadNum\x12+\n" +
+	"\x11merchant_nickname\x18\t \x01(\tR\x10merchantNickname\"U\n" +
 	"\x1fMerchantChatSessionListResponse\x122\n" +
 	"\x05items\x18\x01 \x03(\v2\x1c.web.MerchantChatSessionItemR\x05items\"\x83\x01\n" +
 	"\x1eMerchantChatMessageListRequest\x12(\n" +

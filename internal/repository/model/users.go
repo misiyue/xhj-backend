@@ -11,9 +11,10 @@ const (
 
 const UserInviteCodeLen = 6
 
-const inviteCodeAlphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+// 数字+小写字母，排除易混淆字符 0、1、l、o
+const inviteCodeAlphabet = "23456789abcdefghijkmnpqrstuvwxyz"
 
-// DeriveUserInviteCode 根据 user id 运算生成 6 位数字+小写字母邀请码（salt 用于碰撞重试）
+// DeriveUserInviteCode 根据 user id 运算生成 6 位邀请码（salt 用于碰撞重试；字符集不含 0/1/l/o）
 func DeriveUserInviteCode(userID int, salt int) string {
 	var out [UserInviteCodeLen]byte
 	x := uint64(userID)*2654435761 + uint64(salt)*2246822519 + 97531
@@ -45,7 +46,7 @@ type Users struct {
 	IsRobot      int       `gorm:"column:is_robot;" json:"is_robot"`                                  // 是否机器人[1:否;2:是;]
 	Status       int       `gorm:"column:status;" json:"status"`                                      // 用户状态[1:正常;2:停用;3:注销]
 	InviteUserId int       `gorm:"column:invite_user_id;default:0" json:"invite_user_id"`             // 邀请人 users.id
-	InviteCode   string    `gorm:"column:invite_code;type:varchar(6);uniqueIndex" json:"invite_code"` // 邀请码（6位数字+小写字母）
+	InviteCode   string    `gorm:"column:invite_code;type:varchar(6);uniqueIndex" json:"invite_code"` // 邀请码（6位，不含 0/1/l/o）
 	DeviceCode   string    `gorm:"column:device_code;type:varchar(128)" json:"device_code"`           // 客户端设备码
 	CreatedAt    time.Time `gorm:"column:created_at;" json:"created_at"`                              // 注册时间
 	UpdatedAt    time.Time `gorm:"column:updated_at;" json:"updated_at"`                              // 更新时间

@@ -2,6 +2,7 @@ package mission
 
 import (
 	"github.com/google/wire"
+	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/mission/cron"
 	"github.com/gzydong/go-chat/internal/mission/queue"
 	"github.com/gzydong/go-chat/internal/mission/temp"
@@ -15,6 +16,7 @@ var CronProviderSet = wire.NewSet(
 var QueueProviderSet = wire.NewSet(
 	wire.Struct(new(QueueProvider), "*"),
 	queue.ProviderSet,
+	logic.ProviderSet,
 )
 
 var MigrateProviderSet = wire.NewSet(

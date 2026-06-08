@@ -396,6 +396,7 @@ message MerchantProfileRequest {}
 message MerchantPayTypeLimit {
   double min = 1;
   double max = 2;
+  string pay_type = 3;
 }
 
 message MerchantStatusResponse {
@@ -430,6 +431,7 @@ message MerchantInfoByTaskRequest {
 message MerchantInfoForBuyerResponse {
   int32 task_id = 1 [(google.api.field_behavior) = REQUIRED];
   string nickname = 2 [(google.api.field_behavior) = REQUIRED];
+  // 商户 pay_types JSON 解析结果，如 {"hd":{"pay_type":"801","min":200,"max":1000}}
   map<string, MerchantPayTypeLimit> pay_types = 3;
 }
 
@@ -620,10 +622,18 @@ message MerchantOrderItem {
   string appeal_materials = 27;
   // 下单备注
   string remark = 28;
-  // 对方 users 表头像（买家看卖家，卖家看买家）
-  string avatar = 29;
-  // 对方 users 表昵称
-  string nickname = 30;
+  // 卖家 users 表昵称
+  string saler_user_nickname = 29;
+  // 卖家 users 表头像
+  string saler_user_avatar = 30;
+  // 卖家 merchant 表昵称（已审核通过）
+  string saler_merchant_nickname = 31;
+  // 买家 users 表昵称
+  string buyer_user_nickname = 32;
+  // 买家 users 表头像
+  string buyer_user_avatar = 33;
+  // 买家 merchant 表昵称（已审核通过，非商户为空）
+  string buyer_merchant_nickname = 34;
 }
 
 message MerchantOrderCreateRequest {
@@ -735,6 +745,8 @@ message MerchantChatSessionItem {
   string updated_at = 7;
   // 当前用户在该商户会话下的未读条数（Redis，与 MerchantChatUnread 汇总口径一致）
   int32 unread_num = 8;
+  // 对方 merchant.nickname（已审核通过）
+  string merchant_nickname = 9;
 }
 
 message MerchantChatSessionListResponse {

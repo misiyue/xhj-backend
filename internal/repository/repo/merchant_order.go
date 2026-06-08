@@ -66,6 +66,43 @@ func (r *MerchantOrder) UpdateByID(ctx context.Context, id int, updates map[stri
 	return r.db.WithContext(ctx).Model(&model.MerchantOrder{}).Where("id = ?", id).Updates(updates).Error
 }
 
+// RefreshOrderNoForHdPay 已存在 merchant_hd_order 时重新生成订单号，同步 merchant_order 与 merchant_hd_order
+func (r *MerchantOrder) RefreshOrderNoForHdPay(ctx context.Context, merchantOrderID int, oldOrderNo string) (string, error) {
+	oldOrderNo = strings.TrimSpace(oldOrderNo)
+	if merchantOrderID <= 0 || oldOrderNo == "" {
+		return oldOrderNo, nil
+	}
+	var newOrderNo string
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var hd model.MerchantHdOrder
+		if err := tx.Where("order_no = ?", oldOrderNo).First(&hd).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		newOrderNo = generateMerchantOrderID(time.Now())
+		res := tx.Model(&model.MerchantOrder{}).
+			Where("id = ? AND order_id = ?", merchantOrderID, oldOrderNo).
+			Update("order_id", newOrderNo)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return errors.New("merchant_order: refresh order_no failed")
+		}
+		return tx.Model(&model.MerchantHdOrder{}).Where("id = ?", hd.Id).
+			Update("order_no", newOrderNo).Error
+	})
+	if err != nil {
+		return "", err
+	}
+	if newOrderNo == "" {
+		return oldOrderNo, nil
+	}
+	return newOrderNo, nil
+}
+
 // ListByParticipant 分页：asBuyer=true 查 buyer_id，否则查 saler_id；statuses 非空时按 status IN 筛选；appealPending 为 true 时筛选申诉中未裁定订单
 func (r *MerchantOrder) ListByParticipant(ctx context.Context, userId int, asBuyer bool, statuses []int, appealPending bool, page, pageSize int) ([]model.MerchantOrder, int64, error) {
 	q := r.db.WithContext(ctx).Model(&model.MerchantOrder{})

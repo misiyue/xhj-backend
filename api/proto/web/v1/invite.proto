@@ -16,6 +16,22 @@ service Invite {
     };
   }
 
+  // 获取我的邀请码列表（仅返回 users.invite_code 第一条，未生成则 items 为空）
+  rpc ListInviteCodes(InviteListRequest) returns (InviteListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/list"
+      body: "*"
+    };
+  }
+
+  // 生成邀请码（users.invite_code；已存在则直接返回 code）
+  rpc GenerateInviteCode(InviteGenerateRequest) returns (InviteGenerateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/generate"
+      body: "*"
+    };
+  }
+
   // 获取邀请统计
   rpc GetInviteStats(InviteStatsRequest) returns (InviteStatsResponse) {
     option (google.api.http) = {
@@ -36,6 +52,32 @@ service Invite {
 message InviteCodeGetRequest {}
 
 message InviteCodeGetResponse {
+  string code = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message InviteListRequest {}
+
+message InviteCodeItem {
+  int32 id = 1;
+  string code = 2;
+  int32 status = 3;
+  string expire_at = 4;
+  int32 max_usage_count = 5;
+  int32 usage_count = 6;
+  string created_at = 7;
+}
+
+message InviteListResponse {
+  repeated InviteCodeItem items = 1;
+}
+
+message InviteGenerateRequest {
+  // 兼容旧参数，users.invite_code 模式下忽略
+  int32 expire_days = 1;
+  int32 max_usage = 2;
+}
+
+message InviteGenerateResponse {
   string code = 1 [(google.api.field_behavior) = REQUIRED];
 }
 

@@ -48,7 +48,9 @@ func (Merchant) TableName() string {
 }
 
 type merchantPayTypeEntry struct {
-	PayType string `json:"pay_type"`
+	PayType string  `json:"pay_type"`
+	Min     float64 `json:"min"`
+	Max     float64 `json:"max"`
 }
 
 // MerchantHdChannelPayType 解析 merchant.pay_types，返回宏达通道 pay_type（如 801）
@@ -70,10 +72,11 @@ func MerchantHasPayType(payTypesJSON, key string) bool {
 	return ok
 }
 
-// MerchantPayTypeLimit 支付类型金额区间（profile 接口返回）
+// MerchantPayTypeLimit 支付类型配置（profile / merchant-info 返回）
 type MerchantPayTypeLimit struct {
-	Min float64 `json:"min"`
-	Max float64 `json:"max"`
+	Min     float64 `json:"min"`
+	Max     float64 `json:"max"`
+	PayType string  `json:"pay_type,omitempty"`
 }
 
 // HdChannelAmountLimit 宏达通道 pay_type 对应金额区间（单位：元）
@@ -90,7 +93,7 @@ func HdChannelAmountLimit(payType string) (min, max float64, ok bool) {
 	}
 }
 
-// MerchantPayTypesLimits 解析 pay_types JSON，返回各 key 的金额区间
+// MerchantPayTypesLimits 解析 merchant.pay_types JSON，直接返回库中 min/max/pay_type
 func MerchantPayTypesLimits(payTypesJSON string) map[string]MerchantPayTypeLimit {
 	s := strings.TrimSpace(payTypesJSON)
 	if s == "" {
@@ -102,13 +105,18 @@ func MerchantPayTypesLimits(payTypesJSON string) map[string]MerchantPayTypeLimit
 	}
 	out := make(map[string]MerchantPayTypeLimit, len(raw))
 	for key, entry := range raw {
-		min, max := 0.0, 0.0
-		if channelPayType := strings.TrimSpace(entry.PayType); channelPayType != "" {
+		min, max := entry.Min, entry.Max
+		channelPayType := strings.TrimSpace(entry.PayType)
+		if min == 0 && max == 0 && channelPayType != "" {
 			if m, x, ok := HdChannelAmountLimit(channelPayType); ok {
 				min, max = m, x
 			}
 		}
-		out[key] = MerchantPayTypeLimit{Min: min, Max: max}
+		out[key] = MerchantPayTypeLimit{
+			Min:     min,
+			Max:     max,
+			PayType: channelPayType,
+		}
 	}
 	return out
 }
