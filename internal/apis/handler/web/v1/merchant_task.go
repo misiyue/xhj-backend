@@ -198,10 +198,14 @@ func (u *User) MerchantInfoByTask(ctx context.Context, in *web.MerchantInfoByTas
 	if m == nil {
 		return nil, errorx.New(404, "商户未通过审核")
 	}
+	payTypes, err := u.merchantPayTypesToProto(ctx, m.PayTypes)
+	if err != nil {
+		return nil, err
+	}
 	return &web.MerchantInfoForBuyerResponse{
 		TaskId:   int32(taskID),
 		Nickname: m.Nickname,
-		PayTypes: merchantPayTypesToProto(m.PayTypes),
+		PayTypes: payTypes,
 	}, nil
 }
 

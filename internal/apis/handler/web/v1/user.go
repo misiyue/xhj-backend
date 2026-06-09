@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -33,9 +34,11 @@ type User struct {
 	WalletUserRepo      *repo.WalletUser
 	MerchantRepo        *repo.Merchant
 	MerchantTaskRepo    *repo.MerchantTask
-	MerchantPaytypeRepo *repo.MerchantPaytype
-	MerchantOrderRepo   *repo.MerchantOrder
+	MerchantPaytypeRepo   *repo.MerchantPaytype
+	MerchantPaymentRepo   *repo.MerchantPayment
+	MerchantOrderRepo     *repo.MerchantOrder
 	MerchantHdOrderRepo *repo.MerchantHdOrder
+	MerchantHmOrderRepo *repo.MerchantHmOrder
 	MerchantSessionRepo *repo.MerchantSession
 	MerchantMessageRepo *repo.MerchantMessage
 	PushMessage         *logic.PushMessage
@@ -496,19 +499,52 @@ func (u *User) MerchantStatus(ctx context.Context, _ *web.MerchantStatusRequest)
 	if latest == nil {
 		return &web.MerchantStatusResponse{HasApplication: false}, nil
 	}
-	return merchantToStatusResponse(latest), nil
+	return u.merchantToStatusResponse(ctx, latest)
 }
 
-func merchantPayTypesToProto(payTypesJSON string) map[string]*web.MerchantPayTypeLimit {
-	limits := model.MerchantPayTypesLimits(payTypesJSON)
-	payTypes := make(map[string]*web.MerchantPayTypeLimit, len(limits))
-	for k, v := range limits {
-		payTypes[k] = &web.MerchantPayTypeLimit{Min: v.Min, Max: v.Max, PayType: v.PayType}
+func (u *User) merchantPayTypesToProto(ctx context.Context, payTypesJSON string) (map[string]*web.MerchantPayTypeLimit, error) {
+	refs := model.ParseMerchantPayTypeRefs(payTypesJSON)
+	if len(refs) == 0 {
+		return nil, nil
 	}
-	return payTypes
+	if u.MerchantPaymentRepo == nil {
+		return nil, errors.New("MerchantPaymentRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+	ids := make([]int, 0, len(refs))
+	for _, id := range refs {
+		ids = append(ids, id)
+	}
+	paymentMap, err := u.MerchantPaymentRepo.MapByIDs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	payTypes := make(map[string]*web.MerchantPayTypeLimit, len(refs))
+	for key, id := range refs {
+		p, ok := paymentMap[id]
+		if !ok || p == nil {
+			continue
+		}
+		var min, max float64
+		if p.Min != nil {
+			min = float64(*p.Min)
+		}
+		if p.Max != nil {
+			max = float64(*p.Max)
+		}
+		payTypes[key] = &web.MerchantPayTypeLimit{
+			Min:     min,
+			Max:     max,
+			PayType: p.Code,
+		}
+	}
+	return payTypes, nil
 }
 
-func merchantToStatusResponse(m *model.Merchant) *web.MerchantStatusResponse {
+func (u *User) merchantToStatusResponse(ctx context.Context, m *model.Merchant) (*web.MerchantStatusResponse, error) {
+	payTypes, err := u.merchantPayTypesToProto(ctx, m.PayTypes)
+	if err != nil {
+		return nil, err
+	}
 	return &web.MerchantStatusResponse{
 		HasApplication: true,
 		Id:             int32(m.Id),
@@ -529,8 +565,8 @@ func merchantToStatusResponse(m *model.Merchant) *web.MerchantStatusResponse {
 		IsClose:        int32(m.IsClose),
 		CreatedAt:      timeutil.FormatDatetime(m.CreatedAt),
 		UpdatedAt:      timeutil.FormatDatetime(m.UpdatedAt),
-		PayTypes:       merchantPayTypesToProto(m.PayTypes),
-	}
+		PayTypes:       payTypes,
+	}, nil
 }
 
 // MerchantProfile 获取本人商户资料（与 MerchantStatus 数据一致，供表单查看/编辑回填）

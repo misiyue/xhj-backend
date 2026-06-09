@@ -58,7 +58,8 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 				"/api/v1/common/app-version",
 				"/api/v1/common/explore-list",
 				"/api/v1/common/app-dict",
-				"/api/v1/merchant/order/notify",
+				"/api/v1/merchant/order/hdpay-notify",
+				"/api/v1/merchant/order/hmpay-notify",
 			}
 		},
 	)
@@ -101,9 +102,18 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 }
 
 func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRoutes, handler *web.Handler) {
-	// 汇美支付回调：无 JWT，响应纯文本 success
-	router.POST("/api/v1/merchant/order/notify", func(c *gin.Context) {
-		handler.V1.User.MerchantOrderNotify(c)
+	// 第三方支付回调：无 JWT，响应纯文本 success / fail
+	router.POST("/api/v1/merchant/order/hdpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHdpayNotify(c)
+	})
+	router.GET("/api/v1/merchant/order/hdpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHdpayNotify(c)
+	})
+	router.POST("/api/v1/merchant/order/hmpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHmpayNotify(c)
+	})
+	router.GET("/api/v1/merchant/order/hmpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHmpayNotify(c)
 	})
 
 	api.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {

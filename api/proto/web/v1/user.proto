@@ -705,6 +705,8 @@ message MerchantOrderPayRequest {
 
 message MerchantOrderPayResponse {
   string pay_url = 1 [(google.api.field_behavior) = REQUIRED];
+  // 当前商户订单号（重新下单时可能与请求 order_id 不同）
+  string order_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 // ---------- 商户订单 C2C 对话 merchant_session / merchant_message ----------

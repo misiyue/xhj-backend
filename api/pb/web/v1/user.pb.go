@@ -3625,8 +3625,10 @@ func (x *MerchantOrderPayRequest) GetReturnUrl() string {
 }
 
 type MerchantOrderPayResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	PayUrl        string                 `protobuf:"bytes,1,opt,name=pay_url,json=payUrl,proto3" json:"pay_url,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	PayUrl string                 `protobuf:"bytes,1,opt,name=pay_url,json=payUrl,proto3" json:"pay_url,omitempty"`
+	// 当前商户订单号（重新下单时可能与请求 order_id 不同）
+	OrderId       string `protobuf:"bytes,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3664,6 +3666,13 @@ func (*MerchantOrderPayResponse) Descriptor() ([]byte, []int) {
 func (x *MerchantOrderPayResponse) GetPayUrl() string {
 	if x != nil {
 		return x.PayUrl
+	}
+	return ""
+}
+
+func (x *MerchantOrderPayResponse) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
 	}
 	return ""
 }
@@ -4975,9 +4984,10 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x17MerchantOrderPayRequest\x12$\n" +
 	"\border_id\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18@R\aorderId\x12'\n" +
 	"\n" +
-	"return_url\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\treturnUrl\"9\n" +
+	"return_url\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x04R\treturnUrl\"Z\n" +
 	"\x18MerchantOrderPayResponse\x12\x1d\n" +
-	"\apay_url\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x06payUrl\"\xb8\x01\n" +
+	"\apay_url\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x06payUrl\x12\x1f\n" +
+	"\border_id\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\aorderId\"\xb8\x01\n" +
 	"\x17MerchantChatSendRequest\x12\"\n" +
 	"\border_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\aorderId\x12\"\n" +
 	"\bmsg_type\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\amsgType\x12\x1e\n" +

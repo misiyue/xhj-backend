@@ -23,6 +23,7 @@ type Config struct {
 	Trtc       *Trtc       `json:"trtc" yaml:"trtc"`
 	Wallet     *Wallet     `json:"wallet" yaml:"wallet"`
 	Hdpay      *Hdpay      `json:"hdpay" yaml:"hdpay"`
+	Hmpay      *Hmpay      `json:"hmpay" yaml:"hmpay"`
 	Security   *Security   `json:"security" yaml:"security"`
 }
 
@@ -48,21 +49,6 @@ func New(filename string) *Config {
 	var conf Config
 	if err := yaml.Unmarshal(content, &conf); err != nil {
 		panic(fmt.Sprintf("解析 config.yaml 读取错误: %v", err))
-	}
-
-	// 兼容旧配置键 hmpay / merchant（yaml 键名保留，仅作读取兼容）
-	if conf.Hdpay == nil {
-		var legacy struct {
-			LegacyHmpay *Hdpay `yaml:"hmpay"`
-			Merchant    *Hdpay `yaml:"merchant"`
-		}
-		if err := yaml.Unmarshal(content, &legacy); err == nil {
-			if legacy.LegacyHmpay != nil {
-				conf.Hdpay = legacy.LegacyHmpay
-			} else if legacy.Merchant != nil {
-				conf.Hdpay = legacy.Merchant
-			}
-		}
 	}
 
 	// 如果没有配置安全选项，使用默认配置

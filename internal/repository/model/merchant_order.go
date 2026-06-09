@@ -25,10 +25,22 @@ const (
 	MerchantPayTypeHm     = 5 // 汇美
 )
 
+// MerchantOrderPayTypePlatformKey 订单 pay_type_id 对应 merchant.pay_types 的平台键（hd/hm）
+func MerchantOrderPayTypePlatformKey(payTypeID int) (string, bool) {
+	switch payTypeID {
+	case MerchantPayTypeHd:
+		return MerchantPayTypeKeyHd, true
+	case MerchantPayTypeHm:
+		return MerchantPayTypeKeyHm, true
+	default:
+		return "", false
+	}
+}
+
 // MerchantOrderPayTypeSupportsOnlinePay 订单是否可走第三方在线支付（后续可扩展更多 pay_type_id）
 func MerchantOrderPayTypeSupportsOnlinePay(payTypeID int) bool {
 	switch payTypeID {
-	case MerchantPayTypeHd:
+	case MerchantPayTypeHd, MerchantPayTypeHm:
 		return true
 	default:
 		return false

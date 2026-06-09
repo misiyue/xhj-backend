@@ -15,6 +15,7 @@ import (
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/config"
 	"github.com/gzydong/go-chat/external/hdpay"
+	"github.com/gzydong/go-chat/external/hmpay"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
@@ -24,7 +25,7 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
-const merchantHdPayURLExpire = 2 * time.Minute
+const merchantThirdPayURLExpire = 2 * time.Minute
 
 func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *web.MerchantOrderListItem {
 	if o == nil {
@@ -126,30 +127,30 @@ func merchantOrderToProto(o *model.MerchantOrder, extras merchantOrderUserExtras
 		BuyerUserNickname:     extras.BuyerUserNickname,
 		BuyerUserAvatar:       extras.BuyerUserAvatar,
 		BuyerMerchantNickname: extras.BuyerMerchantNickname,
-		Amount:          o.Amount,
-		TaskId:          int32(o.TaskId),
-		Counts:          o.Counts,
-		PayTypeInfo:     o.PayTypeInfo,
-		PayTypeId:       int32(o.PayTypeId),
-		BuyType:         int32(o.BuyType),
-		Status:          int32(o.Status),
-		PayImg:          o.PayImg,
-		IsCancel:        int32(o.IsCancel),
-		IsAppeal:        int32(o.IsAppeal),
-		AppealId:        int32(o.AppealId),
-		AppealTime:      int32(o.AppealTime),
-		AppealReason:    o.AppealReason,
-		AppealMaterials: o.AppealMaterials,
-		CancelId:        int32(o.CancelId),
-		CancelReason:    o.CancelReason,
-		Remark:          o.Remark,
-		PayTime:         int32(o.PayTime),
-		CancelTime:      int32(o.CancelTime),
-		Wronger:         int32(o.Wronger),
-		Judge:           o.Judge,
-		JudgeTime:       timeutil.FormatUnixSecond(o.JudgeTime),
-		CreatedAt:       timeutil.FormatDatetime(o.CreatedAt),
-		UpdatedAt:       timeutil.FormatDatetime(o.UpdatedAt),
+		Amount:                o.Amount,
+		TaskId:                int32(o.TaskId),
+		Counts:                o.Counts,
+		PayTypeInfo:           o.PayTypeInfo,
+		PayTypeId:             int32(o.PayTypeId),
+		BuyType:               int32(o.BuyType),
+		Status:                int32(o.Status),
+		PayImg:                o.PayImg,
+		IsCancel:              int32(o.IsCancel),
+		IsAppeal:              int32(o.IsAppeal),
+		AppealId:              int32(o.AppealId),
+		AppealTime:            int32(o.AppealTime),
+		AppealReason:          o.AppealReason,
+		AppealMaterials:       o.AppealMaterials,
+		CancelId:              int32(o.CancelId),
+		CancelReason:          o.CancelReason,
+		Remark:                o.Remark,
+		PayTime:               int32(o.PayTime),
+		CancelTime:            int32(o.CancelTime),
+		Wronger:               int32(o.Wronger),
+		Judge:                 o.Judge,
+		JudgeTime:             timeutil.FormatUnixSecond(o.JudgeTime),
+		CreatedAt:             timeutil.FormatDatetime(o.CreatedAt),
+		UpdatedAt:             timeutil.FormatDatetime(o.UpdatedAt),
 	}
 }
 
@@ -167,7 +168,31 @@ func (u *User) assertOrderParticipant(o *model.MerchantOrder, uid int) error {
 func (u *User) MerchantOrderCreate(ctx context.Context, in *web.MerchantOrderCreateRequest) (*web.MerchantOrderCreateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	buyerID := int(session.UserId)
-	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, int(in.GetTaskId()), in.GetCounts(), strings.TrimSpace(in.GetPayTypeInfo()), int(in.GetPayTypeId()), int(in.GetBuyType()), strings.TrimSpace(in.GetRemark()))
+	taskID := int(in.GetTaskId())
+	payTypeID := int(in.GetPayTypeId())
+	counts := in.GetCounts()
+
+	task, err := u.MerchantTaskRepo.FindByID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if task == nil {
+		return nil, errorx.New(404, "任务不存在")
+	}
+	if platformKey, needLimit := model.MerchantOrderPayTypePlatformKey(payTypeID); needLimit {
+		m, err := u.MerchantRepo.FindLatestApprovedByUserId(ctx, task.UserId)
+		if err != nil {
+			return nil, err
+		}
+		if m == nil {
+			return nil, errorx.New(400, "卖家商户未通过审核")
+		}
+		if err := u.validateMerchantOrderPayAmount(ctx, task, counts, platformKey, m.PayTypes); err != nil {
+			return nil, err
+		}
+	}
+
+	row, err := u.MerchantOrderRepo.CreateFromTask(ctx, buyerID, taskID, counts, strings.TrimSpace(in.GetPayTypeInfo()), payTypeID, int(in.GetBuyType()), strings.TrimSpace(in.GetRemark()))
 	if err != nil {
 		switch {
 		case errors.Is(err, repo.ErrMerchantOrderSelfBuy):
@@ -432,6 +457,8 @@ func (u *User) MerchantOrderPay(ctx context.Context, in *web.MerchantOrderPayReq
 	switch o.PayTypeId {
 	case model.MerchantPayTypeHd:
 		return u.merchantOrderPayHd(ctx, in, o, mch)
+	case model.MerchantPayTypeHm:
+		return u.merchantOrderPayHm(ctx, in, o, mch)
 	default:
 		return nil, errorx.New(400, "该订单支付方式不支持在线支付")
 	}
@@ -446,12 +473,12 @@ func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayR
 	client := hdpay.GetClient()
 	orderNo := o.OrderId
 
-	channelPayType, ok := model.MerchantHdChannelPayType(mch.PayTypes)
-	if !ok {
-		return nil, errorx.New(400, "商户未开通宏达支付")
+	channelPayType, err := u.merchantHdChannelPayType(ctx, mch.PayTypes)
+	if err != nil {
+		return nil, err
 	}
-	if !config.IsValidHdpayChannelPayType(channelPayType) {
-		return nil, errorx.New(400, "商户宏达支付通道配置无效")
+	if channelPayType == "" {
+		return nil, errorx.New(400, "商户未开通宏达支付")
 	}
 
 	existing, err := u.MerchantHdOrderRepo.FindByOrderNo(ctx, orderNo)
@@ -459,8 +486,8 @@ func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayR
 		return nil, err
 	}
 	if existing != nil && strings.TrimSpace(existing.PayURL) != "" {
-		if time.Since(existing.CreatedAt) < merchantHdPayURLExpire {
-			return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL}, nil
+		if time.Since(existing.CreatedAt) < merchantThirdPayURLExpire {
+			return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL, OrderId: orderNo}, nil
 		}
 	}
 	if existing != nil {
@@ -512,11 +539,75 @@ func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayR
 	if err != nil {
 		return nil, err
 	}
-	return &web.MerchantOrderPayResponse{PayUrl: data.PayURL}, nil
+	return &web.MerchantOrderPayResponse{PayUrl: data.PayURL, OrderId: orderNo}, nil
 }
 
-// MerchantOrderNotify 宏达支付回调（返回纯文本 success / fail）
-func (u *User) MerchantOrderNotify(c *gin.Context) {
+// merchantOrderPayHm 汇美支付统一下单
+func (u *User) merchantOrderPayHm(ctx context.Context, in *web.MerchantOrderPayRequest, o *model.MerchantOrder, mch *model.Merchant) (*web.MerchantOrderPayResponse, error) {
+	hmc := u.ensureHmPayReady()
+	if hmc == nil {
+		return nil, errorx.New(500, "汇美支付未配置")
+	}
+	orderNo := o.OrderId
+
+	channelPayType, err := u.merchantHmChannelPayType(ctx, mch.PayTypes)
+	if err != nil {
+		return nil, err
+	}
+	if channelPayType == "" {
+		return nil, errorx.New(400, "商户未开通汇美支付")
+	}
+
+	existing, err := u.MerchantHmOrderRepo.FindByOrderId(ctx, orderNo)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil && strings.TrimSpace(existing.PayURL) != "" {
+		if time.Since(existing.CreatedAt) < merchantThirdPayURLExpire {
+			return &web.MerchantOrderPayResponse{PayUrl: existing.PayURL, OrderId: orderNo}, nil
+		}
+	}
+	if existing != nil {
+		newOrderNo, err := u.MerchantOrderRepo.RefreshOrderNoForHmPay(ctx, o.Id, orderNo)
+		if err != nil {
+			return nil, err
+		}
+		orderNo = newOrderNo
+		o.OrderId = newOrderNo
+	}
+
+	submitAmount := formatPayAmount(o.Amount)
+	payURL, err := hmpay.GetClient().CreateOrder(&hmpay.CreateOrderRequest{
+		OrderID:     orderNo,
+		Value:       submitAmount,
+		PayType:     channelPayType,
+		CallbackURL: hmc.CallbackURL,
+		HrefBackURL: strings.TrimSpace(in.GetReturnUrl()),
+	})
+	if err != nil {
+		return nil, errorx.New(400, err.Error())
+	}
+
+	row := &model.MerchantHmOrder{
+		OrderId: orderNo,
+		PayURL:  payURL,
+	}
+	if existing != nil {
+		err = u.MerchantHmOrderRepo.UpdateByOrderId(ctx, orderNo, map[string]any{
+			"pay_url":    payURL,
+			"created_at": time.Now(),
+		})
+	} else {
+		err = u.MerchantHmOrderRepo.Create(ctx, row)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &web.MerchantOrderPayResponse{PayUrl: payURL, OrderId: orderNo}, nil
+}
+
+// MerchantOrderHdpayNotify 宏达支付回调（返回纯文本 success / fail）
+func (u *User) MerchantOrderHdpayNotify(c *gin.Context) {
 	mc := u.hdpayConfig()
 	if mc == nil {
 		c.String(200, "fail")
@@ -585,6 +676,45 @@ func (u *User) MerchantOrderNotify(c *gin.Context) {
 	c.String(200, "success")
 }
 
+// MerchantOrderHmpayNotify 汇美支付回调（返回纯文本 success / fail）
+func (u *User) MerchantOrderHmpayNotify(c *gin.Context) {
+	mc := u.hmpayConfig()
+	if mc == nil {
+		c.String(200, "fail")
+		return
+	}
+	orderID := notifyParam(c, "orderid")
+	restateStr := notifyParam(c, "restate")
+	ovalue := notifyParam(c, "ovalue")
+	sign := notifyParam(c, "sign")
+	if orderID == "" || restateStr == "" || ovalue == "" {
+		c.String(200, "fail")
+		return
+	}
+	if !hmpay.VerifyNotifySign(orderID, restateStr, ovalue, mc.Key, sign) {
+		c.String(200, "fail")
+		return
+	}
+	restate, err := strconv.Atoi(restateStr)
+	if err != nil {
+		c.String(200, "fail")
+		return
+	}
+	ctx := c.Request.Context()
+	if err := u.MerchantHmOrderRepo.ApplyNotifyAndMarkOrderPaid(ctx, orderID, restate, int(time.Now().Unix())); err != nil {
+		c.String(200, "fail")
+		return
+	}
+	c.String(200, "success")
+}
+
+func notifyParam(c *gin.Context, key string) string {
+	if v := strings.TrimSpace(c.Query(key)); v != "" {
+		return v
+	}
+	return strings.TrimSpace(c.PostForm(key))
+}
+
 func (u *User) hdpayConfig() *config.Hdpay {
 	if u.Config == nil || u.Config.Hdpay == nil {
 		return nil
@@ -609,6 +739,86 @@ func (u *User) ensureHdPayReady() *config.Hdpay {
 		return nil
 	}
 	return mc
+}
+
+func (u *User) hmpayConfig() *config.Hmpay {
+	if u.Config == nil || u.Config.Hmpay == nil {
+		return nil
+	}
+	m := u.Config.Hmpay
+	if !m.Valid() {
+		return nil
+	}
+	return m
+}
+
+func (u *User) ensureHmPayReady() *config.Hmpay {
+	mc := u.hmpayConfig()
+	if mc == nil {
+		return nil
+	}
+	if hmpay.GetClient() == nil {
+		hmpay.Init(mc.OrderURL, mc.Parter, mc.ReqType, mc.Key)
+	}
+	if hmpay.GetClient() == nil {
+		return nil
+	}
+	return mc
+}
+
+func (u *User) merchantPaymentByPayTypes(ctx context.Context, payTypesJSON, platformKey string) (*model.MerchantPayment, error) {
+	paymentID, ok := model.MerchantPayTypePaymentID(payTypesJSON, platformKey)
+	if !ok {
+		return nil, nil
+	}
+	payment, err := u.MerchantPaymentRepo.FindByID(ctx, paymentID)
+	if err != nil {
+		return nil, err
+	}
+	if payment == nil || payment.Platform != platformKey {
+		return nil, nil
+	}
+	return payment, nil
+}
+
+func (u *User) merchantHdChannelPayType(ctx context.Context, payTypesJSON string) (string, error) {
+	payment, err := u.merchantPaymentByPayTypes(ctx, payTypesJSON, model.MerchantPayTypeKeyHd)
+	if err != nil {
+		return "", err
+	}
+	if payment == nil {
+		return "", nil
+	}
+	return strings.TrimSpace(payment.Code), nil
+}
+
+func (u *User) merchantHmChannelPayType(ctx context.Context, payTypesJSON string) (string, error) {
+	payment, err := u.merchantPaymentByPayTypes(ctx, payTypesJSON, model.MerchantPayTypeKeyHm)
+	if err != nil {
+		return "", err
+	}
+	if payment == nil {
+		return "", nil
+	}
+	return strings.TrimSpace(payment.Code), nil
+}
+
+func (u *User) validateMerchantOrderPayAmount(ctx context.Context, task *model.MerchantTask, counts float64, platformKey, payTypesJSON string) error {
+	payment, err := u.merchantPaymentByPayTypes(ctx, payTypesJSON, platformKey)
+	if err != nil {
+		return err
+	}
+	if payment == nil {
+		return errorx.New(400, "卖家未开通该支付方式")
+	}
+	amount := math.Round(task.Price*counts*100) / 100
+	if payment.Min != nil && amount < float64(*payment.Min) {
+		return errorx.New(400, fmt.Sprintf("订单金额不能低于 %d 元", *payment.Min))
+	}
+	if payment.Max != nil && amount > float64(*payment.Max) {
+		return errorx.New(400, fmt.Sprintf("订单金额不能超过 %d 元", *payment.Max))
+	}
+	return nil
 }
 
 func formatPayAmount(amount float64) string {

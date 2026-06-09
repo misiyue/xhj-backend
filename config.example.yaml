@@ -235,5 +235,13 @@ hdpay:
   order_url: "http://47.83.15.198:10081/sdk/orders"
   app_id: "GL"
   app_secret: "JC8WHcGHPZ4tQpAznQpnprQ6wDHsmpf6zYtHCw4szmJpMXD8rmcpNn54cZmPFidc"
-  notify_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/notify"
+  notify_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/hdpay-notify"
+
+# 汇美支付
+hmpay:
+  order_url: "http://pay.huimei888.top:8080/interface/chargebank.aspx"
+  parter: "20556"
+  req_type: "json"
+  key: "your-hmpay-key"
+  callback_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/hmpay-notify"
 
