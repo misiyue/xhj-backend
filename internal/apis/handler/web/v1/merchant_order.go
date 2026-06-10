@@ -705,7 +705,7 @@ func (u *User) MerchantOrderHmpayNotify(c *gin.Context) {
 		c.String(200, "fail")
 		return
 	}
-	c.String(200, "success")
+	c.String(200, "Ok")
 }
 
 func notifyParam(c *gin.Context, key string) string {
