@@ -97,6 +97,8 @@ type Service struct {
 	MentionStorage      *cache.MentionStorage
 	RobotRepo           *repo.Robot
 	PushMessage         *logic.PushMessage
+	UserClient          *cache.UserClient
+	NoticeTemplateRepo  *repo.NoticeTemplate
 }
 
 // CreateMessage 是所有消息入库的统一入口：

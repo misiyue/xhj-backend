@@ -175,6 +175,8 @@ func (u *User) MerchantChatSend(ctx context.Context, in *web.MerchantChatSendReq
 		return nil, err
 	}
 
+	message.TryOneSignalChatPush(ctx, u.UserClient, u.UsersRepo, u.NoticeTemplateRepo, nil, peer, 0, model.NoticeTemplateFlagC2cChat)
+
 	msgJSON, err := json.Marshal(row)
 	if err != nil {
 		return nil, err

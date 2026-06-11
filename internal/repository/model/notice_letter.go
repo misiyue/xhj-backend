@@ -3,12 +3,12 @@ package model
 import "time"
 
 const (
-	SysNoticeUnread = 0
-	SysNoticeRead   = 1
+	NoticeLetterUnread = 0
+	NoticeLetterRead   = 1
 )
 
-// SysNotice 对应表 sys_notice
-type SysNotice struct {
+// NoticeLetter 站内信 notice_letter
+type NoticeLetter struct {
 	Id        int       `gorm:"column:id;primary_key;AUTO_INCREMENT" json:"id"`
 	UserId    int       `gorm:"column:user_id;type:int(11);not null;default:0" json:"user_id"`
 	Title     string    `gorm:"column:title;type:varchar(32);not null;default:''" json:"title"`
@@ -19,6 +19,6 @@ type SysNotice struct {
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 }
 
-func (SysNotice) TableName() string {
-	return "sys_notice"
+func (NoticeLetter) TableName() string {
+	return "notice_letter"
 }

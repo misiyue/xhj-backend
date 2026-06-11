@@ -7,6 +7,9 @@ const (
 
 	UsersStatusNormal   = 1
 	UsersStatusDisabled = 2
+
+	UsersSubscribeNo  = 0
+	UsersSubscribeYes = 1
 )
 
 const UserInviteCodeLen = 6
@@ -35,6 +38,7 @@ type Users struct {
 	Gender       int       `gorm:"column:gender;" json:"gender"`                                      // 用户性别 1:男 2:女 3:未知
 	Password     string    `gorm:"column:password;type:varchar(255)" json:"-"`                        // 用户密码
 	Salt         string    `gorm:"column:salt;type:varchar(16)" json:"-"`                             // 密码盐值
+	IsSubscribe  int       `gorm:"column:is_subscribe;type:tinyint(4);default:0" json:"is_subscribe"` // 是否订阅通知 0-否 1-是
 	Motto        string    `gorm:"column:motto;type:varchar(255)" json:"motto"`                       // 用户座右铭
 	Email        string    `gorm:"column:email;type:varchar(128);index" json:"email"`                 // 用户邮箱
 	Birthday     string    `gorm:"column:birthday;type:varchar(32)" json:"birthday"`                  // 生日

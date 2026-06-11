@@ -57,6 +57,14 @@ service User {
     };
   }
 
+  // 更新通知订阅状态
+  rpc SubscribeUpdate(UserSubscribeUpdateRequest) returns (UserSubscribeUpdateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/subscribe-update"
+      body: "*"
+    };
+  }
+
   // 商户入驻申请
   rpc MerchantApply(MerchantApplyRequest) returns (MerchantApplyResponse) {
     option (google.api.http) = {
@@ -289,6 +297,8 @@ message UserDetailResponse{
   // 是否已设置交易密码（0/1）
   int32 is_trans = 13 [(google.api.field_behavior) = REQUIRED];
   string created_at = 14 [(google.api.field_behavior) = REQUIRED];
+  // 是否订阅通知（0-否，1-是）
+  int32 is_subscribe = 15 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 用户配置信息请求参数
@@ -369,6 +379,14 @@ message UserEmailUpdateRequest{
 
 // 用户邮箱更新接口响应参数
 message UserEmailUpdateResponse{}
+
+// 更新通知订阅状态请求
+message UserSubscribeUpdateRequest {
+  int32 is_subscribe = 1 [(buf.validate.field).int32 = {in: [0, 1]}];
+}
+
+// 更新通知订阅状态响应
+message UserSubscribeUpdateResponse {}
 
 // 商户申请请求
 message MerchantApplyRequest {

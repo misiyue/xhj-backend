@@ -245,3 +245,9 @@ hmpay:
   key: "your-hmpay-key"
   callback_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/hmpay-notify"
 
+# OneSignal 推送
+push:
+  app_id: "your-onesignal-app-id"
+  key: "os_v2_app_xxx"
+  url: "https://api.onesignal.com/notifications?c=push"
+

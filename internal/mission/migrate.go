@@ -100,7 +100,8 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.MerchantPayment{},
 
 		// 系统通知
-		&model.SysNotice{},
+		&model.NoticeLetter{},
+		&model.NoticeTemplate{},
 	)
 	
 	if err != nil {

@@ -46,12 +46,14 @@ func (r *MerchantHmOrder) UpdateByOrderId(ctx context.Context, orderId string, u
 }
 
 // ApplyNotifyAndMarkOrderPaid 更新汇美支付订单；restate=0 时同步 merchant_order 为已支付（幂等）
-func (r *MerchantHmOrder) ApplyNotifyAndMarkOrderPaid(ctx context.Context, orderId string, restate int, payTimeUnix int) error {
+// 返回值 marked 表示本次调用将订单从待支付更新为已支付。
+func (r *MerchantHmOrder) ApplyNotifyAndMarkOrderPaid(ctx context.Context, orderId string, restate int, payTimeUnix int) (bool, error) {
 	orderId = strings.TrimSpace(orderId)
 	if orderId == "" {
-		return errors.New("order_id empty")
+		return false, errors.New("order_id empty")
 	}
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	marked := false
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&model.MerchantHmOrder{}).Where("order_id = ?", orderId).
 			Update("restate", restate).Error; err != nil {
 			return err
@@ -72,10 +74,18 @@ func (r *MerchantHmOrder) ApplyNotifyAndMarkOrderPaid(ctx context.Context, order
 		if mo.Status != model.MerchantOrderStatusPendingPay {
 			return nil
 		}
-		return tx.Model(&model.MerchantOrder{}).Where("id = ? AND status = ?", mo.Id, model.MerchantOrderStatusPendingPay).
+		res := tx.Model(&model.MerchantOrder{}).Where("id = ? AND status = ?", mo.Id, model.MerchantOrderStatusPendingPay).
 			Updates(map[string]any{
 				"status":   model.MerchantOrderStatusPaid,
 				"pay_time": payTimeUnix,
-			}).Error
+			})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected > 0 {
+			marked = true
+		}
+		return nil
 	})
+	return marked, err
 }

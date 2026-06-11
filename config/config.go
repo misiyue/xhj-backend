@@ -24,6 +24,7 @@ type Config struct {
 	Wallet     *Wallet     `json:"wallet" yaml:"wallet"`
 	Hdpay      *Hdpay      `json:"hdpay" yaml:"hdpay"`
 	Hmpay      *Hmpay      `json:"hmpay" yaml:"hmpay"`
+	Push       *Push       `json:"push" yaml:"push"`
 	Security   *Security   `json:"security" yaml:"security"`
 }
 

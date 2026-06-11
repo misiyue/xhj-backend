@@ -14,7 +14,7 @@ import (
 const noticePageSize = 15
 
 type Notice struct {
-	SysNoticeRepo *repo.SysNotice
+	NoticeLetterRepo *repo.NoticeLetter
 }
 
 // ListNotice 系统通知列表，按时间倒序，每页 15 条
@@ -26,7 +26,7 @@ func (n *Notice) ListNotice(ctx context.Context, req *pb.NoticeListRequest) (*pb
 		page = 1
 	}
 
-	rows, total, err := n.SysNoticeRepo.ListByUserDesc(ctx, int(session.UserId), page, noticePageSize)
+	rows, total, err := n.NoticeLetterRepo.ListByUserDesc(ctx, int(session.UserId), page, noticePageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (n *Notice) GetUnreadCount(ctx context.Context, _ *pb.NoticeUnreadCountRequ
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	userID := int(session.UserId)
 
-	nUnread, err := n.SysNoticeRepo.CountUnread(ctx, userID)
+	nUnread, err := n.NoticeLetterRepo.CountUnread(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (n *Notice) GetUnreadCount(ctx context.Context, _ *pb.NoticeUnreadCountRequ
 	}
 
 	resp := &pb.NoticeUnreadCountResponse{Count: count}
-	latest, err := n.SysNoticeRepo.FindLatestByUser(ctx, userID)
+	latest, err := n.NoticeLetterRepo.FindLatestByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func (n *Notice) GetUnreadCount(ctx context.Context, _ *pb.NoticeUnreadCountRequ
 func (n *Notice) ClearUnread(ctx context.Context, _ *pb.NoticeClearUnreadRequest) (*pb.NoticeClearUnreadResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 
-	if err := n.SysNoticeRepo.MarkAllRead(ctx, int(session.UserId)); err != nil {
+	if err := n.NoticeLetterRepo.MarkAllRead(ctx, int(session.UserId)); err != nil {
 		return nil, err
 	}
 

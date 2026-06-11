@@ -352,7 +352,38 @@ func (u *User) MerchantOrderConfirmPay(ctx context.Context, in *web.MerchantOrde
 	if err != nil {
 		return nil, err
 	}
+	u.notifyMerchantOrderPaid(ctx, o)
 	return &web.MerchantOrderActionResponse{}, nil
+}
+
+func (u *User) notifyMerchantOrderPaid(ctx context.Context, o *model.MerchantOrder) {
+	if u.SysNotice == nil || o == nil || o.SalerId <= 0 {
+		return
+	}
+	orderNo := strings.TrimSpace(o.OrderId)
+	if orderNo == "" {
+		return
+	}
+	if err := u.SysNotice.PublishFromTemplate(ctx, o.SalerId, model.NoticeTemplateFlagC2cPaid, map[string]string{
+		"order": orderNo,
+	}, ""); err != nil {
+		logger.Errorf("merchant_order paid notice err: order_id=%s saler_id=%d %s", orderNo, o.SalerId, err.Error())
+	}
+}
+
+func (u *User) notifyMerchantOrderPaidByOrderNo(ctx context.Context, orderNo string) {
+	orderNo = strings.TrimSpace(orderNo)
+	if orderNo == "" {
+		return
+	}
+	o, err := u.MerchantOrderRepo.FindByOrderNo(ctx, orderNo)
+	if err != nil || o == nil {
+		if err != nil {
+			logger.Errorf("merchant_order paid notice load err: order_no=%s %s", orderNo, err.Error())
+		}
+		return
+	}
+	u.notifyMerchantOrderPaid(ctx, o)
 }
 
 // MerchantOrderUrge 催单（买卖家均可；仅记录日志，不改变订单状态）
@@ -669,9 +700,13 @@ func (u *User) MerchantOrderHdpayNotify(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	if err := u.MerchantHdOrderRepo.ApplyNotifyAndMarkOrderPaid(ctx, orderNo, hdUpdates, payTimeUnix); err != nil {
+	marked, err := u.MerchantHdOrderRepo.ApplyNotifyAndMarkOrderPaid(ctx, orderNo, hdUpdates, payTimeUnix)
+	if err != nil {
 		c.String(200, "fail")
 		return
+	}
+	if marked {
+		u.notifyMerchantOrderPaidByOrderNo(ctx, orderNo)
 	}
 	c.String(200, "success")
 }
@@ -701,9 +736,13 @@ func (u *User) MerchantOrderHmpayNotify(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	if err := u.MerchantHmOrderRepo.ApplyNotifyAndMarkOrderPaid(ctx, orderID, restate, int(time.Now().Unix())); err != nil {
+	marked, err := u.MerchantHmOrderRepo.ApplyNotifyAndMarkOrderPaid(ctx, orderID, restate, int(time.Now().Unix()))
+	if err != nil {
 		c.String(200, "fail")
 		return
+	}
+	if marked {
+		u.notifyMerchantOrderPaidByOrderNo(ctx, orderID)
 	}
 	c.String(200, "Ok")
 }

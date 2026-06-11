@@ -97,6 +97,8 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 		return err
 	}
 
+	s.tryOneSignalUserChat(ctx, option.ReceiverId, 0)
+
 	// 推送消息给双方用户
 	pipe := s.Source.Redis().Pipeline()
 
@@ -181,6 +183,8 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 	if err := s.Db().WithContext(ctx).Create(data).Error; err != nil {
 		return err
 	}
+
+	s.tryOneSignalUserChat(ctx, data.ReceiverId, 0)
 
 	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventImMessage,

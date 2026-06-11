@@ -4,51 +4,47 @@ import (
 	"context"
 	"encoding/json"
 	"strings"
-	"unicode/utf8"
 
+	"github.com/gzydong/go-chat/external/push"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
-	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
 type SysNoticeConsumer struct {
-	SysNoticeRepo *repo.SysNotice
-	PushMessage   *logic.PushMessage
+	UsersRepo   *repo.Users
+	UserClient  *cache.UserClient
+	PushMessage *logic.PushMessage
 }
 
 func (c *SysNoticeConsumer) Do(ctx context.Context, msg []byte) error {
 	var in entity.SysNoticeQueueMessage
 	if err := json.Unmarshal(msg, &in); err != nil {
-		logger.Errorf("sys_notice consumer unmarshal err: %s", err.Error())
+		logger.Errorf("notice_letter consumer unmarshal err: %s", err.Error())
 		return err
 	}
-	if in.UserId <= 0 {
-		logger.Warnf("sys_notice consumer skip: invalid user_id")
+	if in.UserId <= 0 || in.Id <= 0 {
+		logger.Warnf("notice_letter consumer skip: invalid payload")
 		return nil
 	}
 
-	row := &model.SysNotice{
-		UserId:  in.UserId,
-		Title:   truncateRunes(strings.TrimSpace(in.Title), 32),
-		Content: truncateRunes(strings.TrimSpace(in.Content), 255),
-		Url:     truncateRunes(strings.TrimSpace(in.Url), 255),
-		IsRead:  model.SysNoticeUnread,
-	}
-	if err := c.SysNoticeRepo.Create(ctx, row); err != nil {
-		return err
-	}
+	title := strings.TrimSpace(in.Title)
+	content := strings.TrimSpace(in.Content)
+	url := strings.TrimSpace(in.Url)
+
+	c.tryOneSignalNotice(ctx, in.UserId, title, content)
 
 	payload := entity.SubEventSysNoticePayload{
-		UserId:    row.UserId,
-		Id:        row.Id,
-		Title:     row.Title,
-		Content:   row.Content,
-		Url:       row.Url,
-		CreatedAt: timeutil.FormatDatetime(row.CreatedAt),
+		UserId:    in.UserId,
+		Id:        in.Id,
+		Title:     title,
+		Content:   content,
+		Url:       url,
+		CreatedAt: strings.TrimSpace(in.CreatedAt),
 	}
 	return c.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event:   entity.SubEventSysNotice,
@@ -56,13 +52,22 @@ func (c *SysNoticeConsumer) Do(ctx context.Context, msg []byte) error {
 	})
 }
 
-func truncateRunes(s string, max int) string {
-	if max <= 0 || s == "" {
-		return ""
+func (c *SysNoticeConsumer) tryOneSignalNotice(ctx context.Context, userID int, title, content string) {
+	if userID <= 0 || c.UserClient == nil || c.UsersRepo == nil {
+		return
 	}
-	if utf8.RuneCountInString(s) <= max {
-		return s
+	if c.UserClient.IsOnline(ctx, int64(userID)) {
+		return
 	}
-	rs := []rune(s)
-	return string(rs[:max])
+	user, err := c.UsersRepo.FindByIdWithCache(ctx, userID)
+	if err != nil || user == nil || user.IsSubscribe != model.UsersSubscribeYes {
+		return
+	}
+	if err := push.SendToUser(userID, push.Message{
+		Title:    title,
+		Subtitle: "",
+		Contents: content,
+	}); err != nil {
+		logger.Errorf("notice_letter onesignal push err: user_id=%d %s", userID, err.Error())
+	}
 }

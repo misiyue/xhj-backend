@@ -24,6 +24,8 @@ type IUserHandler interface {
 	MobileUpdate(ctx context.Context, in *UserMobileUpdateRequest) (*UserMobileUpdateResponse, error)
 	// 更新用户邮箱接口
 	EmailUpdate(ctx context.Context, in *UserEmailUpdateRequest) (*UserEmailUpdateResponse, error)
+	// 更新通知订阅状态
+	SubscribeUpdate(ctx context.Context, in *UserSubscribeUpdateRequest) (*UserSubscribeUpdateResponse, error)
 	// 商户入驻申请
 	MerchantApply(ctx context.Context, in *MerchantApplyRequest) (*MerchantApplyResponse, error)
 	// 查询本人最近一次商户申请状态
@@ -151,6 +153,15 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.EmailUpdate(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/user/subscribe-update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserSubscribeUpdateRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.SubscribeUpdate(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {

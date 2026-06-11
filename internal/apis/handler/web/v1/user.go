@@ -44,6 +44,9 @@ type User struct {
 	PushMessage         *logic.PushMessage
 	MessageStorage      *cache.MessageStorage
 	UnreadStorage       *cache.UnreadStorage
+	UserClient          *cache.UserClient
+	NoticeTemplateRepo  *repo.NoticeTemplate
+	SysNotice           *logic.SysNotice
 	OrganizeRepo        *repo.Organize
 	UserService         service.IUserService
 	SmsService          service.ISmsService
@@ -85,6 +88,7 @@ func (u *User) Detail(ctx context.Context, _ *web.UserDetailRequest) (*web.UserD
 		UserCode:  user.UserCode,
 		IsTrans:   int32(user.IsTrans),
 		CreatedAt: timeutil.FormatDatetime(user.CreatedAt),
+		IsSubscribe: int32(user.IsSubscribe),
 	}, nil
 }
 
@@ -317,6 +321,22 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 
 	_ = u.UsersRepo.ClearTableCache(ctx, user.Id)
 	return &web.UserEmailUpdateResponse{}, nil
+}
+
+// SubscribeUpdate 更新通知订阅状态
+func (u *User) SubscribeUpdate(ctx context.Context, in *web.UserSubscribeUpdateRequest) (*web.UserSubscribeUpdateResponse, error) {
+	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	isSubscribe := int(in.GetIsSubscribe())
+	if isSubscribe != model.UsersSubscribeNo && isSubscribe != model.UsersSubscribeYes {
+		return nil, errorx.New(400, "is_subscribe 必须为 0 或 1")
+	}
+	if _, err := u.UsersRepo.UpdateById(ctx, session.UserId, map[string]any{
+		"is_subscribe": isSubscribe,
+	}); err != nil {
+		return nil, err
+	}
+	_ = u.UsersRepo.ClearTableCache(ctx, int(session.UserId))
+	return &web.UserSubscribeUpdateResponse{}, nil
 }
 
 func (u *User) resolveWalletUID(ctx context.Context, uid int) (int, error) {
