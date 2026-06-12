@@ -65,6 +65,14 @@ service User {
     };
   }
 
+  // 当前用户各类未读数汇总
+  rpc UnreadSummary(UserUnreadSummaryRequest) returns (UserUnreadSummaryResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/unread-summary"
+      body: "*"
+    };
+  }
+
   // 商户入驻申请
   rpc MerchantApply(MerchantApplyRequest) returns (MerchantApplyResponse) {
     option (google.api.http) = {
@@ -809,3 +817,39 @@ message MerchantChatClearUnreadRequest {
 }
 
 message MerchantChatClearUnreadResponse {}
+
+// 当前用户未读数汇总
+message UserUnreadSummaryRequest {}
+
+message UserUnreadSummaryResponse {
+  // 普通会话未读数（私聊 + 群聊）
+  int32 talk_unread = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "talk_unread"
+  ];
+  // 商户会话未读数
+  int32 merchant_unread = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "merchant_unread"
+  ];
+  // 好友申请未读数
+  int32 contact_apply_unread = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "contact_apply_unread"
+  ];
+  // 群申请未读数
+  int32 group_apply_unread = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "group_apply_unread"
+  ];
+  // 系统通知未读数
+  int32 notice_unread = 5 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "notice_unread"
+  ];
+  // 以上未读数总和
+  int32 total_unread = 6 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "total_unread"
+  ];
+}

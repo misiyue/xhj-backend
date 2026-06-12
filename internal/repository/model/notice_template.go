@@ -3,10 +3,11 @@ package model
 import "time"
 
 const (
-	NoticeTemplateFlagUserChat = "userChat"
-	NoticeTemplateFlagC2cChat  = "c2cChat"
-	NoticeTemplateFlagC2cPaid  = "c2cPaid"
-	NoticeTemplateFlagC2cTrans = "c2cTrans"
+	NoticeTemplateFlagUserChat     = "userChat"
+	NoticeTemplateFlagC2cChat      = "c2cChat"
+	NoticeTemplateFlagC2cPaid      = "c2cPaid"
+	NoticeTemplateFlagC2cTrans     = "c2cTrans"
+	NoticeTemplateFlagContactApply = "contactApply"
 )
 
 // NoticeTemplate 通知模板 notice_template

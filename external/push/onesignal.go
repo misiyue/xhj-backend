@@ -44,6 +44,8 @@ type sendRequest struct {
 	Subtitle       map[string]string   `json:"subtitle,omitempty"`
 	IncludeAliases map[string][]string `json:"include_aliases"`
 	TargetChannel  string              `json:"target_channel"`
+	IOSBadgeType   string              `json:"ios_badgeType"`
+	IOSBadgeCount  int                 `json:"ios_badgeCount"`
 }
 
 type sendResponse struct {
@@ -95,6 +97,8 @@ func (c *Client) send(externalID string, msg Message) error {
 			"external_id": {externalID},
 		},
 		TargetChannel: "push",
+		IOSBadgeType:  "Increase",
+		IOSBadgeCount: 1,
 	})
 	if err != nil {
 		return err

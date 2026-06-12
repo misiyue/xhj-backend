@@ -4527,6 +4527,133 @@ func (*MerchantChatClearUnreadResponse) Descriptor() ([]byte, []int) {
 	return file_web_v1_user_proto_rawDescGZIP(), []int{67}
 }
 
+// 当前用户未读数汇总
+type UserUnreadSummaryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserUnreadSummaryRequest) Reset() {
+	*x = UserUnreadSummaryRequest{}
+	mi := &file_web_v1_user_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserUnreadSummaryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserUnreadSummaryRequest) ProtoMessage() {}
+
+func (x *UserUnreadSummaryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_user_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserUnreadSummaryRequest.ProtoReflect.Descriptor instead.
+func (*UserUnreadSummaryRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_user_proto_rawDescGZIP(), []int{68}
+}
+
+type UserUnreadSummaryResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 普通会话未读数（私聊 + 群聊）
+	TalkUnread int32 `protobuf:"varint,1,opt,name=talk_unread,proto3" json:"talk_unread,omitempty"`
+	// 商户会话未读数
+	MerchantUnread int32 `protobuf:"varint,2,opt,name=merchant_unread,proto3" json:"merchant_unread,omitempty"`
+	// 好友申请未读数
+	ContactApplyUnread int32 `protobuf:"varint,3,opt,name=contact_apply_unread,proto3" json:"contact_apply_unread,omitempty"`
+	// 群申请未读数
+	GroupApplyUnread int32 `protobuf:"varint,4,opt,name=group_apply_unread,proto3" json:"group_apply_unread,omitempty"`
+	// 系统通知未读数
+	NoticeUnread int32 `protobuf:"varint,5,opt,name=notice_unread,proto3" json:"notice_unread,omitempty"`
+	// 以上未读数总和
+	TotalUnread   int32 `protobuf:"varint,6,opt,name=total_unread,proto3" json:"total_unread,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UserUnreadSummaryResponse) Reset() {
+	*x = UserUnreadSummaryResponse{}
+	mi := &file_web_v1_user_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UserUnreadSummaryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UserUnreadSummaryResponse) ProtoMessage() {}
+
+func (x *UserUnreadSummaryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_user_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UserUnreadSummaryResponse.ProtoReflect.Descriptor instead.
+func (*UserUnreadSummaryResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_user_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *UserUnreadSummaryResponse) GetTalkUnread() int32 {
+	if x != nil {
+		return x.TalkUnread
+	}
+	return 0
+}
+
+func (x *UserUnreadSummaryResponse) GetMerchantUnread() int32 {
+	if x != nil {
+		return x.MerchantUnread
+	}
+	return 0
+}
+
+func (x *UserUnreadSummaryResponse) GetContactApplyUnread() int32 {
+	if x != nil {
+		return x.ContactApplyUnread
+	}
+	return 0
+}
+
+func (x *UserUnreadSummaryResponse) GetGroupApplyUnread() int32 {
+	if x != nil {
+		return x.GroupApplyUnread
+	}
+	return 0
+}
+
+func (x *UserUnreadSummaryResponse) GetNoticeUnread() int32 {
+	if x != nil {
+		return x.NoticeUnread
+	}
+	return 0
+}
+
+func (x *UserUnreadSummaryResponse) GetTotalUnread() int32 {
+	if x != nil {
+		return x.TotalUnread
+	}
+	return 0
+}
+
 type UserSettingResponse_UserInfo struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Uid   int32                  `protobuf:"varint,1,opt,name=uid,proto3" json:"uid,omitempty"`
@@ -4553,7 +4680,7 @@ type UserSettingResponse_UserInfo struct {
 
 func (x *UserSettingResponse_UserInfo) Reset() {
 	*x = UserSettingResponse_UserInfo{}
-	mi := &file_web_v1_user_proto_msgTypes[68]
+	mi := &file_web_v1_user_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4565,7 +4692,7 @@ func (x *UserSettingResponse_UserInfo) String() string {
 func (*UserSettingResponse_UserInfo) ProtoMessage() {}
 
 func (x *UserSettingResponse_UserInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_user_proto_msgTypes[68]
+	mi := &file_web_v1_user_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4685,7 +4812,7 @@ type UserSettingResponse_ConfigInfo struct {
 
 func (x *UserSettingResponse_ConfigInfo) Reset() {
 	*x = UserSettingResponse_ConfigInfo{}
-	mi := &file_web_v1_user_proto_msgTypes[69]
+	mi := &file_web_v1_user_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4697,7 +4824,7 @@ func (x *UserSettingResponse_ConfigInfo) String() string {
 func (*UserSettingResponse_ConfigInfo) ProtoMessage() {}
 
 func (x *UserSettingResponse_ConfigInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_user_proto_msgTypes[69]
+	mi := &file_web_v1_user_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5149,7 +5276,15 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x1eMerchantChatClearUnreadRequest\x12&\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\tsessionId\"!\n" +
-	"\x1fMerchantChatClearUnreadResponse2\xf1$\n" +
+	"\x1fMerchantChatClearUnreadResponse\"\x1a\n" +
+	"\x18UserUnreadSummaryRequest\"\xb9\x02\n" +
+	"\x19UserUnreadSummaryResponse\x12&\n" +
+	"\vtalk_unread\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\vtalk_unread\x12.\n" +
+	"\x0fmerchant_unread\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x0fmerchant_unread\x128\n" +
+	"\x14contact_apply_unread\x18\x03 \x01(\x05B\x04\xe2A\x01\x02R\x14contact_apply_unread\x124\n" +
+	"\x12group_apply_unread\x18\x04 \x01(\x05B\x04\xe2A\x01\x02R\x12group_apply_unread\x12*\n" +
+	"\rnotice_unread\x18\x05 \x01(\x05B\x04\xe2A\x01\x02R\rnotice_unread\x12(\n" +
+	"\ftotal_unread\x18\x06 \x01(\x05B\x04\xe2A\x01\x02R\ftotal_unread2\xe9%\n" +
 	"\x04User\x12Y\n" +
 	"\x06Detail\x12\x16.web.UserDetailRequest\x1a\x17.web.UserDetailResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/user/detail\x12]\n" +
 	"\aSetting\x12\x17.web.UserSettingRequest\x1a\x18.web.UserSettingResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/user/setting\x12r\n" +
@@ -5157,7 +5292,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x0ePasswordUpdate\x12\x1e.web.UserPasswordUpdateRequest\x1a\x1f.web.UserPasswordUpdateResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/user/password-update\x12r\n" +
 	"\fMobileUpdate\x12\x1c.web.UserMobileUpdateRequest\x1a\x1d.web.UserMobileUpdateResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/user/mobile-update\x12n\n" +
 	"\vEmailUpdate\x12\x1b.web.UserEmailUpdateRequest\x1a\x1c.web.UserEmailUpdateResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/user/email-update\x12~\n" +
-	"\x0fSubscribeUpdate\x12\x1f.web.UserSubscribeUpdateRequest\x1a .web.UserSubscribeUpdateResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/user/subscribe-update\x12i\n" +
+	"\x0fSubscribeUpdate\x12\x1f.web.UserSubscribeUpdateRequest\x1a .web.UserSubscribeUpdateResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/user/subscribe-update\x12v\n" +
+	"\rUnreadSummary\x12\x1d.web.UserUnreadSummaryRequest\x1a\x1e.web.UserUnreadSummaryResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/user/unread-summary\x12i\n" +
 	"\rMerchantApply\x12\x19.web.MerchantApplyRequest\x1a\x1a.web.MerchantApplyResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/merchant/apply\x12m\n" +
 	"\x0eMerchantStatus\x12\x1a.web.MerchantStatusRequest\x1a\x1b.web.MerchantStatusResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/merchant/status\x12p\n" +
 	"\x0fMerchantProfile\x12\x1b.web.MerchantProfileRequest\x1a\x1b.web.MerchantStatusResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/merchant/profile\x12~\n" +
@@ -5202,7 +5338,7 @@ func file_web_v1_user_proto_rawDescGZIP() []byte {
 	return file_web_v1_user_proto_rawDescData
 }
 
-var file_web_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 72)
+var file_web_v1_user_proto_msgTypes = make([]protoimpl.MessageInfo, 74)
 var file_web_v1_user_proto_goTypes = []any{
 	(*UserDetailRequest)(nil),                 // 0: web.UserDetailRequest
 	(*UserDetailResponse)(nil),                // 1: web.UserDetailResponse
@@ -5272,16 +5408,18 @@ var file_web_v1_user_proto_goTypes = []any{
 	(*MerchantChatMessageListResponse)(nil),   // 65: web.MerchantChatMessageListResponse
 	(*MerchantChatClearUnreadRequest)(nil),    // 66: web.MerchantChatClearUnreadRequest
 	(*MerchantChatClearUnreadResponse)(nil),   // 67: web.MerchantChatClearUnreadResponse
-	(*UserSettingResponse_UserInfo)(nil),      // 68: web.UserSettingResponse.UserInfo
-	(*UserSettingResponse_ConfigInfo)(nil),    // 69: web.UserSettingResponse.ConfigInfo
-	nil,                                       // 70: web.MerchantStatusResponse.PayTypesEntry
-	nil,                                       // 71: web.MerchantInfoForBuyerResponse.PayTypesEntry
+	(*UserUnreadSummaryRequest)(nil),          // 68: web.UserUnreadSummaryRequest
+	(*UserUnreadSummaryResponse)(nil),         // 69: web.UserUnreadSummaryResponse
+	(*UserSettingResponse_UserInfo)(nil),      // 70: web.UserSettingResponse.UserInfo
+	(*UserSettingResponse_ConfigInfo)(nil),    // 71: web.UserSettingResponse.ConfigInfo
+	nil,                                       // 72: web.MerchantStatusResponse.PayTypesEntry
+	nil,                                       // 73: web.MerchantInfoForBuyerResponse.PayTypesEntry
 }
 var file_web_v1_user_proto_depIdxs = []int32{
-	68, // 0: web.UserSettingResponse.user_info:type_name -> web.UserSettingResponse.UserInfo
-	69, // 1: web.UserSettingResponse.setting:type_name -> web.UserSettingResponse.ConfigInfo
-	70, // 2: web.MerchantStatusResponse.pay_types:type_name -> web.MerchantStatusResponse.PayTypesEntry
-	71, // 3: web.MerchantInfoForBuyerResponse.pay_types:type_name -> web.MerchantInfoForBuyerResponse.PayTypesEntry
+	70, // 0: web.UserSettingResponse.user_info:type_name -> web.UserSettingResponse.UserInfo
+	71, // 1: web.UserSettingResponse.setting:type_name -> web.UserSettingResponse.ConfigInfo
+	72, // 2: web.MerchantStatusResponse.pay_types:type_name -> web.MerchantStatusResponse.PayTypesEntry
+	73, // 3: web.MerchantInfoForBuyerResponse.pay_types:type_name -> web.MerchantInfoForBuyerResponse.PayTypesEntry
 	22, // 4: web.MerchantTaskListResponse.items:type_name -> web.MerchantTaskItem
 	33, // 5: web.MerchantPaytypeListResponse.items:type_name -> web.MerchantPaytypeItem
 	42, // 6: web.MerchantOrderListResponse.items:type_name -> web.MerchantOrderListItem
@@ -5296,75 +5434,77 @@ var file_web_v1_user_proto_depIdxs = []int32{
 	8,  // 15: web.User.MobileUpdate:input_type -> web.UserMobileUpdateRequest
 	10, // 16: web.User.EmailUpdate:input_type -> web.UserEmailUpdateRequest
 	12, // 17: web.User.SubscribeUpdate:input_type -> web.UserSubscribeUpdateRequest
-	14, // 18: web.User.MerchantApply:input_type -> web.MerchantApplyRequest
-	16, // 19: web.User.MerchantStatus:input_type -> web.MerchantStatusRequest
-	17, // 20: web.User.MerchantProfile:input_type -> web.MerchantProfileRequest
-	23, // 21: web.User.MerchantTaskCreate:input_type -> web.MerchantTaskCreateRequest
-	25, // 22: web.User.MerchantTaskMyList:input_type -> web.MerchantTaskMyListRequest
-	26, // 23: web.User.MerchantTaskMarketList:input_type -> web.MerchantTaskMarketListRequest
-	28, // 24: web.User.MerchantTaskDetail:input_type -> web.MerchantTaskDetailRequest
-	20, // 25: web.User.MerchantInfoByTask:input_type -> web.MerchantInfoByTaskRequest
-	29, // 26: web.User.MerchantTaskUpdate:input_type -> web.MerchantTaskUpdateRequest
-	31, // 27: web.User.MerchantTaskUp:input_type -> web.MerchantTaskIdRequest
-	31, // 28: web.User.MerchantTaskDown:input_type -> web.MerchantTaskIdRequest
-	31, // 29: web.User.MerchantTaskFinish:input_type -> web.MerchantTaskIdRequest
-	34, // 30: web.User.MerchantPaytypeCreate:input_type -> web.MerchantPaytypeCreateRequest
-	36, // 31: web.User.MerchantPaytypeUpdate:input_type -> web.MerchantPaytypeUpdateRequest
-	38, // 32: web.User.MerchantPaytypeList:input_type -> web.MerchantPaytypeListRequest
-	40, // 33: web.User.MerchantPaytypeInvalidate:input_type -> web.MerchantPaytypeInvalidateRequest
-	44, // 34: web.User.MerchantOrderCreate:input_type -> web.MerchantOrderCreateRequest
-	46, // 35: web.User.MerchantOrderDetail:input_type -> web.MerchantOrderDetailRequest
-	47, // 36: web.User.MerchantOrderCancel:input_type -> web.MerchantOrderCancelRequest
-	51, // 37: web.User.MerchantOrderList:input_type -> web.MerchantOrderListRequest
-	49, // 38: web.User.MerchantOrderConfirmPay:input_type -> web.MerchantOrderConfirmPayRequest
-	48, // 39: web.User.MerchantOrderUrge:input_type -> web.MerchantOrderIdRequest
-	50, // 40: web.User.MerchantOrderAppealSeller:input_type -> web.MerchantOrderAppealRequest
-	50, // 41: web.User.MerchantOrderAppealBuyer:input_type -> web.MerchantOrderAppealRequest
-	54, // 42: web.User.MerchantOrderPay:input_type -> web.MerchantOrderPayRequest
-	56, // 43: web.User.MerchantChatSend:input_type -> web.MerchantChatSendRequest
-	58, // 44: web.User.MerchantChatUnread:input_type -> web.MerchantChatUnreadRequest
-	60, // 45: web.User.MerchantChatSessionList:input_type -> web.MerchantChatSessionListRequest
-	63, // 46: web.User.MerchantChatMessageList:input_type -> web.MerchantChatMessageListRequest
-	66, // 47: web.User.MerchantChatClearUnread:input_type -> web.MerchantChatClearUnreadRequest
-	1,  // 48: web.User.Detail:output_type -> web.UserDetailResponse
-	3,  // 49: web.User.Setting:output_type -> web.UserSettingResponse
-	5,  // 50: web.User.DetailUpdate:output_type -> web.UserDetailUpdateResponse
-	7,  // 51: web.User.PasswordUpdate:output_type -> web.UserPasswordUpdateResponse
-	9,  // 52: web.User.MobileUpdate:output_type -> web.UserMobileUpdateResponse
-	11, // 53: web.User.EmailUpdate:output_type -> web.UserEmailUpdateResponse
-	13, // 54: web.User.SubscribeUpdate:output_type -> web.UserSubscribeUpdateResponse
-	15, // 55: web.User.MerchantApply:output_type -> web.MerchantApplyResponse
-	19, // 56: web.User.MerchantStatus:output_type -> web.MerchantStatusResponse
-	19, // 57: web.User.MerchantProfile:output_type -> web.MerchantStatusResponse
-	24, // 58: web.User.MerchantTaskCreate:output_type -> web.MerchantTaskCreateResponse
-	27, // 59: web.User.MerchantTaskMyList:output_type -> web.MerchantTaskListResponse
-	27, // 60: web.User.MerchantTaskMarketList:output_type -> web.MerchantTaskListResponse
-	22, // 61: web.User.MerchantTaskDetail:output_type -> web.MerchantTaskItem
-	21, // 62: web.User.MerchantInfoByTask:output_type -> web.MerchantInfoForBuyerResponse
-	30, // 63: web.User.MerchantTaskUpdate:output_type -> web.MerchantTaskUpdateResponse
-	32, // 64: web.User.MerchantTaskUp:output_type -> web.MerchantTaskActionResponse
-	32, // 65: web.User.MerchantTaskDown:output_type -> web.MerchantTaskActionResponse
-	32, // 66: web.User.MerchantTaskFinish:output_type -> web.MerchantTaskActionResponse
-	35, // 67: web.User.MerchantPaytypeCreate:output_type -> web.MerchantPaytypeCreateResponse
-	37, // 68: web.User.MerchantPaytypeUpdate:output_type -> web.MerchantPaytypeUpdateResponse
-	39, // 69: web.User.MerchantPaytypeList:output_type -> web.MerchantPaytypeListResponse
-	41, // 70: web.User.MerchantPaytypeInvalidate:output_type -> web.MerchantPaytypeInvalidateResponse
-	45, // 71: web.User.MerchantOrderCreate:output_type -> web.MerchantOrderCreateResponse
-	43, // 72: web.User.MerchantOrderDetail:output_type -> web.MerchantOrderItem
-	53, // 73: web.User.MerchantOrderCancel:output_type -> web.MerchantOrderActionResponse
-	52, // 74: web.User.MerchantOrderList:output_type -> web.MerchantOrderListResponse
-	53, // 75: web.User.MerchantOrderConfirmPay:output_type -> web.MerchantOrderActionResponse
-	53, // 76: web.User.MerchantOrderUrge:output_type -> web.MerchantOrderActionResponse
-	53, // 77: web.User.MerchantOrderAppealSeller:output_type -> web.MerchantOrderActionResponse
-	53, // 78: web.User.MerchantOrderAppealBuyer:output_type -> web.MerchantOrderActionResponse
-	55, // 79: web.User.MerchantOrderPay:output_type -> web.MerchantOrderPayResponse
-	57, // 80: web.User.MerchantChatSend:output_type -> web.MerchantChatSendResponse
-	59, // 81: web.User.MerchantChatUnread:output_type -> web.MerchantChatUnreadResponse
-	62, // 82: web.User.MerchantChatSessionList:output_type -> web.MerchantChatSessionListResponse
-	65, // 83: web.User.MerchantChatMessageList:output_type -> web.MerchantChatMessageListResponse
-	67, // 84: web.User.MerchantChatClearUnread:output_type -> web.MerchantChatClearUnreadResponse
-	48, // [48:85] is the sub-list for method output_type
-	11, // [11:48] is the sub-list for method input_type
+	68, // 18: web.User.UnreadSummary:input_type -> web.UserUnreadSummaryRequest
+	14, // 19: web.User.MerchantApply:input_type -> web.MerchantApplyRequest
+	16, // 20: web.User.MerchantStatus:input_type -> web.MerchantStatusRequest
+	17, // 21: web.User.MerchantProfile:input_type -> web.MerchantProfileRequest
+	23, // 22: web.User.MerchantTaskCreate:input_type -> web.MerchantTaskCreateRequest
+	25, // 23: web.User.MerchantTaskMyList:input_type -> web.MerchantTaskMyListRequest
+	26, // 24: web.User.MerchantTaskMarketList:input_type -> web.MerchantTaskMarketListRequest
+	28, // 25: web.User.MerchantTaskDetail:input_type -> web.MerchantTaskDetailRequest
+	20, // 26: web.User.MerchantInfoByTask:input_type -> web.MerchantInfoByTaskRequest
+	29, // 27: web.User.MerchantTaskUpdate:input_type -> web.MerchantTaskUpdateRequest
+	31, // 28: web.User.MerchantTaskUp:input_type -> web.MerchantTaskIdRequest
+	31, // 29: web.User.MerchantTaskDown:input_type -> web.MerchantTaskIdRequest
+	31, // 30: web.User.MerchantTaskFinish:input_type -> web.MerchantTaskIdRequest
+	34, // 31: web.User.MerchantPaytypeCreate:input_type -> web.MerchantPaytypeCreateRequest
+	36, // 32: web.User.MerchantPaytypeUpdate:input_type -> web.MerchantPaytypeUpdateRequest
+	38, // 33: web.User.MerchantPaytypeList:input_type -> web.MerchantPaytypeListRequest
+	40, // 34: web.User.MerchantPaytypeInvalidate:input_type -> web.MerchantPaytypeInvalidateRequest
+	44, // 35: web.User.MerchantOrderCreate:input_type -> web.MerchantOrderCreateRequest
+	46, // 36: web.User.MerchantOrderDetail:input_type -> web.MerchantOrderDetailRequest
+	47, // 37: web.User.MerchantOrderCancel:input_type -> web.MerchantOrderCancelRequest
+	51, // 38: web.User.MerchantOrderList:input_type -> web.MerchantOrderListRequest
+	49, // 39: web.User.MerchantOrderConfirmPay:input_type -> web.MerchantOrderConfirmPayRequest
+	48, // 40: web.User.MerchantOrderUrge:input_type -> web.MerchantOrderIdRequest
+	50, // 41: web.User.MerchantOrderAppealSeller:input_type -> web.MerchantOrderAppealRequest
+	50, // 42: web.User.MerchantOrderAppealBuyer:input_type -> web.MerchantOrderAppealRequest
+	54, // 43: web.User.MerchantOrderPay:input_type -> web.MerchantOrderPayRequest
+	56, // 44: web.User.MerchantChatSend:input_type -> web.MerchantChatSendRequest
+	58, // 45: web.User.MerchantChatUnread:input_type -> web.MerchantChatUnreadRequest
+	60, // 46: web.User.MerchantChatSessionList:input_type -> web.MerchantChatSessionListRequest
+	63, // 47: web.User.MerchantChatMessageList:input_type -> web.MerchantChatMessageListRequest
+	66, // 48: web.User.MerchantChatClearUnread:input_type -> web.MerchantChatClearUnreadRequest
+	1,  // 49: web.User.Detail:output_type -> web.UserDetailResponse
+	3,  // 50: web.User.Setting:output_type -> web.UserSettingResponse
+	5,  // 51: web.User.DetailUpdate:output_type -> web.UserDetailUpdateResponse
+	7,  // 52: web.User.PasswordUpdate:output_type -> web.UserPasswordUpdateResponse
+	9,  // 53: web.User.MobileUpdate:output_type -> web.UserMobileUpdateResponse
+	11, // 54: web.User.EmailUpdate:output_type -> web.UserEmailUpdateResponse
+	13, // 55: web.User.SubscribeUpdate:output_type -> web.UserSubscribeUpdateResponse
+	69, // 56: web.User.UnreadSummary:output_type -> web.UserUnreadSummaryResponse
+	15, // 57: web.User.MerchantApply:output_type -> web.MerchantApplyResponse
+	19, // 58: web.User.MerchantStatus:output_type -> web.MerchantStatusResponse
+	19, // 59: web.User.MerchantProfile:output_type -> web.MerchantStatusResponse
+	24, // 60: web.User.MerchantTaskCreate:output_type -> web.MerchantTaskCreateResponse
+	27, // 61: web.User.MerchantTaskMyList:output_type -> web.MerchantTaskListResponse
+	27, // 62: web.User.MerchantTaskMarketList:output_type -> web.MerchantTaskListResponse
+	22, // 63: web.User.MerchantTaskDetail:output_type -> web.MerchantTaskItem
+	21, // 64: web.User.MerchantInfoByTask:output_type -> web.MerchantInfoForBuyerResponse
+	30, // 65: web.User.MerchantTaskUpdate:output_type -> web.MerchantTaskUpdateResponse
+	32, // 66: web.User.MerchantTaskUp:output_type -> web.MerchantTaskActionResponse
+	32, // 67: web.User.MerchantTaskDown:output_type -> web.MerchantTaskActionResponse
+	32, // 68: web.User.MerchantTaskFinish:output_type -> web.MerchantTaskActionResponse
+	35, // 69: web.User.MerchantPaytypeCreate:output_type -> web.MerchantPaytypeCreateResponse
+	37, // 70: web.User.MerchantPaytypeUpdate:output_type -> web.MerchantPaytypeUpdateResponse
+	39, // 71: web.User.MerchantPaytypeList:output_type -> web.MerchantPaytypeListResponse
+	41, // 72: web.User.MerchantPaytypeInvalidate:output_type -> web.MerchantPaytypeInvalidateResponse
+	45, // 73: web.User.MerchantOrderCreate:output_type -> web.MerchantOrderCreateResponse
+	43, // 74: web.User.MerchantOrderDetail:output_type -> web.MerchantOrderItem
+	53, // 75: web.User.MerchantOrderCancel:output_type -> web.MerchantOrderActionResponse
+	52, // 76: web.User.MerchantOrderList:output_type -> web.MerchantOrderListResponse
+	53, // 77: web.User.MerchantOrderConfirmPay:output_type -> web.MerchantOrderActionResponse
+	53, // 78: web.User.MerchantOrderUrge:output_type -> web.MerchantOrderActionResponse
+	53, // 79: web.User.MerchantOrderAppealSeller:output_type -> web.MerchantOrderActionResponse
+	53, // 80: web.User.MerchantOrderAppealBuyer:output_type -> web.MerchantOrderActionResponse
+	55, // 81: web.User.MerchantOrderPay:output_type -> web.MerchantOrderPayResponse
+	57, // 82: web.User.MerchantChatSend:output_type -> web.MerchantChatSendResponse
+	59, // 83: web.User.MerchantChatUnread:output_type -> web.MerchantChatUnreadResponse
+	62, // 84: web.User.MerchantChatSessionList:output_type -> web.MerchantChatSessionListResponse
+	65, // 85: web.User.MerchantChatMessageList:output_type -> web.MerchantChatMessageListResponse
+	67, // 86: web.User.MerchantChatClearUnread:output_type -> web.MerchantChatClearUnreadResponse
+	49, // [49:87] is the sub-list for method output_type
+	11, // [11:49] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
 	11, // [11:11] is the sub-list for extension extendee
 	0,  // [0:11] is the sub-list for field type_name
@@ -5382,7 +5522,7 @@ func file_web_v1_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_user_proto_rawDesc), len(file_web_v1_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   72,
+			NumMessages:   74,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

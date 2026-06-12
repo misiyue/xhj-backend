@@ -26,6 +26,8 @@ type IUserHandler interface {
 	EmailUpdate(ctx context.Context, in *UserEmailUpdateRequest) (*UserEmailUpdateResponse, error)
 	// 更新通知订阅状态
 	SubscribeUpdate(ctx context.Context, in *UserSubscribeUpdateRequest) (*UserSubscribeUpdateResponse, error)
+	// 当前用户各类未读数汇总
+	UnreadSummary(ctx context.Context, in *UserUnreadSummaryRequest) (*UserUnreadSummaryResponse, error)
 	// 商户入驻申请
 	MerchantApply(ctx context.Context, in *MerchantApplyRequest) (*MerchantApplyResponse, error)
 	// 查询本人最近一次商户申请状态
@@ -162,6 +164,15 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.SubscribeUpdate(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/user/unread-summary", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserUnreadSummaryRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.UnreadSummary(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {

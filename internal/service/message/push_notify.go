@@ -2,6 +2,7 @@ package message
 
 import (
 	"context"
+	"strings"
 
 	"github.com/gzydong/go-chat/external/push"
 	"github.com/gzydong/go-chat/internal/entity"
@@ -11,9 +12,9 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
-// TryOneSignalChatPush 用户离线且已订阅时，按 notice_template.flag 发送 OneSignal 推送。
-// groupID > 0 时会检查群聊免打扰；私聊/商户聊天传 0。
-func TryOneSignalChatPush(
+// TryOneSignalTemplatePush 用户离线且已订阅时，按 notice_template.flag 发送 OneSignal 推送。
+// vars 用于替换模板中的 {#key} 占位符；groupID > 0 时会检查群聊免打扰。
+func TryOneSignalTemplatePush(
 	ctx context.Context,
 	userClient *cache.UserClient,
 	usersRepo *repo.Users,
@@ -21,6 +22,7 @@ func TryOneSignalChatPush(
 	talkSessionRepo *repo.TalkSession,
 	userID, groupID int,
 	templateFlag string,
+	vars map[string]string,
 ) {
 	if userID <= 0 || userClient == nil || usersRepo == nil || noticeTemplateRepo == nil {
 		return
@@ -43,12 +45,37 @@ func TryOneSignalChatPush(
 		return
 	}
 	if err := push.SendToUser(userID, push.Message{
-		Title:    tpl.Title,
-		Subtitle: tpl.Subtitle,
-		Contents: tpl.Content,
+		Title:    applyNoticeTemplateVars(tpl.Title, vars),
+		Subtitle: applyNoticeTemplateVars(tpl.Subtitle, vars),
+		Contents: applyNoticeTemplateVars(tpl.Content, vars),
 	}); err != nil {
 		logger.Errorf("onesignal %s push err: user_id=%d %s", templateFlag, userID, err.Error())
 	}
+}
+
+// TryOneSignalChatPush 用户离线且已订阅时，按 notice_template.flag 发送 OneSignal 推送。
+// groupID > 0 时会检查群聊免打扰；私聊/商户聊天传 0。
+func TryOneSignalChatPush(
+	ctx context.Context,
+	userClient *cache.UserClient,
+	usersRepo *repo.Users,
+	noticeTemplateRepo *repo.NoticeTemplate,
+	talkSessionRepo *repo.TalkSession,
+	userID, groupID int,
+	templateFlag string,
+) {
+	TryOneSignalTemplatePush(ctx, userClient, usersRepo, noticeTemplateRepo, talkSessionRepo, userID, groupID, templateFlag, nil)
+}
+
+func applyNoticeTemplateVars(s string, vars map[string]string) string {
+	if s == "" || len(vars) == 0 {
+		return s
+	}
+	out := s
+	for k, v := range vars {
+		out = strings.ReplaceAll(out, "{#"+k+"}", v)
+	}
+	return out
 }
 
 // tryOneSignalUserChat 普通私聊/群聊离线推送（userChat 模板）

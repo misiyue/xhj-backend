@@ -47,6 +47,10 @@ type User struct {
 	UserClient          *cache.UserClient
 	NoticeTemplateRepo  *repo.NoticeTemplate
 	SysNotice           *logic.SysNotice
+	TalkSessionService  service.ITalkSessionService
+	ContactApplyService service.IContactApplyService
+	GroupApplyStorage   *cache.GroupApplyStorage
+	NoticeLetterRepo    *repo.NoticeLetter
 	OrganizeRepo        *repo.Organize
 	UserService         service.IUserService
 	SmsService          service.ISmsService
