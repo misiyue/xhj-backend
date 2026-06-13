@@ -93,6 +93,7 @@ func (s *ContactApplyService) tryOneSignalContactApply(ctx context.Context, rece
 		nil,
 		receiverID,
 		0,
+		0,
 		model.NoticeTemplateFlagContactApply,
 		map[string]string{"sender": senderName},
 	)

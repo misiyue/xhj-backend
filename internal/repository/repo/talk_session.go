@@ -17,9 +17,26 @@ func NewTalkSession(db *gorm.DB) *TalkSession {
 	return &TalkSession{Repo: core.NewRepo[model.TalkSession](db)}
 }
 
-func (t *TalkSession) IsDisturb(uid int, receiverId int, talkType int) bool {
-	resp, err := t.Repo.FindByWhere(context.TODO(), "user_id = ? and receiver_id = ? and talk_mode = ?", uid, receiverId, talkType)
-	return err == nil && resp.IsDisturb == 1
+// IsDisturb 当前用户对某会话是否开启免打扰（is_disturb=1，与 session-disturb action=1 一致）
+func (t *TalkSession) IsDisturb(ctx context.Context, uid int, receiverId int, talkType int) bool {
+	if uid <= 0 || receiverId <= 0 || talkType <= 0 || t.Db == nil {
+		return false
+	}
+	var row model.TalkSession
+	err := t.Db.WithContext(ctx).
+		Model(&model.TalkSession{}).
+		Where("user_id = ? AND receiver_id = ? AND talk_mode = ?", uid, receiverId, talkType).
+		Where("(is_delete = ? OR is_delete = 0)", model.No).
+		Order("updated_at DESC, id DESC").
+		Limit(1).
+		Take(&row).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false
+		}
+		return false
+	}
+	return row.IsDisturb == model.Yes
 }
 
 func (t *TalkSession) FindBySessionId(uid int, receiverId int, talkType int) int {

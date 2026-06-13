@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gzydong/go-chat/external/push"
-	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
@@ -13,14 +12,15 @@ import (
 )
 
 // TryOneSignalTemplatePush 用户离线且已订阅时，按 notice_template.flag 发送 OneSignal 推送。
-// vars 用于替换模板中的 {#key} 占位符；groupID > 0 时会检查群聊免打扰。
+// vars 用于替换模板中的 {#key} 占位符。
+// talkMode/receiverID 用于 talk_session 免打扰判断（私聊 receiverID 为对方 user_id，群聊为 group_id）；talkMode=0 时不检查。
 func TryOneSignalTemplatePush(
 	ctx context.Context,
 	userClient *cache.UserClient,
 	usersRepo *repo.Users,
 	noticeTemplateRepo *repo.NoticeTemplate,
 	talkSessionRepo *repo.TalkSession,
-	userID, groupID int,
+	userID, talkMode, receiverID int,
 	templateFlag string,
 	vars map[string]string,
 ) {
@@ -34,7 +34,8 @@ func TryOneSignalTemplatePush(
 	if err != nil || user == nil || user.IsSubscribe != model.UsersSubscribeYes {
 		return
 	}
-	if groupID > 0 && talkSessionRepo != nil && talkSessionRepo.IsDisturb(userID, groupID, entity.ChatGroupMode) {
+	if talkMode > 0 && receiverID > 0 && talkSessionRepo != nil &&
+		talkSessionRepo.IsDisturb(ctx, userID, receiverID, talkMode) {
 		return
 	}
 	tpl, err := noticeTemplateRepo.FindByFlagCached(ctx, templateFlag)
@@ -54,17 +55,16 @@ func TryOneSignalTemplatePush(
 }
 
 // TryOneSignalChatPush 用户离线且已订阅时，按 notice_template.flag 发送 OneSignal 推送。
-// groupID > 0 时会检查群聊免打扰；私聊/商户聊天传 0。
 func TryOneSignalChatPush(
 	ctx context.Context,
 	userClient *cache.UserClient,
 	usersRepo *repo.Users,
 	noticeTemplateRepo *repo.NoticeTemplate,
 	talkSessionRepo *repo.TalkSession,
-	userID, groupID int,
+	userID, talkMode, receiverID int,
 	templateFlag string,
 ) {
-	TryOneSignalTemplatePush(ctx, userClient, usersRepo, noticeTemplateRepo, talkSessionRepo, userID, groupID, templateFlag, nil)
+	TryOneSignalTemplatePush(ctx, userClient, usersRepo, noticeTemplateRepo, talkSessionRepo, userID, talkMode, receiverID, templateFlag, nil)
 }
 
 func applyNoticeTemplateVars(s string, vars map[string]string) string {
@@ -79,6 +79,6 @@ func applyNoticeTemplateVars(s string, vars map[string]string) string {
 }
 
 // tryOneSignalUserChat 普通私聊/群聊离线推送（userChat 模板）
-func (s *Service) tryOneSignalUserChat(ctx context.Context, userID int, groupID int) {
-	TryOneSignalChatPush(ctx, s.UserClient, s.UsersRepo, s.NoticeTemplateRepo, s.TalkSessionRepo, userID, groupID, model.NoticeTemplateFlagUserChat)
+func (s *Service) tryOneSignalUserChat(ctx context.Context, userID, talkMode, receiverID int) {
+	TryOneSignalChatPush(ctx, s.UserClient, s.UsersRepo, s.NoticeTemplateRepo, s.TalkSessionRepo, userID, talkMode, receiverID, model.NoticeTemplateFlagUserChat)
 }

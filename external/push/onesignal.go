@@ -43,9 +43,11 @@ type sendRequest struct {
 	Headings       map[string]string   `json:"headings,omitempty"`
 	Subtitle       map[string]string   `json:"subtitle,omitempty"`
 	IncludeAliases map[string][]string `json:"include_aliases"`
-	TargetChannel  string              `json:"target_channel"`
-	IOSBadgeType   string              `json:"ios_badgeType"`
-	IOSBadgeCount  int                 `json:"ios_badgeCount"`
+	TargetChannel     string              `json:"target_channel"`
+	IOSBadgeType      string              `json:"ios_badgeType"`
+	IOSBadgeCount     int                 `json:"ios_badgeCount"`
+	HuaweiBadgeClass  string              `json:"huawei_badge_class"`
+	HuaweiBadgeAddNum int                 `json:"huawei_badge_add_num"`
 }
 
 type sendResponse struct {
@@ -96,9 +98,11 @@ func (c *Client) send(externalID string, msg Message) error {
 		IncludeAliases: map[string][]string{
 			"external_id": {externalID},
 		},
-		TargetChannel: "push",
-		IOSBadgeType:  "Increase",
-		IOSBadgeCount: 1,
+		TargetChannel:     "push",
+		IOSBadgeType:      "Increase",
+		IOSBadgeCount:     1,
+		HuaweiBadgeClass:  "com.xhj.im.MainActivity",
+		HuaweiBadgeAddNum: 1,
 	})
 	if err != nil {
 		return err

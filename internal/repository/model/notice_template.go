@@ -8,6 +8,7 @@ const (
 	NoticeTemplateFlagC2cPaid      = "c2cPaid"
 	NoticeTemplateFlagC2cTrans     = "c2cTrans"
 	NoticeTemplateFlagContactApply = "contactApply"
+	NoticeTemplateFlagGroupApply   = "groupApply"
 )
 
 // NoticeTemplate 通知模板 notice_template

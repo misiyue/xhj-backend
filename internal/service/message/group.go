@@ -76,7 +76,7 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 	memberIds := s.GroupMemberRepo.GetMemberIds(ctx, item.GroupId)
 	for _, uid := range memberIds {
 		if uid != item.FromId {
-			s.tryOneSignalUserChat(ctx, uid, item.GroupId)
+			s.tryOneSignalUserChat(ctx, uid, entity.ChatGroupMode, item.GroupId)
 		}
 	}
 
