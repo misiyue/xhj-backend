@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"errors"
 	"math"
 
 	pb "github.com/gzydong/go-chat/api/pb/web/v1"
@@ -17,8 +18,18 @@ type Notice struct {
 	NoticeLetterRepo *repo.NoticeLetter
 }
 
+func (n *Notice) ensureRepo() error {
+	if n == nil || n.NoticeLetterRepo == nil {
+		return errors.New("NoticeLetterRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+	return nil
+}
+
 // ListNotice 系统通知列表，按时间倒序，每页 15 条
 func (n *Notice) ListNotice(ctx context.Context, req *pb.NoticeListRequest) (*pb.NoticeListResponse, error) {
+	if err := n.ensureRepo(); err != nil {
+		return nil, err
+	}
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 
 	page := int(req.GetPage())
@@ -53,6 +64,9 @@ func (n *Notice) ListNotice(ctx context.Context, req *pb.NoticeListRequest) (*pb
 
 // GetUnreadCount 未读通知数，并返回最新一条通知摘要
 func (n *Notice) GetUnreadCount(ctx context.Context, _ *pb.NoticeUnreadCountRequest) (*pb.NoticeUnreadCountResponse, error) {
+	if err := n.ensureRepo(); err != nil {
+		return nil, err
+	}
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	userID := int(session.UserId)
 
@@ -82,6 +96,9 @@ func (n *Notice) GetUnreadCount(ctx context.Context, _ *pb.NoticeUnreadCountRequ
 
 // ClearUnread 清除未读（全部标记为已读）
 func (n *Notice) ClearUnread(ctx context.Context, _ *pb.NoticeClearUnreadRequest) (*pb.NoticeClearUnreadResponse, error) {
+	if err := n.ensureRepo(); err != nil {
+		return nil, err
+	}
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 
 	if err := n.NoticeLetterRepo.MarkAllRead(ctx, int(session.UserId)); err != nil {

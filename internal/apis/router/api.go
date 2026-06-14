@@ -95,6 +95,15 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 		handler.V1.Invite.UsersRepo = handler.UserRepo
 	}
 
+	// Notice 需要 *repo.NoticeLetter：wire_gen 未更新时补齐，避免 /api/v1/notice/* 空指针 500。
+	if handler.V1 != nil && handler.V1.User != nil && handler.V1.User.NoticeLetterRepo != nil {
+		if handler.V1.Notice == nil {
+			handler.V1.Notice = &v1.Notice{NoticeLetterRepo: handler.V1.User.NoticeLetterRepo}
+		} else if handler.V1.Notice.NoticeLetterRepo == nil {
+			handler.V1.Notice.NoticeLetterRepo = handler.V1.User.NoticeLetterRepo
+		}
+	}
+
 	web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
 	web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
 
