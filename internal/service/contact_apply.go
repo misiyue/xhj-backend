@@ -87,7 +87,6 @@ func (s *ContactApplyService) tryOneSignalContactApply(ctx context.Context, rece
 	}
 	message.TryOneSignalTemplatePush(
 		ctx,
-		s.UserClient,
 		s.UsersRepo,
 		s.NoticeTemplateRepo,
 		nil,

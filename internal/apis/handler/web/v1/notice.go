@@ -15,7 +15,8 @@ import (
 const noticePageSize = 15
 
 type Notice struct {
-	NoticeLetterRepo *repo.NoticeLetter
+	NoticeLetterRepo  *repo.NoticeLetter
+	NoticeArticleRepo *repo.NoticeArticle
 }
 
 func (n *Notice) ensureRepo() error {
@@ -106,4 +107,26 @@ func (n *Notice) ClearUnread(ctx context.Context, _ *pb.NoticeClearUnreadRequest
 	}
 
 	return &pb.NoticeClearUnreadResponse{}, nil
+}
+
+// GetNoticeArticle 获取通知文章（notice_article，仅 status=开启）
+func (n *Notice) GetNoticeArticle(ctx context.Context, req *pb.NoticeArticleGetRequest) (*pb.NoticeArticleGetResponse, error) {
+	if n == nil || n.NoticeArticleRepo == nil {
+		return nil, errors.New("NoticeArticleRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+	row, err := n.NoticeArticleRepo.FindEnabledById(ctx, int(req.GetId()))
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return nil, entity.ErrDataNotFound
+	}
+	return &pb.NoticeArticleGetResponse{
+		Id:        int32(row.Id),
+		Title:     row.Title,
+		Content:   row.Content,
+		Status:    int32(row.Status),
+		CreatedAt: timeutil.FormatDatetime(row.CreatedAt),
+		UpdatedAt: timeutil.FormatDatetime(row.UpdatedAt),
+	}, nil
 }

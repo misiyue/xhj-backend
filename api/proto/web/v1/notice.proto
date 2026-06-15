@@ -3,6 +3,7 @@ package web;
 
 option go_package = "web/v1;web";
 
+import "buf/validate/validate.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 
@@ -28,6 +29,14 @@ service Notice {
   rpc ClearUnread(NoticeClearUnreadRequest) returns (NoticeClearUnreadResponse) {
     option (google.api.http) = {
       post: "/api/v1/notice/clear-unread"
+      body: "*"
+    };
+  }
+
+  // 获取通知文章（notice_article，仅 status=开启）
+  rpc GetNoticeArticle(NoticeArticleGetRequest) returns (NoticeArticleGetResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/notice/article"
       body: "*"
     };
   }
@@ -65,3 +74,16 @@ message NoticeUnreadCountResponse {
 message NoticeClearUnreadRequest {}
 
 message NoticeClearUnreadResponse {}
+
+message NoticeArticleGetRequest {
+  int32 id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+message NoticeArticleGetResponse {
+  int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+  string title = 2;
+  string content = 3;
+  int32 status = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}

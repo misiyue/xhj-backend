@@ -53,10 +53,7 @@ func (c *SysNoticeConsumer) Do(ctx context.Context, msg []byte) error {
 }
 
 func (c *SysNoticeConsumer) tryOneSignalNotice(ctx context.Context, userID int, title, content string) {
-	if userID <= 0 || c.UserClient == nil || c.UsersRepo == nil {
-		return
-	}
-	if c.UserClient.IsOnline(ctx, int64(userID)) {
+	if userID <= 0 || c.UsersRepo == nil {
 		return
 	}
 	user, err := c.UsersRepo.FindByIdWithCache(ctx, userID)

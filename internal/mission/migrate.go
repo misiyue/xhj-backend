@@ -102,6 +102,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		// 系统通知
 		&model.NoticeLetter{},
 		&model.NoticeTemplate{},
+		&model.NoticeArticle{},
 	)
 	
 	if err != nil {

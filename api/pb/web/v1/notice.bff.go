@@ -18,6 +18,8 @@ type INoticeHandler interface {
 	GetUnreadCount(ctx context.Context, in *NoticeUnreadCountRequest) (*NoticeUnreadCountResponse, error)
 	// 清除未读（全部标记为已读）
 	ClearUnread(ctx context.Context, in *NoticeClearUnreadRequest) (*NoticeClearUnreadResponse, error)
+	// 获取通知文章（notice_article，仅 status=开启）
+	GetNoticeArticle(ctx context.Context, in *NoticeArticleGetRequest) (*NoticeArticleGetResponse, error)
 }
 
 // RegisterNoticeHandler 注册服务路由处理器
@@ -58,6 +60,15 @@ func RegisterNoticeHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.ClearUnread(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/notice/article", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in NoticeArticleGetRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.GetNoticeArticle(ctx.Request.Context(), &in)
 	}))
 
 }

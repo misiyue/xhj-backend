@@ -51,4 +51,5 @@ var ProviderSet = wire.NewSet(
 	NewMerchantMessage,
 	NewNoticeLetter,
 	NewNoticeTemplate,
+	NewNoticeArticle,
 )

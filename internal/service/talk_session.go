@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
@@ -164,11 +162,11 @@ type TalkSessionCreateOpt struct {
 func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateOpt) (*model.TalkSession, error) {
 
 	result, err := s.TalkSessionRepo.FindByWhere(ctx, "talk_mode = ? and user_id = ? and receiver_id = ?", opt.TalkType, opt.UserId, opt.ReceiverId)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return nil, err
 	}
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if result == nil || result.Id == 0 {
 		result = &model.TalkSession{
 			TalkMode:   opt.TalkType,
 			UserId:     opt.UserId,
@@ -187,7 +185,7 @@ func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateO
 		if opt.TalkType == entity.ChatPrivateMode {
 			// 检查是否已有反向会话
 			reverseSession, err := s.TalkSessionRepo.FindByWhere(ctx, "talk_mode = ? and user_id = ? and receiver_id = ?", opt.TalkType, opt.ReceiverId, opt.UserId)
-			if err == nil && reverseSession.Id > 0 {
+			if err == nil && reverseSession != nil && reverseSession.Id > 0 {
 				// 如果反向会话已存在，使用较小的 ID 作为 session_id
 				result.SessionId = lo.Min([]int{reverseSession.Id, result.Id + 1}) // result.Id + 1 是新记录预计的ID
 			}
@@ -206,7 +204,7 @@ func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateO
 		// 对于私聊，自动创建反向会话并与这个会话关联
 		if opt.TalkType == entity.ChatPrivateMode {
 			reverseResult, err := s.TalkSessionRepo.FindByWhere(ctx, "talk_mode = ? and user_id = ? and receiver_id = ?", opt.TalkType, opt.ReceiverId, opt.UserId)
-			if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+			if err == nil && (reverseResult == nil || reverseResult.Id == 0) {
 				// 反向会话不存在，需要创建
 				reverseSession := &model.TalkSession{
 					TalkMode:   opt.TalkType,
@@ -219,21 +217,25 @@ func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateO
 					IsRobot:    model.No,
 				}
 				s.Source.Db().WithContext(ctx).Create(reverseSession)
-			} else if err == nil && reverseResult.SessionId == 0 {
+			} else if err == nil && reverseResult != nil && reverseResult.SessionId == 0 {
 				// 反向会话存在但没有 session_id，更新它
 				s.Source.Db().WithContext(ctx).Model(reverseResult).Update("session_id", result.SessionId)
 			}
 		}
 	} else {
-		result.IsTop = model.No
-		result.IsDelete = model.No
-		result.IsDisturb = model.No
-
+		// 已有会话：仅恢复未删除状态，保留 is_top / is_disturb 等用户设置
+		updates := map[string]any{
+			"is_delete":  model.No,
+			"updated_at": time.Now(),
+		}
 		if opt.IsBoot {
+			updates["is_robot"] = model.Yes
 			result.IsRobot = model.Yes
 		}
-
-		s.Source.Db().WithContext(ctx).Save(result)
+		if _, err := s.TalkSessionRepo.UpdateByWhere(ctx, updates, "id = ?", result.Id); err != nil {
+			return nil, err
+		}
+		result.IsDelete = model.No
 	}
 
 	return result, nil

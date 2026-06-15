@@ -137,7 +137,6 @@ func (a Apply) tryOneSignalGroupApply(ctx context.Context, receiverID, senderID,
 	}
 	message.TryOneSignalTemplatePush(
 		ctx,
-		a.UserClient,
 		a.UsersRepo,
 		a.NoticeTemplateRepo,
 		nil,

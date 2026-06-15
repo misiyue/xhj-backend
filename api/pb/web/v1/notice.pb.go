@@ -7,6 +7,7 @@
 package web
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -380,11 +381,139 @@ func (*NoticeClearUnreadResponse) Descriptor() ([]byte, []int) {
 	return file_web_v1_notice_proto_rawDescGZIP(), []int{6}
 }
 
+type NoticeArticleGetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NoticeArticleGetRequest) Reset() {
+	*x = NoticeArticleGetRequest{}
+	mi := &file_web_v1_notice_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NoticeArticleGetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NoticeArticleGetRequest) ProtoMessage() {}
+
+func (x *NoticeArticleGetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_notice_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NoticeArticleGetRequest.ProtoReflect.Descriptor instead.
+func (*NoticeArticleGetRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_notice_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *NoticeArticleGetRequest) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+type NoticeArticleGetResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Content       string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	Status        int32                  `protobuf:"varint,4,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,5,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     string                 `protobuf:"bytes,6,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NoticeArticleGetResponse) Reset() {
+	*x = NoticeArticleGetResponse{}
+	mi := &file_web_v1_notice_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NoticeArticleGetResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NoticeArticleGetResponse) ProtoMessage() {}
+
+func (x *NoticeArticleGetResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_notice_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NoticeArticleGetResponse.ProtoReflect.Descriptor instead.
+func (*NoticeArticleGetResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_notice_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *NoticeArticleGetResponse) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *NoticeArticleGetResponse) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *NoticeArticleGetResponse) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *NoticeArticleGetResponse) GetStatus() int32 {
+	if x != nil {
+		return x.Status
+	}
+	return 0
+}
+
+func (x *NoticeArticleGetResponse) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *NoticeArticleGetResponse) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
 var File_web_v1_notice_proto protoreflect.FileDescriptor
 
 const file_web_v1_notice_proto_rawDesc = "" +
 	"\n" +
-	"\x13web/v1/notice.proto\x12\x03web\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"'\n" +
+	"\x13web/v1/notice.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"'\n" +
 	"\x11NoticeListRequest\x12\x12\n" +
 	"\x04page\x18\x01 \x01(\x05R\x04page\"W\n" +
 	"\x12NoticeListResponse\x12%\n" +
@@ -407,12 +536,24 @@ const file_web_v1_notice_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\x1a\n" +
 	"\x18NoticeClearUnreadRequest\"\x1b\n" +
-	"\x19NoticeClearUnreadResponse2\xd6\x02\n" +
+	"\x19NoticeClearUnreadResponse\"2\n" +
+	"\x17NoticeArticleGetRequest\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x02id\"\xb6\x01\n" +
+	"\x18NoticeArticleGetResponse\x12\x14\n" +
+	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\x05R\x06status\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x05 \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x06 \x01(\tR\tupdatedAt2\xca\x03\n" +
 	"\x06Notice\x12]\n" +
 	"\n" +
 	"ListNotice\x12\x16.web.NoticeListRequest\x1a\x17.web.NoticeListResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/notice/list\x12w\n" +
 	"\x0eGetUnreadCount\x12\x1d.web.NoticeUnreadCountRequest\x1a\x1e.web.NoticeUnreadCountResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/notice/unread-count\x12t\n" +
-	"\vClearUnread\x12\x1d.web.NoticeClearUnreadRequest\x1a\x1e.web.NoticeClearUnreadResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/notice/clear-unreadB\fZ\n" +
+	"\vClearUnread\x12\x1d.web.NoticeClearUnreadRequest\x1a\x1e.web.NoticeClearUnreadResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/notice/clear-unread\x12r\n" +
+	"\x10GetNoticeArticle\x12\x1c.web.NoticeArticleGetRequest\x1a\x1d.web.NoticeArticleGetResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/notice/articleB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -427,7 +568,7 @@ func file_web_v1_notice_proto_rawDescGZIP() []byte {
 	return file_web_v1_notice_proto_rawDescData
 }
 
-var file_web_v1_notice_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_web_v1_notice_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_web_v1_notice_proto_goTypes = []any{
 	(*NoticeListRequest)(nil),         // 0: web.NoticeListRequest
 	(*NoticeListResponse)(nil),        // 1: web.NoticeListResponse
@@ -436,17 +577,21 @@ var file_web_v1_notice_proto_goTypes = []any{
 	(*NoticeUnreadCountResponse)(nil), // 4: web.NoticeUnreadCountResponse
 	(*NoticeClearUnreadRequest)(nil),  // 5: web.NoticeClearUnreadRequest
 	(*NoticeClearUnreadResponse)(nil), // 6: web.NoticeClearUnreadResponse
+	(*NoticeArticleGetRequest)(nil),   // 7: web.NoticeArticleGetRequest
+	(*NoticeArticleGetResponse)(nil),  // 8: web.NoticeArticleGetResponse
 }
 var file_web_v1_notice_proto_depIdxs = []int32{
 	2, // 0: web.NoticeListResponse.items:type_name -> web.NoticeItem
 	0, // 1: web.Notice.ListNotice:input_type -> web.NoticeListRequest
 	3, // 2: web.Notice.GetUnreadCount:input_type -> web.NoticeUnreadCountRequest
 	5, // 3: web.Notice.ClearUnread:input_type -> web.NoticeClearUnreadRequest
-	1, // 4: web.Notice.ListNotice:output_type -> web.NoticeListResponse
-	4, // 5: web.Notice.GetUnreadCount:output_type -> web.NoticeUnreadCountResponse
-	6, // 6: web.Notice.ClearUnread:output_type -> web.NoticeClearUnreadResponse
-	4, // [4:7] is the sub-list for method output_type
-	1, // [1:4] is the sub-list for method input_type
+	7, // 4: web.Notice.GetNoticeArticle:input_type -> web.NoticeArticleGetRequest
+	1, // 5: web.Notice.ListNotice:output_type -> web.NoticeListResponse
+	4, // 6: web.Notice.GetUnreadCount:output_type -> web.NoticeUnreadCountResponse
+	6, // 7: web.Notice.ClearUnread:output_type -> web.NoticeClearUnreadResponse
+	8, // 8: web.Notice.GetNoticeArticle:output_type -> web.NoticeArticleGetResponse
+	5, // [5:9] is the sub-list for method output_type
+	1, // [1:5] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -463,7 +608,7 @@ func file_web_v1_notice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_notice_proto_rawDesc), len(file_web_v1_notice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
