@@ -57,3 +57,21 @@ func (t *TalkSession) GetOrCreateSessionId(ctx context.Context, uid int, receive
 
 	return 0, nil
 }
+
+// FindPrivatePairByLinkSessionId 按关联 session_id 查询私聊成对会话
+func (t *TalkSession) FindPrivatePairByLinkSessionId(ctx context.Context, linkSessionID int) ([]*model.TalkSession, error) {
+	if linkSessionID <= 0 {
+		return nil, nil
+	}
+	return t.FindAllByWhere(ctx, "session_id = ? AND talk_mode = ?", linkSessionID, 1)
+}
+
+// UpdateRetainDaysByLinkSessionId 按关联 session_id 批量更新 retain_days
+func (t *TalkSession) UpdateRetainDaysByLinkSessionId(ctx context.Context, linkSessionID, retainDays int) error {
+	if linkSessionID <= 0 {
+		return nil
+	}
+	return t.Db.WithContext(ctx).Model(&model.TalkSession{}).
+		Where("session_id = ? AND talk_mode = ?", linkSessionID, 1).
+		Update("retain_days", retainDays).Error
+}

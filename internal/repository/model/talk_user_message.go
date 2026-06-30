@@ -2,6 +2,11 @@ package model
 
 import "time"
 
+const (
+	// TalkUserMessageDeletedScheduled 定时任务按 retain_days 标记删除
+	TalkUserMessageDeletedScheduled = -1
+)
+
 type TalkUserMessage struct {
 	Id         int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`          // 聊天记录ID
 	MsgId      string    `gorm:"column:msg_id;type:varchar(64);" json:"msg_id"`         // 消息ID
@@ -12,7 +17,7 @@ type TalkUserMessage struct {
 	ReceiverId int       `gorm:"column:receiver_id;" json:"receiver_id"`                // 对方用户ID
 	FromId     int       `gorm:"column:from_id;" json:"from_id"`                        // 消息发送者ID
 	IsRevoked  int       `gorm:"column:is_revoked;" json:"is_revoked"`                  // 是否撤回[1:否;2:是;]
-	IsDeleted  int       `gorm:"column:is_deleted;" json:"is_deleted"`                  // 是否删除[1:否;2:是;]
+	IsDeleted  int       `gorm:"column:is_deleted;" json:"is_deleted"`                  // 是否删除[-1:定时删除;1:用户删除;2:否/可见]
 	Extra      string    `gorm:"column:extra;type:text" json:"extra"`                   // 消息扩展字段
 	Quote      string    `gorm:"column:quote;type:text" json:"quote"`                   // 引用消息
 	SendTime   time.Time `gorm:"column:send_time;" json:"send_time"`                    // 发送时间

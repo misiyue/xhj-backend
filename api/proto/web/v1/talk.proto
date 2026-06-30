@@ -63,6 +63,14 @@ service Talk {
       body: "*"
     };
   }
+
+  // 设置私聊会话消息保留天数（按 session_id 同时更新己方与对方 talk_session）
+  rpc SessionSetRetainDays(TalkSessionSetRetainDaysRequest) returns (TalkSessionSetRetainDaysResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/talk/session-set-retain-days"
+      body: "*"
+    };
+  }
 }
 
 // 会话列表项
@@ -151,6 +159,18 @@ message TalkSessionDetailRequest{
 message TalkSessionDetailResponse{
   int32 is_top = 1 [(google.api.field_behavior) = REQUIRED];
   int32 is_disturb = 2 [(google.api.field_behavior) = REQUIRED];
+  int32 retain_days = 3;
+}
+
+// 设置消息保留天数（私聊成对 session_id）
+message TalkSessionSetRetainDaysRequest {
+  int32 session_id = 1 [(buf.validate.field).int32.gte = 1];
+  // 0 表示不限制；最大 3650 天
+  int32 retain_days = 2 [(buf.validate.field).int32 = {gte: 0, lte: 3650}];
+}
+
+message TalkSessionSetRetainDaysResponse {
+  int32 retain_days = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 会话列表接口请求参数

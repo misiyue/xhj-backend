@@ -65,15 +65,6 @@ func RegisterCommonHandler(r gin.IRoutes, interceptor interface {
 		return handler.Test(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/common/explore-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in CommonExploreListRequest
-		if err := interceptor.ShouldProto(ctx, &in); err != nil {
-			return nil, err
-		}
-
-		return handler.ExploreList(ctx.Request.Context(), &in)
-	}))
-
 	r.POST("/api/v1/common/app-dict", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in CommonAppDictGetRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {

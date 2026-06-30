@@ -252,9 +252,24 @@ func (s *Session) SessionDetail(ctx context.Context, in *web.TalkSessionDetailRe
 	}
 
 	return &web.TalkSessionDetailResponse{
-		IsTop:     int32(detail.IsTop),
-		IsDisturb: int32(detail.IsDisturb),
+		IsTop:      int32(detail.IsTop),
+		IsDisturb:  int32(detail.IsDisturb),
+		RetainDays: int32(detail.RetainDays),
 	}, nil
+}
+
+// SessionSetRetainDays 设置私聊消息保留天数（按 session_id 同步己方与对方）
+func (s *Session) SessionSetRetainDays(ctx context.Context, in *web.TalkSessionSetRetainDaysRequest) (*web.TalkSessionSetRetainDaysResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	retainDays, err := s.TalkSessionService.SetRetainDays(ctx, &service.TalkSessionSetRetainDaysOpt{
+		UserId:        uid,
+		LinkSessionId: int(in.GetSessionId()),
+		RetainDays:    int(in.GetRetainDays()),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &web.TalkSessionSetRetainDaysResponse{RetainDays: int32(retainDays)}, nil
 }
 
 // SessionList 会话列表接口

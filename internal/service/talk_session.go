@@ -24,6 +24,7 @@ type ITalkSessionService interface {
 	Top(ctx context.Context, opt *TalkSessionTopOpt) (int, error)
 	Disturb(ctx context.Context, opt *TalkSessionDisturbOpt) (int, error)
 	SessionDetail(ctx context.Context, uid int, talkMode int, receiverId int) (*model.TalkSession, error)
+	SetRetainDays(ctx context.Context, opt *TalkSessionSetRetainDaysOpt) (int, error)
 	BatchAddList(ctx context.Context, uid int, values map[string]int)
 }
 
@@ -343,6 +344,55 @@ func (s *TalkSessionService) Disturb(ctx context.Context, opt *TalkSessionDistur
 // SessionDetail 会话详情
 func (s *TalkSessionService) SessionDetail(ctx context.Context, uid int, talkMode int, receiverId int) (*model.TalkSession, error) {
 	return s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and talk_mode = ? and receiver_id = ?", uid, talkMode, receiverId)
+}
+
+type TalkSessionSetRetainDaysOpt struct {
+	UserId        int
+	LinkSessionId int // talk_session.session_id（私聊成对关联 ID）
+	RetainDays    int
+}
+
+// SetRetainDays 设置私聊消息保留天数：校验己方与对方 talk_session 后，按 session_id 同步更新
+func (s *TalkSessionService) SetRetainDays(ctx context.Context, opt *TalkSessionSetRetainDaysOpt) (int, error) {
+	if opt == nil || opt.UserId <= 0 || opt.LinkSessionId <= 0 {
+		return 0, entity.ErrPermissionDenied
+	}
+	if opt.RetainDays < 0 || opt.RetainDays > 3650 {
+		return 0, entity.ErrPermissionDenied
+	}
+
+	rows, err := s.TalkSessionRepo.FindPrivatePairByLinkSessionId(ctx, opt.LinkSessionId)
+	if err != nil {
+		return 0, err
+	}
+	if len(rows) < 2 {
+		return 0, entity.ErrDataNotFound
+	}
+
+	var mine, peer *model.TalkSession
+	for _, row := range rows {
+		if row.UserId == opt.UserId {
+			mine = row
+			continue
+		}
+		if peer == nil {
+			peer = row
+		}
+	}
+	if mine == nil {
+		return 0, entity.ErrPermissionDenied
+	}
+	if peer == nil {
+		return 0, entity.ErrDataNotFound
+	}
+	if mine.ReceiverId != peer.UserId || peer.ReceiverId != mine.UserId {
+		return 0, entity.ErrPermissionDenied
+	}
+
+	if err := s.TalkSessionRepo.UpdateRetainDaysByLinkSessionId(ctx, opt.LinkSessionId, opt.RetainDays); err != nil {
+		return 0, err
+	}
+	return opt.RetainDays, nil
 }
 
 // BatchAddList 批量添加会话列表

@@ -55,8 +55,6 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 				"/api/v1/common/send-email",
 				"/api/v1/common/send-sms",
 				"/api/v1/common/send-test",
-				"/api/v1/common/app-version",
-				"/api/v1/common/explore-list",
 				"/api/v1/common/app-dict",
 				"/api/v1/notice/article",
 				"/api/v1/merchant/order/hdpay-notify",
@@ -126,7 +124,7 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 		handler.V1.User.MerchantOrderHmpayNotify(c)
 	})
 
-	api.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
+	router.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
 		in := &web2.CommonAppVersionLatestRequest{
 			Platform: strings.ToLower(strings.TrimSpace(c.Query("platform"))),
 		}
@@ -134,6 +132,14 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 			return nil, errorx.New(400, err.Error())
 		}
 		return handler.V1.Common.AppVersionLatest(c.Request.Context(), in)
+	}))
+
+	router.POST("/api/v1/common/explore-list", resp.Do(func(c *gin.Context) (any, error) {
+		var in web2.CommonExploreListRequest
+		if err := resp.ShouldProto(c, &in); err != nil {
+			return nil, err
+		}
+		return handler.V1.Common.ExploreList(c.Request.Context(), &in)
 	}))
 
 	api.POST("/api/v1/emoticon/customize/upload", HandlerFunc(resp, func(c *gin.Context) (any, error) {

@@ -283,7 +283,7 @@ func (s *TalkRecordService) FindForwardRecords(ctx context.Context, uid int, msg
 	} else {
 		query := s.Source.Db().Model(&model.TalkUserMessage{})
 		query.Select(fields)
-		query.Where("msg_id in ?", msgIds)
+		query.Where("msg_id in ? and is_deleted = ?", msgIds, model.No)
 		query.Order("id asc")
 		if err := query.Scan(&items).Error; err != nil {
 			return nil, err
