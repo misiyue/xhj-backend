@@ -11,6 +11,7 @@ import (
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
 	"github.com/gzydong/go-chat/internal/repository/cache"
+	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
 )
@@ -255,7 +256,18 @@ func (s *Session) SessionDetail(ctx context.Context, in *web.TalkSessionDetailRe
 		IsTop:      int32(detail.IsTop),
 		IsDisturb:  int32(detail.IsDisturb),
 		RetainDays: int32(detail.RetainDays),
+		SessionId:  int32(linkSessionId(detail)),
 	}, nil
+}
+
+func linkSessionId(detail *model.TalkSession) int {
+	if detail == nil {
+		return 0
+	}
+	if detail.SessionId > 0 {
+		return detail.SessionId
+	}
+	return detail.Id
 }
 
 // SessionSetRetainDays 设置私聊消息保留天数（按 session_id 同步己方与对方）

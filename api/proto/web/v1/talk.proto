@@ -160,6 +160,8 @@ message TalkSessionDetailResponse{
   int32 is_top = 1 [(google.api.field_behavior) = REQUIRED];
   int32 is_disturb = 2 [(google.api.field_behavior) = REQUIRED];
   int32 retain_days = 3;
+  // 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
+  int32 session_id = 4;
 }
 
 // 设置消息保留天数（私聊成对 session_id）

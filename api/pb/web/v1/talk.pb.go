@@ -718,10 +718,12 @@ func (x *TalkSessionDetailRequest) GetReceiverId() int32 {
 
 // 会话详情接口响应参数
 type TalkSessionDetailResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsTop         int32                  `protobuf:"varint,1,opt,name=is_top,json=isTop,proto3" json:"is_top,omitempty"`
-	IsDisturb     int32                  `protobuf:"varint,2,opt,name=is_disturb,json=isDisturb,proto3" json:"is_disturb,omitempty"`
-	RetainDays    int32                  `protobuf:"varint,3,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	IsTop      int32                  `protobuf:"varint,1,opt,name=is_top,json=isTop,proto3" json:"is_top,omitempty"`
+	IsDisturb  int32                  `protobuf:"varint,2,opt,name=is_disturb,json=isDisturb,proto3" json:"is_disturb,omitempty"`
+	RetainDays int32                  `protobuf:"varint,3,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
+	// 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
+	SessionId     int32 `protobuf:"varint,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -773,6 +775,13 @@ func (x *TalkSessionDetailResponse) GetIsDisturb() int32 {
 func (x *TalkSessionDetailResponse) GetRetainDays() int32 {
 	if x != nil {
 		return x.RetainDays
+	}
+	return 0
+}
+
+func (x *TalkSessionDetailResponse) GetSessionId() int32 {
+	if x != nil {
+		return x.SessionId
 	}
 	return 0
 }
@@ -1117,13 +1126,15 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\x18TalkSessionDetailRequest\x12&\n" +
 	"\ttalk_mode\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x040\x010\x02R\btalkMode\x12(\n" +
 	"\vreceiver_id\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +
-	"receiverId\"~\n" +
+	"receiverId\"\x9d\x01\n" +
 	"\x19TalkSessionDetailResponse\x12\x1b\n" +
 	"\x06is_top\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x05isTop\x12#\n" +
 	"\n" +
 	"is_disturb\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\tisDisturb\x12\x1f\n" +
 	"\vretain_days\x18\x03 \x01(\x05R\n" +
-	"retainDays\"v\n" +
+	"retainDays\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x04 \x01(\x05R\tsessionId\"v\n" +
 	"\x1fTalkSessionSetRetainDaysRequest\x12&\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\tsessionId\x12+\n" +
