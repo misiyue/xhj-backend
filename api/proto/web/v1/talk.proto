@@ -89,6 +89,10 @@ message TalkSessionItem{
   string updated_at = 13 [(google.api.field_behavior) = REQUIRED];
   // 该会话中 @ 我的消息条数（群聊有效，单聊为 0），前端 atMeUserCount
   int32 at_me_user_count = 14;
+  // 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
+  int32 session_id = 15;
+  // 消息保留天数，0 表示不限制（私聊有效）
+  int32 retain_days = 16;
 }
 
 // 会话创建接口请求参数

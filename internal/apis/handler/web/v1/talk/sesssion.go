@@ -256,18 +256,22 @@ func (s *Session) SessionDetail(ctx context.Context, in *web.TalkSessionDetailRe
 		IsTop:      int32(detail.IsTop),
 		IsDisturb:  int32(detail.IsDisturb),
 		RetainDays: int32(detail.RetainDays),
-		SessionId:  int32(linkSessionId(detail)),
+		SessionId:  int32(linkSessionID(detail.Id, detail.SessionId)),
 	}, nil
+}
+
+func linkSessionID(id, sessionID int) int {
+	if sessionID > 0 {
+		return sessionID
+	}
+	return id
 }
 
 func linkSessionId(detail *model.TalkSession) int {
 	if detail == nil {
 		return 0
 	}
-	if detail.SessionId > 0 {
-		return detail.SessionId
-	}
-	return detail.Id
+	return linkSessionID(detail.Id, detail.SessionId)
 }
 
 // SessionSetRetainDays 设置私聊消息保留天数（按 session_id 同步己方与对方）
@@ -342,6 +346,8 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 			UpdatedAt:     timeutil.FormatDatetime(item.UpdatedAt),
 			UnreadNum:     int32(s.UnreadStorage.Get(ctx, uid, item.TalkMode, item.ReceiverId)),
 			AtMeUserCount: atMeUserCount,
+			SessionId:     int32(linkSessionID(item.Id, item.SessionId)),
+			RetainDays:    int32(item.RetainDays),
 		}
 
 		if item.TalkMode == entity.ChatPrivateMode {

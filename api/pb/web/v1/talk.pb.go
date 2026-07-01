@@ -40,6 +40,10 @@ type TalkSessionItem struct {
 	UpdatedAt  string                 `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// 该会话中 @ 我的消息条数（群聊有效，单聊为 0），前端 atMeUserCount
 	AtMeUserCount int32 `protobuf:"varint,14,opt,name=at_me_user_count,json=atMeUserCount,proto3" json:"at_me_user_count,omitempty"`
+	// 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
+	SessionId int32 `protobuf:"varint,15,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// 消息保留天数，0 表示不限制（私聊有效）
+	RetainDays    int32 `protobuf:"varint,16,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -161,6 +165,20 @@ func (x *TalkSessionItem) GetUpdatedAt() string {
 func (x *TalkSessionItem) GetAtMeUserCount() int32 {
 	if x != nil {
 		return x.AtMeUserCount
+	}
+	return 0
+}
+
+func (x *TalkSessionItem) GetSessionId() int32 {
+	if x != nil {
+		return x.SessionId
+	}
+	return 0
+}
+
+func (x *TalkSessionItem) GetRetainDays() int32 {
+	if x != nil {
+		return x.RetainDays
 	}
 	return 0
 }
@@ -1060,7 +1078,7 @@ var File_web_v1_talk_proto protoreflect.FileDescriptor
 
 const file_web_v1_talk_proto_rawDesc = "" +
 	"\n" +
-	"\x11web/v1/talk.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\xbe\x03\n" +
+	"\x11web/v1/talk.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\xfe\x03\n" +
 	"\x0fTalkSessionItem\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12!\n" +
 	"\ttalk_mode\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\btalkMode\x12%\n" +
@@ -1079,7 +1097,11 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\bmsg_text\x18\f \x01(\tB\x04\xe2A\x01\x02R\amsgText\x12#\n" +
 	"\n" +
 	"updated_at\x18\r \x01(\tB\x04\xe2A\x01\x02R\tupdatedAt\x12'\n" +
-	"\x10at_me_user_count\x18\x0e \x01(\x05R\ratMeUserCount\"l\n" +
+	"\x10at_me_user_count\x18\x0e \x01(\x05R\ratMeUserCount\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x0f \x01(\x05R\tsessionId\x12\x1f\n" +
+	"\vretain_days\x18\x10 \x01(\x05R\n" +
+	"retainDays\"l\n" +
 	"\x18TalkSessionCreateRequest\x12&\n" +
 	"\ttalk_mode\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x040\x010\x02R\btalkMode\x12(\n" +
 	"\vreceiver_id\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +

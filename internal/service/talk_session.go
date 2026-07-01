@@ -43,7 +43,7 @@ func (s *TalkSessionService) List(ctx context.Context, uid int) ([]*model.TalkSe
 		Table("talk_session").
 		Select([]string{
 			"talk_session.id", "talk_session.session_id", "talk_session.talk_mode", "talk_session.receiver_id", "talk_session.updated_at",
-			"talk_session.is_disturb", "talk_session.is_top", "talk_session.is_robot", "talk_session.is_delete",
+			"talk_session.is_disturb", "talk_session.is_top", "talk_session.is_robot", "talk_session.is_delete", "talk_session.retain_days",
 			"`users`.avatar", "`users`.nickname",
 			"`group`.name as group_name", "`group`.avatar as group_avatar",
 		}).

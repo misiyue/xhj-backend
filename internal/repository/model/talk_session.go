@@ -23,12 +23,14 @@ func (TalkSession) TableName() string {
 
 type TalkSessionDisplay struct {
 	Id          int       `json:"id"`
+	SessionId   int       `gorm:"column:session_id" json:"session_id"`
 	TalkMode    int       `json:"talk_mode"`
 	ReceiverId  int       `json:"receiver_id"`
 	IsDelete    int       `json:"is_delete"`
 	IsTop       int       `json:"is_top"`
 	IsRobot     int       `json:"is_robot"`
 	IsDisturb   int       `json:"is_disturb"`
+	RetainDays  int       `gorm:"column:retain_days" json:"retain_days"`
 	Avatar      string    `json:"avatar"`
 	Nickname    string    `json:"nickname"`
 	GroupName   string    `json:"group_name"`
