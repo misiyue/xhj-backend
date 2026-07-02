@@ -12,6 +12,7 @@ import (
 
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
+	"github.com/gzydong/go-chat/internal/service/message"
 	"gorm.io/gorm/clause"
 )
 
@@ -33,6 +34,7 @@ type TalkSessionService struct {
 	TalkSessionRepo *repo.TalkSession
 	GroupMemberRepo *repo.GroupMember
 	GroupRepo       *repo.Group
+	Message         message.IService
 }
 
 func (s *TalkSessionService) List(ctx context.Context, uid int) ([]*model.TalkSessionDisplay, error) {
@@ -392,6 +394,13 @@ func (s *TalkSessionService) SetRetainDays(ctx context.Context, opt *TalkSession
 	if err := s.TalkSessionRepo.UpdateRetainDaysByLinkSessionId(ctx, opt.LinkSessionId, opt.RetainDays); err != nil {
 		return 0, err
 	}
+
+	if s.Message != nil {
+		if err := s.Message.CreatePrivateRetainDaysSetMessage(ctx, opt.UserId, mine.ReceiverId, opt.RetainDays); err != nil {
+			return 0, err
+		}
+	}
+
 	return opt.RetainDays, nil
 }
 

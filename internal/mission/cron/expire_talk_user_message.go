@@ -29,6 +29,7 @@ func (c *ExpireTalkUserMessage) Enable() bool {
 
 func (c *ExpireTalkUserMessage) Do(ctx context.Context) error {
 	if c.TalkUserMessageRepo == nil {
+		slog.WarnContext(ctx, "私聊消息 retain_days 定时删除跳过：TalkUserMessageRepo 未注入，请重新生成 wire_gen.go")
 		return nil
 	}
 	n, err := c.TalkUserMessageRepo.MarkScheduledDeleteExpired(ctx)

@@ -60,6 +60,7 @@ const (
 	ChatMsgSysGroupMemberCancelMuted = 1110 // 群成员解除禁言
 	ChatMsgSysGroupNotice            = 1111 // 编辑群公告
 	ChatMsgSysGroupTransfer          = 1113 // 变更群主
+	ChatMsgSysRetainDaysSet          = 1201 // 设置私聊消息保留天数
 )
 
 var ChatMsgTypeMapping = map[int]string{
@@ -88,6 +89,7 @@ var ChatMsgTypeMapping = map[int]string{
 	ChatMsgSysGroupCancelMuted:       "[群解除禁言消息]",
 	ChatMsgSysGroupMemberMuted:       "[群成员禁言消息]",
 	ChatMsgSysGroupMemberCancelMuted: "[群成员解除禁言消息]",
+	ChatMsgSysRetainDaysSet:          "[消息保留设置]",
 }
 
 type TalkLastMessage struct {

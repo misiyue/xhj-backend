@@ -222,3 +222,12 @@ func (s *Service) CreatePrivateSysMessage(ctx context.Context, option CreatePriv
 		SendTime: time.Now(),
 	})
 }
+
+func (s *Service) CreatePrivateRetainDaysSetMessage(ctx context.Context, fromId, receiverId, retainDays int) error {
+	return s.CreatePrivateMessage(ctx, CreatePrivateMessageOption{
+		MsgType:    entity.ChatMsgSysRetainDaysSet,
+		FromId:     fromId,
+		ReceiverId: receiverId,
+		Extra:      jsonutil.Encode(map[string]int{"retain_days": retainDays}),
+	})
+}

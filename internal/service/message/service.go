@@ -30,6 +30,8 @@ type IPrivateMessage interface {
 	CreatePrivateMessage(ctx context.Context, option CreatePrivateMessageOption) error
 	// CreateToUserPrivateMessage 给指定用户信箱添加消息
 	CreateToUserPrivateMessage(ctx context.Context, data *model.TalkUserMessage) error
+	// CreatePrivateRetainDaysSetMessage 设置 retain_days 后通知双方
+	CreatePrivateRetainDaysSetMessage(ctx context.Context, fromId, receiverId, retainDays int) error
 }
 
 // IGroupMessage 群消息
