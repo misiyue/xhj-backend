@@ -45,6 +45,11 @@ func (m *MessageStorage) Get(ctx context.Context, talkType int, sender int, rece
 	return msg, nil
 }
 
+// Delete 清除会话最后一条消息缓存（私聊双方共用同一 hash field）
+func (m *MessageStorage) Delete(ctx context.Context, talkType int, sender int, receive int) error {
+	return m.redis.HDel(ctx, lastMessageCacheKey, m.name(talkType, sender, receive)).Err()
+}
+
 func (m *MessageStorage) MGet(ctx context.Context, fields []string) ([]*LastCacheMessage, error) {
 
 	res := m.redis.HMGet(ctx, lastMessageCacheKey, fields...)

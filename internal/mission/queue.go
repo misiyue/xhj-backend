@@ -2,6 +2,10 @@ package mission
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/gzydong/go-chat/internal/entity"
@@ -19,21 +23,95 @@ type QueueProvider struct {
 func Queue(ctx *cli.Context, app *QueueProvider) error {
 	topics := []string{entity.LoginTopic, entity.SysNoticeTopic}
 
-	sub := app.Redis.Subscribe(ctx.Context, topics...)
+	runCtx, stop := signal.NotifyContext(ctx.Context, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
+	defer stop()
 
-	// nolint
-	defer sub.Close()
+	logger.Infof("queue worker started, topics: %v", topics)
 
-	logger.Infof("subscribed to topics: %v", topics)
+	backoff := time.Second
+	const maxBackoff = 30 * time.Second
 
-	for data := range sub.Channel(redis.WithChannelHealthCheckInterval(10 * time.Second)) {
-		switch data.Channel {
-		case entity.LoginTopic:
-			_ = app.Consumers.UserLoginConsumer.Do(context.Background(), []byte(data.Payload), 1)
-		case entity.SysNoticeTopic:
-			_ = app.Consumers.SysNoticeConsumer.Do(context.Background(), []byte(data.Payload))
+	for {
+		if err := runCtx.Err(); err != nil {
+			logger.Infof("queue worker shutting down: %v", err)
+			return nil
+		}
+
+		err := runQueueSubscribe(runCtx, app, topics)
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			logger.Infof("queue worker stopped")
+			return nil
+		}
+		if err != nil {
+			logger.Errorf("queue redis subscription error: %s, reconnecting in %s", err.Error(), backoff)
+		} else {
+			logger.Warnf("queue redis subscription closed, reconnecting in %s", backoff)
+			backoff = time.Second
+		}
+
+		select {
+		case <-runCtx.Done():
+			logger.Infof("queue worker shutting down")
+			return nil
+		case <-time.After(backoff):
+		}
+
+		if err != nil {
+			if backoff < maxBackoff {
+				backoff *= 2
+				if backoff > maxBackoff {
+					backoff = maxBackoff
+				}
+			}
 		}
 	}
+}
 
-	return nil
+func runQueueSubscribe(ctx context.Context, app *QueueProvider, topics []string) error {
+	sub := app.Redis.Subscribe(ctx, topics...)
+	defer sub.Close()
+
+	if _, err := sub.Receive(ctx); err != nil {
+		return fmt.Errorf("redis subscribe receive: %w", err)
+	}
+
+	logger.Infof("queue subscribed to topics: %v", topics)
+
+	ch := sub.Channel(redis.WithChannelHealthCheckInterval(10 * time.Second))
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case msg, ok := <-ch:
+			if !ok {
+				return errors.New("redis pubsub channel closed")
+			}
+			if msg == nil {
+				continue
+			}
+			dispatchQueueMessage(app, msg)
+		}
+	}
+}
+
+func dispatchQueueMessage(app *QueueProvider, data *redis.Message) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("queue consumer panic: topic=%s err=%v", data.Channel, r)
+		}
+	}()
+
+	bg := context.Background()
+	switch data.Channel {
+	case entity.LoginTopic:
+		if err := app.Consumers.UserLoginConsumer.Do(bg, []byte(data.Payload), 1); err != nil {
+			logger.Errorf("queue consumer %s error: %s", entity.LoginTopic, err.Error())
+		}
+	case entity.SysNoticeTopic:
+		if err := app.Consumers.SysNoticeConsumer.Do(bg, []byte(data.Payload)); err != nil {
+			logger.Errorf("queue consumer %s error: %s", entity.SysNoticeTopic, err.Error())
+		}
+	default:
+		logger.Warnf("queue unknown topic: %s", data.Channel)
+	}
 }

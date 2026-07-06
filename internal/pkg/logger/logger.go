@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -45,6 +46,9 @@ func formatTimeAttr(groups []string, a slog.Attr) slog.Attr {
 
 // Init 初始化日志；console 为 true 时同时输出到标准输出（便于本地调试）。
 func Init(filePath string, level slog.Level, topic string, console bool) {
+	if dir := filepath.Dir(filePath); dir != "" && dir != "." {
+		_ = os.MkdirAll(dir, 0o755)
+	}
 	opts := &slog.HandlerOptions{
 		AddSource:   true,
 		Level:       level,
