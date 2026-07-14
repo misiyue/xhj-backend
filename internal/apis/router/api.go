@@ -191,14 +191,6 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 		return handler.V1.Trtc.GetSignature(c)
 	}))
 
-	api.POST("/api/v1/trtc/call-push", HandlerFunc(resp, func(c *gin.Context) (any, error) {
-		var req v1.CallPushRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			return nil, errorx.New(400, "请求参数错误")
-		}
-		return handler.V1.Trtc.CallPush(c.Request.Context(), &req)
-	}))
-
 	// KYC routes
 	api.POST("/api/v1/kyc/status", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.KYC.GetKYCStatus(c.Request.Context(), &v1.KYCStatusRequest{})

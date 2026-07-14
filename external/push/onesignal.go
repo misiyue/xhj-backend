@@ -159,12 +159,11 @@ func SendTextToUser(userID int, title, subtitle, contents string) error {
 	return defaultClient.SendTextToUser(userID, title, subtitle, contents)
 }
 
-// VoIPCallData 音视频通话 VoIP 推送自定义数据
+// VoIPCallData 音视频通话 VoIP 推送自定义 data
 type VoIPCallData struct {
 	Event          string `json:"event"`
 	FromUserId     int    `json:"from_user_id"`
 	ToUserId       int    `json:"to_user_id"`
-	RoomId         int    `json:"room_id"`
 	CallType       int    `json:"call_type"`
 	FromUserName   string `json:"from_user_name"`
 	FromUserAvatar string `json:"from_user_avatar"`
@@ -211,7 +210,6 @@ func (c *Client) sendVoIP(externalID string, data VoIPCallData) error {
 			"event":            data.Event,
 			"from_user_id":     strconv.Itoa(data.FromUserId),
 			"to_user_id":       strconv.Itoa(data.ToUserId),
-			"room_id":          strconv.Itoa(data.RoomId),
 			"call_type":        strconv.Itoa(data.CallType),
 			"from_user_name":   data.FromUserName,
 			"from_user_avatar": data.FromUserAvatar,

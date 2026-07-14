@@ -97,7 +97,9 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 		return err
 	}
 
-	s.tryOneSignalUserChat(ctx, option.ReceiverId, entity.ChatPrivateMode, option.FromId)
+	if option.MsgType != entity.ChatMsgTypeRTCCall {
+		s.tryOneSignalUserChat(ctx, option.ReceiverId, entity.ChatPrivateMode, option.FromId)
+	}
 
 	// 推送消息给双方用户
 	pipe := s.Source.Redis().Pipeline()

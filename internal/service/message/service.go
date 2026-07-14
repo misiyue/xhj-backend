@@ -488,7 +488,7 @@ func (s *Service) CreateMixedMessage(ctx context.Context, option CreateMixedMess
 }
 
 func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCallMessage) error {
-	return s.CreateMessage(ctx, CreateMessageOption{
+	if err := s.CreateMessage(ctx, CreateMessageOption{
 		MsgId:      option.MsgId,
 		TalkMode:   option.TalkMode,
 		FromId:     option.FromId,
@@ -499,7 +499,14 @@ func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCall
 			Status:   option.Status,
 			Duration: option.Duration,
 		}),
-	})
+	}); err != nil {
+		return err
+	}
+
+	if option.TalkMode == entity.ChatPrivateMode && option.PushVoIP {
+		s.tryOneSignalVoIPCall(ctx, option.FromId, option.ReceiverId, option.Type)
+	}
+	return nil
 }
 
 func (s *Service) CreateRedEnvelopeMessage(ctx context.Context, option CreateRedEnvelopeMessage) error {

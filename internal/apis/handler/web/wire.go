@@ -22,7 +22,7 @@ var ProviderSet = wire.NewSet(
 	wire.Struct(new(v1.KYC), "*"),
 	wire.Struct(new(v1.Wallet), "*"),
 	wire.Struct(new(v1.GroupRobot), "*"),
-	wire.Struct(new(v1.Trtc), "*"),
+	v1.NewTrtc,
 
 	wire.Struct(new(contact.Contact), "*"),
 	wire.Struct(new(contact.Apply), "*"),

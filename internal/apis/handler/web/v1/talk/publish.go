@@ -489,6 +489,7 @@ func (c *Publish) onSendRTCCall(ctx *gin.Context) error {
 		Type:       in.Body.Type,
 		Status:     in.Body.Status,
 		Duration:   in.Body.Duration,
+		PushVoIP:   true,
 	})
 
 	if err != nil {
