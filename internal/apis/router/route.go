@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/external/push"
 	"github.com/gzydong/go-chat/internal/apis/handler"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
@@ -15,6 +16,10 @@ import (
 
 // NewRouter 初始化配置路由
 func NewRouter(conf *config.Config, handler *handler.Handler, session *cache.JwtTokenStorage) *gin.Engine {
+	if conf.Push != nil && conf.Push.Valid() {
+		push.Init(conf.Push.AppID, conf.Push.Key, conf.Push.URL)
+	}
+
 	router := gin.New()
 
 	router.Use(middleware.Cors(conf.Cors))

@@ -461,6 +461,14 @@ func PreviewText(msgType int, extra string) string {
 		}
 
 		return strutil.MtSubstr(data.Content, 0, 200)
+	case entity.ChatMsgSysRetainDaysSet:
+		var data struct {
+			RetainDays int `json:"retain_days"`
+		}
+		if err := jsonutil.Unmarshal(extra, &data); err != nil {
+			return entity.ChatMsgSysRetainDaysSetPreview(0)
+		}
+		return entity.ChatMsgSysRetainDaysSetPreview(data.RetainDays)
 	default:
 		if value, ok := entity.ChatMsgTypeMapping[msgType]; ok {
 			return value

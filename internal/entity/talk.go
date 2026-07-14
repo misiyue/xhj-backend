@@ -1,5 +1,10 @@
 package entity
 
+import (
+	"fmt"
+	"strings"
+)
+
 // 聊天模式
 const (
 	ChatPrivateMode  = 1 // 私信模式
@@ -89,7 +94,23 @@ var ChatMsgTypeMapping = map[int]string{
 	ChatMsgSysGroupCancelMuted:       "[群解除禁言消息]",
 	ChatMsgSysGroupMemberMuted:       "[群成员禁言消息]",
 	ChatMsgSysGroupMemberCancelMuted: "[群成员解除禁言消息]",
-	ChatMsgSysRetainDaysSet:          "[消息保留设置]",
+	ChatMsgSysRetainDaysSet:          "[当前聊天已禁用自动删除消息]|[当前聊天已设置为%d天后删除]",
+}
+
+// ChatMsgSysRetainDaysSetPreview 根据 retain_days 生成消息保留设置摘要
+func ChatMsgSysRetainDaysSetPreview(retainDays int) string {
+	template, ok := ChatMsgTypeMapping[ChatMsgSysRetainDaysSet]
+	if !ok {
+		return ""
+	}
+	parts := strings.SplitN(template, "|", 2)
+	if retainDays <= 0 {
+		return parts[0]
+	}
+	if len(parts) < 2 {
+		return parts[0]
+	}
+	return fmt.Sprintf(parts[1], retainDays)
 }
 
 type TalkLastMessage struct {
