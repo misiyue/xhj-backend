@@ -99,6 +99,11 @@ func (m *Message) Records(ctx context.Context, in *web.MessageRecordsRequest) (*
 	// 补充红包消息的状态信息
 	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
 
+	if in.TalkMode == entity.ChatPrivateMode {
+		m.markPrivateMessagesRead(ctx, uid, int(in.ReceiverId), records)
+		m.applyPrivateReadStatus(items, int(in.ReceiverId))
+	}
+
 	return &web.MessageRecordsResponse{
 		Items:  items,
 		Cursor: int32(cursor),
@@ -171,6 +176,11 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 
 	// 补充红包消息的状态信息
 	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
+
+	if in.TalkMode == entity.ChatPrivateMode {
+		m.markPrivateMessagesRead(ctx, uid, int(in.ReceiverId), records)
+		m.applyPrivateReadStatus(items, int(in.ReceiverId))
+	}
 
 	return &web.MessageHistoryRecordsResponse{
 		Items:  items,
@@ -248,6 +258,7 @@ func (m *Message) enrichRedEnvelopeStatus(ctx context.Context, userId int, recor
 			Nickname:   item.Nickname,
 			Avatar:     item.Avatar,
 			IsRevoked:  int32(item.IsRevoked),
+			IsRead:     int32(item.IsRead),
 			SendTime:   item.SendTime.Format(time.DateTime),
 			Extra:      extra,
 			Quote:      item.Quote,
@@ -493,4 +504,31 @@ func (m *Message) GetAllMentions(ctx context.Context) (*AllMentionsResponse, err
 	return &AllMentionsResponse{
 		Groups: groups,
 	}, nil
+}
+
+func (m *Message) markPrivateMessagesRead(ctx context.Context, readerId, peerId int, records []*model.TalkMessageRecord) {
+	if m.TalkService == nil || readerId <= 0 || peerId <= 0 || len(records) == 0 {
+		return
+	}
+
+	msgIds := make([]string, 0, len(records))
+	for _, record := range records {
+		if record == nil || record.FromId != peerId || record.IsRead == model.TalkUserMessageIsReadYes {
+			continue
+		}
+		msgIds = append(msgIds, record.MsgId)
+	}
+	if len(msgIds) == 0 {
+		return
+	}
+
+	_ = m.TalkService.MarkPrivateMessagesRead(ctx, readerId, peerId, msgIds)
+}
+
+func (m *Message) applyPrivateReadStatus(items []*web.MessageRecord, peerId int) {
+	for _, item := range items {
+		if item != nil && item.GetFromId() == int32(peerId) {
+			item.IsRead = int32(model.TalkUserMessageIsReadYes)
+		}
+	}
 }

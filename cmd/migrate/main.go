@@ -441,6 +441,7 @@ type NewTalkUserMessage struct {
 	FromId     int       `gorm:"column:from_id"`
 	IsRevoked  int       `gorm:"column:is_revoked"`
 	IsDeleted  int       `gorm:"column:is_deleted"`
+	IsRead     int       `gorm:"column:is_read;default:0"`
 	Extra      string    `gorm:"column:extra;type:text"`
 	Quote      string    `gorm:"column:quote;type:text"`
 	SendTime   time.Time `gorm:"column:send_time"`

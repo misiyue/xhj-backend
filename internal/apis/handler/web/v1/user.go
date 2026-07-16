@@ -489,6 +489,10 @@ func (u *User) MerchantApply(ctx context.Context, in *web.MerchantApplyRequest) 
 			return nil, errorx.New(400, "您已是认证商户，无法再次申请")
 		case model.MerchantStatusRejected:
 			// 驳回后可重新申请
+		case model.MerchantStatusApplyCancel:
+			return nil, errorx.New(400, "商户注销申请审核中，请勿重复提交")
+		case model.MerchantStatusCancelled:
+			// 已注销，可重新入驻
 		default:
 			return nil, errorx.New(400, "当前申请状态不允许重复提交")
 		}
@@ -596,4 +600,46 @@ func (u *User) merchantToStatusResponse(ctx context.Context, m *model.Merchant) 
 // MerchantProfile 获取本人商户资料（与 MerchantStatus 数据一致，供表单查看/编辑回填）
 func (u *User) MerchantProfile(ctx context.Context, _ *web.MerchantProfileRequest) (*web.MerchantStatusResponse, error) {
 	return u.MerchantStatus(ctx, &web.MerchantStatusRequest{})
+}
+
+type MerchantCancelApplyResponse struct{}
+
+// MerchantCancelApply 商户注销申请（POST /api/v1/merchant/cancel-apply）
+func (u *User) MerchantCancelApply(ctx context.Context) (*MerchantCancelApplyResponse, error) {
+	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	uid := int(session.UserId)
+
+	m, err := u.MerchantRepo.FindLatestByUserId(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	if m == nil || m.Status != model.MerchantStatusApproved {
+		return nil, errorx.New(400, "仅审核通过且正常营业的商户可申请注销")
+	}
+
+	now := time.Now().Unix()
+	if m.IsClose != 0 {
+		return nil, errorx.New(400, "商户已关停，无法申请注销")
+	}
+	if m.IsFrozen != 0 && int64(m.FrozenTime) > now {
+		return nil, errorx.New(400, "商户处于封禁状态，无法申请注销")
+	}
+	if m.IsLimit != 0 && int64(m.LimitTime) > now {
+		return nil, errorx.New(400, "商户处于限制状态，无法申请注销")
+	}
+
+	hasListed, err := u.MerchantTaskRepo.HasListedUnsoldByUserId(ctx, uid)
+	if err != nil {
+		return nil, err
+	}
+	if hasListed {
+		return nil, errorx.New(400, "存在未卖完的上架挂单，请先下架或等待售完后再申请注销")
+	}
+
+	if err := u.MerchantRepo.UpdateById(ctx, m.Id, map[string]any{
+		"status": model.MerchantStatusApplyCancel,
+	}); err != nil {
+		return nil, err
+	}
+	return &MerchantCancelApplyResponse{}, nil
 }

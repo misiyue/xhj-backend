@@ -17,7 +17,7 @@ import (
 const suretyCountEpsilon = 1e-6
 
 func isMerchantEffectiveForTask(m *model.Merchant, now int64) bool {
-	if m == nil || m.Status != model.MerchantStatusApproved {
+	if m == nil || !model.MerchantIsOperating(m.Status) {
 		return false
 	}
 	if m.IsClose != 0 {
@@ -33,6 +33,13 @@ func isMerchantEffectiveForTask(m *model.Merchant, now int64) bool {
 }
 
 func (u *User) requireEffectiveMerchant(ctx context.Context, userId int, actionHint ...string) (*model.Merchant, error) {
+	latest, err := u.MerchantRepo.FindLatestByUserId(ctx, userId)
+	if err != nil {
+		return nil, err
+	}
+	if latest != nil && latest.Status == model.MerchantStatusApplyCancel {
+		return nil, errorx.New(403, "商户注销申请审核中，无法操作挂售任务")
+	}
 	m, err := u.MerchantRepo.FindLatestApprovedByUserId(ctx, userId)
 	if err != nil {
 		return nil, err

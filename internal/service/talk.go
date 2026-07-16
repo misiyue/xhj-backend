@@ -35,6 +35,7 @@ type TalkDeleteRecordOption struct {
 type ITalkService interface {
 	DeleteRecord(ctx context.Context, opt *TalkDeleteRecordOption) error
 	Revoke(ctx context.Context, opt *TalkRevokeOption) error
+	MarkPrivateMessagesRead(ctx context.Context, readerId, peerId int, msgIds []string) error
 }
 
 type TalkService struct {
@@ -188,4 +189,53 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 	}
 
 	return errors.New("暂不支持撤回消息")
+}
+
+// MarkPrivateMessagesRead 接收方拉取私聊消息后，将对方发来的未读消息标记为已读并通知发送方。
+func (t *TalkService) MarkPrivateMessagesRead(ctx context.Context, readerId, peerId int, msgIds []string) error {
+	if readerId <= 0 || peerId <= 0 || len(msgIds) == 0 || t.PushMessage == nil {
+		return nil
+	}
+
+	db := t.Source.Db().WithContext(ctx)
+
+	result := db.Model(&model.TalkUserMessage{}).
+		Where(
+			"msg_id in ? and from_id = ? and receiver_id = ? and is_read = ?",
+			msgIds, peerId, readerId, model.TalkUserMessageIsReadNo,
+		).
+		Update("is_read", model.TalkUserMessageIsReadYes)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil
+	}
+
+	var readMsgIds []string
+	if err := db.Model(&model.TalkUserMessage{}).
+		Where(
+			"msg_id in ? and from_id = ? and receiver_id = ? and is_read = ?",
+			msgIds, peerId, readerId, model.TalkUserMessageIsReadYes,
+		).
+		Pluck("msg_id", &readMsgIds).Error; err != nil {
+		return err
+	}
+	if len(readMsgIds) == 0 {
+		return nil
+	}
+
+	if err := t.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
+		Event: entity.SubEventImMessageRead,
+		Payload: jsonutil.Encode(entity.SubEventImMessageReadPayload{
+			TalkMode:   entity.ChatPrivateMode,
+			FromId:     peerId,
+			ReceiverId: readerId,
+			MsgIds:     readMsgIds,
+		}),
+	}); err != nil {
+		logger.Errorf("mark private messages read push error: reader_id=%d peer_id=%d %s", readerId, peerId, err.Error())
+	}
+
+	return nil
 }

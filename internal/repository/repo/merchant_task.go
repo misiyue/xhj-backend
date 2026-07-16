@@ -113,3 +113,15 @@ func (r *MerchantTask) ListMarketPending(ctx context.Context, page, pageSize int
 	}
 	return rows, total, nil
 }
+
+// HasListedUnsoldByUserId 是否存在未卖完的上架挂单
+func (r *MerchantTask) HasListedUnsoldByUserId(ctx context.Context, userId int) (bool, error) {
+	var n int64
+	err := marketListedScope(r.db.WithContext(ctx)).
+		Where("user_id = ?", userId).
+		Count(&n).Error
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}

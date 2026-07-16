@@ -5,6 +5,7 @@ const (
 	SubEventImMessageMerchant      = "sub.im.message.merchant"       // 商户订单 C2C 对话消息通知
 	SubEventImMessageKeyboard      = "sub.im.message.keyboard"       // 键盘输入事件通知
 	SubEventImMessageRevoke        = "sub.im.message.revoke"         // 聊天消息撤销通知
+	SubEventImMessageRead          = "sub.im.message.read"         // 私聊消息已读通知
 	SubEventImSessionUnreadCleared = "sub.im.session.unread.cleared" // 会话未读清零通知
 	SubEventImMessageMention       = "sub.im.message.mention"        // @提及消息通知
 	SubEventContactStatus          = "sub.im.contact.status"         // 用户在线状态通知
@@ -98,6 +99,13 @@ type SubEventTalkRevokePayload struct {
 	TalkMode int    `json:"talk_mode"` // 1单聊 2群聊
 	MsgId    string `json:"msg_id"`    // 消息ID
 	Remark   string `json:"remark"`
+}
+
+type SubEventImMessageReadPayload struct {
+	TalkMode   int      `json:"talk_mode"`   // 1 私聊
+	FromId     int      `json:"from_id"`     // 消息发送方（需收到已读通知）
+	ReceiverId int      `json:"receiver_id"` // 阅读者
+	MsgIds     []string `json:"msg_ids"`     // 已读消息 ID 列表
 }
 
 type SubEventImSessionUnreadClearedPayload struct {

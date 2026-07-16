@@ -97,6 +97,14 @@ service User {
     };
   }
 
+  // 商户注销申请（status 置为 -1 申请注销）
+  rpc MerchantCancelApply(MerchantCancelApplyRequest) returns (MerchantCancelApplyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/merchant/cancel-apply"
+      body: "*"
+    };
+  }
+
   // 发布商户挂售任务
   rpc MerchantTaskCreate(MerchantTaskCreateRequest) returns (MerchantTaskCreateResponse) {
     option (google.api.http) = {
@@ -418,6 +426,10 @@ message MerchantApplyResponse {
 message MerchantStatusRequest {}
 
 message MerchantProfileRequest {}
+
+message MerchantCancelApplyRequest {}
+
+message MerchantCancelApplyResponse {}
 
 message MerchantPayTypeLimit {
   double min = 1;

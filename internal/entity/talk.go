@@ -17,6 +17,7 @@ const (
 	PushEventImMessageMerchantC2c   = "im.message.c2c"            // 商户订单对话消息（C2C）
 	PushEventImMessageKeyboard      = "im.message.keyboard"       // 键盘输入事件推送
 	PushEventImMessageRevoke        = "im.message.revoke"         // 聊天消息撤销推送
+	PushEventImMessageRead          = "im.message.read"           // 私聊消息已读推送
 	PushEventImSessionUnreadCleared = "im.session.unread.cleared" // 会话未读清零推送
 	PushEventImMessageMention       = "im.message.mention"        // @提及通知推送
 	PushEventContactApply           = "im.contact.apply"          // 好友申请消息推送

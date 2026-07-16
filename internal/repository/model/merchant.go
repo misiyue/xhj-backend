@@ -8,10 +8,17 @@ import (
 
 // 商户审核状态
 const (
-	MerchantStatusPending  = 0 // 待审核
-	MerchantStatusApproved = 1 // 审核通过
-	MerchantStatusRejected = 2 // 驳回
+	MerchantStatusApplyCancel = -1 // 申请注销
+	MerchantStatusCancelled   = -2 // 注销
+	MerchantStatusPending     = 0  // 待审核
+	MerchantStatusApproved    = 1  // 审核通过
+	MerchantStatusRejected    = 2  // 驳回
 )
+
+// MerchantIsOperating 是否为正常营业中的商户（审核通过且未进入注销流程）
+func MerchantIsOperating(status int) bool {
+	return status == MerchantStatusApproved
+}
 
 const (
 	MerchantPayTypeKeyHd = "hd" // 宏达

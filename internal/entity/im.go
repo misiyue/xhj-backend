@@ -85,6 +85,14 @@ type ImMessageRevokePayload struct {
 	Remark     string `json:"remark"`
 }
 
+// ImMessageReadPayload im.message.read - 私聊消息已读
+type ImMessageReadPayload struct {
+	TalkMode   int      `json:"talk_mode"`
+	FromId     int      `json:"from_id"`
+	ReceiverId int      `json:"receiver_id"`
+	MsgIds     []string `json:"msg_ids"`
+}
+
 // ImSessionUnreadClearedPayload im.session.unread.cleared
 type ImSessionUnreadClearedPayload struct {
 	UserId     int `json:"user_id"`
