@@ -25,16 +25,17 @@ import (
 var _ web.IMessageHandler = (*Message)(nil)
 
 type Message struct {
-	TalkService          service.ITalkService
-	AuthService          service.IAuthService
-	RedEnvelopeService   service.IRedEnvelopeService
-	Filesystem           filesystem.IFilesystem
-	GroupMemberRepo      *repo.GroupMember
-	TalkRecordFriendRepo *repo.TalkUserMessage
-	TalkRecordGroupRepo  *repo.TalkGroupMessage
-	TalkRecordsService   service.ITalkRecordService
-	GroupMemberService   service.IGroupMemberService
-	MentionStorage       *cache.MentionStorage
+	TalkService            service.ITalkService
+	AuthService            service.IAuthService
+	RedEnvelopeService     service.IRedEnvelopeService
+	Filesystem             filesystem.IFilesystem
+	GroupMemberRepo        *repo.GroupMember
+	TalkRecordFriendRepo   *repo.TalkUserMessage
+	TalkRecordGroupRepo    *repo.TalkGroupMessage
+	TalkGroupMsgReaderRepo *repo.TalkGroupMsgReader
+	TalkRecordsService     service.ITalkRecordService
+	GroupMemberService     service.IGroupMemberService
+	MentionStorage         *cache.MentionStorage
 }
 
 // Records 获取会话消息记录
@@ -96,8 +97,13 @@ func (m *Message) Records(ctx context.Context, in *web.MessageRecordsRequest) (*
 		cursor = records[length-1].Id
 	}
 
+	var readerMap map[string][]int
+	if in.TalkMode == entity.ChatGroupMode {
+		readerMap = m.buildGroupReaderMap(ctx, uid, int(in.ReceiverId), records)
+	}
+
 	// 补充红包消息的状态信息
-	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
+	items := m.enrichRedEnvelopeStatus(ctx, uid, records, readerMap)
 
 	if in.TalkMode == entity.ChatPrivateMode {
 		m.markPrivateMessagesRead(ctx, uid, int(in.ReceiverId), records)
@@ -174,8 +180,13 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 		cursor = records[length-1].Id
 	}
 
+	var readerMap map[string][]int
+	if in.TalkMode == entity.ChatGroupMode {
+		readerMap = m.buildGroupReaderMap(ctx, uid, int(in.ReceiverId), records)
+	}
+
 	// 补充红包消息的状态信息
-	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
+	items := m.enrichRedEnvelopeStatus(ctx, uid, records, readerMap)
 
 	if in.TalkMode == entity.ChatPrivateMode {
 		m.markPrivateMessagesRead(ctx, uid, int(in.ReceiverId), records)
@@ -208,15 +219,15 @@ func (m *Message) ForwardRecords(ctx context.Context, in *web.MessageForwardReco
 	}
 
 	// 补充红包消息的状态信息
-	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
+	items := m.enrichRedEnvelopeStatus(ctx, uid, records, nil)
 
 	return &web.MessageRecordsClearResponse{
 		Items: items,
 	}, nil
 }
 
-// enrichRedEnvelopeStatus 补充红包消息的状态信息
-func (m *Message) enrichRedEnvelopeStatus(ctx context.Context, userId int, records []*model.TalkMessageRecord) []*web.MessageRecord {
+// enrichRedEnvelopeStatus 补充红包消息的状态信息；readerMap 为群聊已读用户（msg_id -> user_ids）
+func (m *Message) enrichRedEnvelopeStatus(ctx context.Context, userId int, records []*model.TalkMessageRecord, readerMap map[string][]int) []*web.MessageRecord {
 	return lo.Map(records, func(item *model.TalkMessageRecord, _ int) *web.MessageRecord {
 		extra := item.Extra
 		if item.IsRevoked == model.Yes {
@@ -250,18 +261,32 @@ func (m *Message) enrichRedEnvelopeStatus(ctx context.Context, userId int, recor
 			}
 		}
 
+		var readerUserIDs []int32
+		if readerMap != nil {
+			if ids, ok := readerMap[item.MsgId]; ok {
+				readerUserIDs = make([]int32, 0, len(ids))
+				for _, id := range ids {
+					readerUserIDs = append(readerUserIDs, int32(id))
+				}
+			}
+		}
+		if readerUserIDs == nil {
+			readerUserIDs = []int32{}
+		}
+
 		return &web.MessageRecord{
-			FromId:     int32(item.FromId),
-			MsgId:      item.MsgId,
-			Sequence:   int32(item.Id),
-			MsgType:    int32(item.MsgType),
-			Nickname:   item.Nickname,
-			Avatar:     item.Avatar,
-			IsRevoked:  int32(item.IsRevoked),
-			IsRead:     int32(item.IsRead),
-			SendTime:   item.SendTime.Format(time.DateTime),
-			Extra:      extra,
-			Quote:      item.Quote,
+			FromId:         int32(item.FromId),
+			MsgId:          item.MsgId,
+			Sequence:       int32(item.Id),
+			MsgType:        int32(item.MsgType),
+			Nickname:       item.Nickname,
+			Avatar:         item.Avatar,
+			IsRevoked:      int32(item.IsRevoked),
+			IsRead:         int32(item.IsRead),
+			SendTime:       item.SendTime.Format(time.DateTime),
+			Extra:          extra,
+			Quote:          item.Quote,
+			ReaderUserIds:  readerUserIDs,
 		}
 	})
 }
@@ -504,6 +529,29 @@ func (m *Message) GetAllMentions(ctx context.Context) (*AllMentionsResponse, err
 	return &AllMentionsResponse{
 		Groups: groups,
 	}, nil
+}
+
+func (m *Message) buildGroupReaderMap(ctx context.Context, readerId, groupId int, records []*model.TalkMessageRecord) map[string][]int {
+	if readerId <= 0 || groupId <= 0 || len(records) == 0 {
+		return nil
+	}
+	if m.TalkService != nil {
+		_ = m.TalkService.MarkGroupMessagesRead(ctx, readerId, groupId, records)
+	}
+	if m.TalkGroupMsgReaderRepo == nil {
+		return nil
+	}
+	msgIds := make([]string, 0, len(records))
+	for _, rec := range records {
+		if rec != nil && rec.MsgId != "" {
+			msgIds = append(msgIds, rec.MsgId)
+		}
+	}
+	if len(msgIds) == 0 {
+		return nil
+	}
+	readerMap, _ := m.TalkGroupMsgReaderRepo.MapReaderUserIDsByMsgIDs(ctx, msgIds)
+	return readerMap
 }
 
 func (m *Message) markPrivateMessagesRead(ctx context.Context, readerId, peerId int, records []*model.TalkMessageRecord) {

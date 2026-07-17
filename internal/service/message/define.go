@@ -178,7 +178,14 @@ type CreateRTCCallMessage struct {
 	Type       int    `json:"type"`        // 通话类型 1:语音 2:视频
 	Status     int    `json:"status"`      // 通话状态 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
 	Duration   int    `json:"duration"`    // 通话时长
-	PushVoIP   bool   `json:"-"`           // 是否发送 VoIP 离线推送（仅前端 message/send 发起通话时为 true）
+}
+
+// SendRTCCallInvite 音视频通话邀请（仅离线 VoIP 唤醒，不写消息、不推 WebSocket）
+type SendRTCCallInvite struct {
+	TalkMode   int `json:"talk_mode"`
+	FromId     int `json:"from_id"`
+	ReceiverId int `json:"receiver_id"`
+	Type       int `json:"type"` // 1:语音 2:视频
 }
 
 type CreateRedEnvelopeMessage struct {

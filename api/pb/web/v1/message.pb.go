@@ -581,6 +581,7 @@ type MessageRecord struct {
 	Extra         string                 `protobuf:"bytes,10,opt,name=extra,proto3" json:"extra,omitempty"`
 	Quote         string                 `protobuf:"bytes,12,opt,name=quote,proto3" json:"quote,omitempty"`
 	IsRead        int32                  `protobuf:"varint,13,opt,name=is_read,json=isRead,proto3" json:"is_read,omitempty"`
+	ReaderUserIds []int32                `protobuf:"varint,14,rep,packed,name=reader_user_ids,json=readerUserIds,proto3" json:"reader_user_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -692,6 +693,13 @@ func (x *MessageRecord) GetIsRead() int32 {
 	return 0
 }
 
+func (x *MessageRecord) GetReaderUserIds() []int32 {
+	if x != nil {
+		return x.ReaderUserIds
+	}
+	return nil
+}
+
 var File_web_v1_message_proto protoreflect.FileDescriptor
 
 const file_web_v1_message_proto_rawDesc = "" +
@@ -733,7 +741,7 @@ const file_web_v1_message_proto_rawDesc = "" +
 	"\ttalk_mode\x18\x01 \x01(\x05R\btalkMode\x12\x17\n" +
 	"\amsg_ids\x18\x02 \x03(\tR\x06msgIds\"M\n" +
 	"\x1bMessageRecordsClearResponse\x12.\n" +
-	"\x05items\x18\x01 \x03(\v2\x12.web.MessageRecordB\x04\xe2A\x01\x02R\x05items\"\xe7\x02\n" +
+	"\x05items\x18\x01 \x03(\v2\x12.web.MessageRecordB\x04\xe2A\x01\x02R\x05items\"\x8f\x03\n" +
 	"\rMessageRecord\x12\x1b\n" +
 	"\x06msg_id\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x05msgId\x12 \n" +
 	"\bsequence\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\bsequence\x12\x1f\n" +
@@ -747,7 +755,8 @@ const file_web_v1_message_proto_rawDesc = "" +
 	"\x05extra\x18\n" +
 	" \x01(\tB\x04\xe2A\x01\x02R\x05extra\x12\x1a\n" +
 	"\x05quote\x18\f \x01(\tB\x04\xe2A\x01\x02R\x05quote\x12\x17\n" +
-	"\ais_read\x18\r \x01(\x05R\x06isRead2\xc3\x04\n" +
+	"\ais_read\x18\r \x01(\x05R\x06isRead\x12&\n" +
+	"\x0freader_user_ids\x18\x0e \x03(\x05R\rreaderUserIds2\xc3\x04\n" +
 	"\aMessage\x12b\n" +
 	"\x06Revoke\x12\x19.web.MessageRevokeRequest\x1a\x1a.web.MessageRevokeResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/message/revoke\x12b\n" +
 	"\x06Delete\x12\x19.web.MessageDeleteRequest\x1a\x1a.web.MessageDeleteResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/message/delete\x12f\n" +

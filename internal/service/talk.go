@@ -36,14 +36,16 @@ type ITalkService interface {
 	DeleteRecord(ctx context.Context, opt *TalkDeleteRecordOption) error
 	Revoke(ctx context.Context, opt *TalkRevokeOption) error
 	MarkPrivateMessagesRead(ctx context.Context, readerId, peerId int, msgIds []string) error
+	MarkGroupMessagesRead(ctx context.Context, readerId, groupId int, records []*model.TalkMessageRecord) error
 }
 
 type TalkService struct {
 	*repo.Source
-	GroupMemberRepo *repo.GroupMember
-	UserRepo        *repo.Users
-	PushMessage     *logic.PushMessage
-	MessageStorage  *cache.MessageStorage
+	GroupMemberRepo        *repo.GroupMember
+	UserRepo               *repo.Users
+	TalkGroupMsgReaderRepo *repo.TalkGroupMsgReader
+	PushMessage            *logic.PushMessage
+	MessageStorage         *cache.MessageStorage
 }
 
 // DeleteRecord 删除消息记录
@@ -237,5 +239,52 @@ func (t *TalkService) MarkPrivateMessagesRead(ctx context.Context, readerId, pee
 		logger.Errorf("mark private messages read push error: reader_id=%d peer_id=%d %s", readerId, peerId, err.Error())
 	}
 
+	return nil
+}
+
+// MarkGroupMessagesRead 群成员拉取历史消息后，将非本人发送且未读的消息写入已读表并通知在线群成员。
+func (t *TalkService) MarkGroupMessagesRead(ctx context.Context, readerId, groupId int, records []*model.TalkMessageRecord) error {
+	if readerId <= 0 || groupId <= 0 || len(records) == 0 || t.TalkGroupMsgReaderRepo == nil {
+		return nil
+	}
+
+	candidates := make([]string, 0, len(records))
+	for _, rec := range records {
+		if rec == nil || rec.MsgId == "" || rec.FromId == readerId {
+			continue
+		}
+		candidates = append(candidates, rec.MsgId)
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	unread, err := t.TalkGroupMsgReaderRepo.FilterUnreadMsgIDs(ctx, readerId, candidates)
+	if err != nil {
+		return err
+	}
+	if len(unread) == 0 {
+		return nil
+	}
+
+	affected, err := t.TalkGroupMsgReaderRepo.BatchInsert(ctx, readerId, unread)
+	if err != nil {
+		return err
+	}
+	if affected == 0 || t.PushMessage == nil {
+		return nil
+	}
+
+	if err := t.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
+		Event: entity.SubEventImMessageRead,
+		Payload: jsonutil.Encode(entity.SubEventImMessageReadPayload{
+			TalkMode:   entity.ChatGroupMode,
+			FromId:     readerId,
+			ReceiverId: groupId,
+			MsgIds:     unread,
+		}),
+	}); err != nil {
+		logger.Errorf("mark group messages read push error: reader_id=%d group_id=%d %s", readerId, groupId, err.Error())
+	}
 	return nil
 }

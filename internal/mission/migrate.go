@@ -54,6 +54,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.TalkUserMessage{},
 		&model.TalkGroupMessage{},
 		&model.TalkGroupMessageDel{},
+		&model.TalkGroupMsgReader{},
 		
 		// 表情包相关
 		&model.Emoticon{},

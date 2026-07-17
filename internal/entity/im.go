@@ -85,7 +85,7 @@ type ImMessageRevokePayload struct {
 	Remark     string `json:"remark"`
 }
 
-// ImMessageReadPayload im.message.read - 私聊消息已读
+// ImMessageReadPayload im.message.read - 消息已读（私聊/群聊）
 type ImMessageReadPayload struct {
 	TalkMode   int      `json:"talk_mode"`
 	FromId     int      `json:"from_id"`

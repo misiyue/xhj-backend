@@ -17,6 +17,7 @@ var ProviderSet = wire.NewSet(
 	NewGroupNotice,
 	NewTalkSession,
 	NewTalkRecordGroupDel,
+	NewTalkGroupMsgReader,
 	NewEmoticon,
 	NewGroupVote,
 	NewFileUpload,

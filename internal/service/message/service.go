@@ -73,6 +73,8 @@ type IMessage interface {
 	CreateMixedMessage(ctx context.Context, option CreateMixedMessage) error
 	// CreateRTCCallMessage 音视频通话消息
 	CreateRTCCallMessage(ctx context.Context, option CreateRTCCallMessage) error
+	// SendRTCCallInvite 发起音视频通话邀请（仅 OneSignal VoIP 推送，不落库、不推 WebSocket）
+	SendRTCCallInvite(ctx context.Context, option SendRTCCallInvite) error
 	// CreateRedEnvelopeMessage 红包消息
 	CreateRedEnvelopeMessage(ctx context.Context, option CreateRedEnvelopeMessage) error
 	// CreateTransferMessage 转账消息
@@ -488,7 +490,7 @@ func (s *Service) CreateMixedMessage(ctx context.Context, option CreateMixedMess
 }
 
 func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCallMessage) error {
-	if err := s.CreateMessage(ctx, CreateMessageOption{
+	return s.CreateMessage(ctx, CreateMessageOption{
 		MsgId:      option.MsgId,
 		TalkMode:   option.TalkMode,
 		FromId:     option.FromId,
@@ -499,13 +501,20 @@ func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCall
 			Status:   option.Status,
 			Duration: option.Duration,
 		}),
-	}); err != nil {
-		return err
-	}
+	})
+}
 
-	if option.TalkMode == entity.ChatPrivateMode && option.PushVoIP {
-		s.tryOneSignalVoIPCall(ctx, option.FromId, option.ReceiverId, option.Type)
+func (s *Service) SendRTCCallInvite(ctx context.Context, option SendRTCCallInvite) error {
+	if option.TalkMode != entity.ChatPrivateMode {
+		return errors.New("rtc_invite 仅支持私聊")
 	}
+	if option.FromId <= 0 || option.ReceiverId <= 0 {
+		return errors.New("无效的发送者或接收者")
+	}
+	if option.Type != 1 && option.Type != 2 {
+		return errors.New("通话类型无效")
+	}
+	s.tryOneSignalVoIPCall(ctx, option.FromId, option.ReceiverId, option.Type)
 	return nil
 }
 
