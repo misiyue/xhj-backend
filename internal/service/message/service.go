@@ -511,10 +511,7 @@ func (s *Service) SendRTCCallInvite(ctx context.Context, option SendRTCCallInvit
 	if option.FromId <= 0 || option.ReceiverId <= 0 {
 		return errors.New("无效的发送者或接收者")
 	}
-	if option.Type != 1 && option.Type != 2 {
-		return errors.New("通话类型无效")
-	}
-	s.tryOneSignalVoIPCall(ctx, option.FromId, option.ReceiverId, option.Type)
+	TryOneSignalRTCInvitePush(ctx, s.UsersRepo, s.TalkSessionRepo, option.FromId, option.ReceiverId)
 	return nil
 }
 

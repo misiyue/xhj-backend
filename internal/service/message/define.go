@@ -185,7 +185,6 @@ type SendRTCCallInvite struct {
 	TalkMode   int `json:"talk_mode"`
 	FromId     int `json:"from_id"`
 	ReceiverId int `json:"receiver_id"`
-	Type       int `json:"type"` // 1:语音 2:视频
 }
 
 type CreateRedEnvelopeMessage struct {

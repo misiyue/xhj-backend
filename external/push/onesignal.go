@@ -169,8 +169,12 @@ type VoIPCallData struct {
 	FromUserAvatar string `json:"from_user_avatar"`
 }
 
+// VoIPInviteContentsEN rtc_invite 固定推送文案（contents.en）
+const VoIPInviteContentsEN = "你有一条语音来电消息"
+
 type voipSendRequest struct {
 	AppID                string              `json:"app_id"`
+	Contents             map[string]string   `json:"contents"`
 	IncludeAliases       map[string][]string `json:"include_aliases"`
 	TargetChannel        string              `json:"target_channel"`
 	ApnsPushTypeOverride string              `json:"apns_push_type_override"`
@@ -188,6 +192,15 @@ func (c *Client) SendVoIPToUser(userID int, data VoIPCallData) error {
 	return c.sendVoIP(strconv.Itoa(userID), data)
 }
 
+// SendRTCInviteVoIPToUser rtc_invite：include_aliases.external_id = [receiver_id]
+func (c *Client) SendRTCInviteVoIPToUser(receiverID int, data VoIPCallData) error {
+	if receiverID <= 0 {
+		return fmt.Errorf("receiver_id invalid")
+	}
+	data.ToUserId = receiverID
+	return c.sendVoIP(strconv.Itoa(receiverID), data)
+}
+
 func (c *Client) sendVoIP(externalID string, data VoIPCallData) error {
 	if c == nil || c.URL == "" {
 		return fmt.Errorf("push client not configured")
@@ -198,6 +211,9 @@ func (c *Client) sendVoIP(externalID string, data VoIPCallData) error {
 	}
 	body, err := json.Marshal(voipSendRequest{
 		AppID: c.AppID,
+		Contents: map[string]string{
+			"en": VoIPInviteContentsEN,
+		},
 		IncludeAliases: map[string][]string{
 			"external_id": {externalID},
 		},
@@ -260,6 +276,14 @@ func SendVoIPToUser(userID int, data VoIPCallData) error {
 		return fmt.Errorf("push client not configured")
 	}
 	return defaultClient.SendVoIPToUser(userID, data)
+}
+
+// SendRTCInviteVoIPToUser rtc_invite：include_aliases.external_id = [receiver_id]
+func SendRTCInviteVoIPToUser(receiverID int, data VoIPCallData) error {
+	if defaultClient == nil {
+		return fmt.Errorf("push client not configured")
+	}
+	return defaultClient.SendRTCInviteVoIPToUser(receiverID, data)
 }
 
 func isEmptyErrors(v any) bool {

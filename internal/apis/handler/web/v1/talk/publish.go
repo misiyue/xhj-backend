@@ -498,16 +498,9 @@ func (c *Publish) onSendRTCCall(ctx *gin.Context) error {
 	return nil
 }
 
-type onSendRTCInviteMessage struct {
-	BaseMessageRequest
-	Body struct {
-		Type int `json:"type" binding:"required"` // 1:语音 2:视频
-	} `json:"body" binding:"required"`
-}
-
 // 音视频通话邀请（仅 OneSignal VoIP 推送，不落库、不推 WebSocket）
 func (c *Publish) onSendRTCInvite(ctx *gin.Context) error {
-	in := &onSendRTCInviteMessage{}
+	in := &BaseMessageRequest{}
 	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
 		return errorx.New(400, err.Error())
 	}
@@ -521,7 +514,6 @@ func (c *Publish) onSendRTCInvite(ctx *gin.Context) error {
 		TalkMode:   in.TalkMode,
 		FromId:     uid,
 		ReceiverId: in.ReceiverId,
-		Type:       in.Body.Type,
 	})
 	if err != nil {
 		return ctx.Error(err)

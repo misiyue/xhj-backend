@@ -44,10 +44,13 @@ type Merchant struct {
 	LimitTime    int       `gorm:"column:limit_time;default:0" json:"limit_time"`
 	IsFrozen     int       `gorm:"column:is_frozen;default:0" json:"is_frozen"`
 	FrozenTime   int       `gorm:"column:frozen_time;default:0" json:"frozen_time"`
-	IsClose      int       `gorm:"column:is_close;default:0" json:"is_close"`
-	PayTypes     string    `gorm:"column:pay_types;type:varchar(255)" json:"pay_types"`
-	CreatedAt    time.Time `gorm:"column:created_at" json:"created_at"`
-	UpdatedAt    time.Time `gorm:"column:updated_at" json:"updated_at"`
+	IsClose      int        `gorm:"column:is_close;default:0" json:"is_close"`
+	PayTypes      string     `gorm:"column:pay_types;type:varchar(255)" json:"pay_types"`
+	CarReason     string     `gorm:"column:car_reason;type:varchar(255);not null;default:''" json:"car_reason"` // 注销申请驳回原因
+	CancelApplyAt *time.Time `gorm:"column:cancel_apply_at" json:"cancel_apply_at"`                             // 注销申请时间
+	CancelAt      *time.Time `gorm:"column:cancel_at" json:"cancel_at"`                                         // 注销时间
+	CreatedAt     time.Time  `gorm:"column:created_at" json:"created_at"`
+	UpdatedAt     time.Time  `gorm:"column:updated_at" json:"updated_at"`
 }
 
 func (Merchant) TableName() string {

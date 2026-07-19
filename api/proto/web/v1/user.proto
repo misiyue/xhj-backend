@@ -459,6 +459,12 @@ message MerchantStatusResponse {
   string updated_at = 19;
   // 已开通支付类型及金额区间，如 {"hd":{"min":200,"max":10000}}，依据 pay_types JSON 中 pay_type 映射
   map<string, MerchantPayTypeLimit> pay_types = 20;
+  // 注销申请驳回原因
+  string car_reason = 21;
+  // 注销申请时间
+  string cancel_apply_at = 22;
+  // 注销时间
+  string cancel_at = 23;
 }
 
 // 买家查看挂单对应商户的公开信息

@@ -167,6 +167,24 @@ func (r *MerchantOrder) ListByParticipant(ctx context.Context, userId int, asBuy
 	return rows, total, nil
 }
 
+// HasActiveOrdersBySalerId 卖家是否存在待支付或已支付未完成的订单
+func (r *MerchantOrder) HasActiveOrdersBySalerId(ctx context.Context, salerId int) (bool, error) {
+	if salerId <= 0 {
+		return false, nil
+	}
+	var n int64
+	err := r.db.WithContext(ctx).Model(&model.MerchantOrder{}).
+		Where("saler_id = ? AND is_cancel = 0 AND status IN ?", salerId, []int{
+			model.MerchantOrderStatusPendingPay,
+			model.MerchantOrderStatusPaid,
+		}).
+		Count(&n).Error
+	if err != nil {
+		return false, err
+	}
+	return n > 0, nil
+}
+
 // CreateFromTask 创建订单：单事务内锁挂单 → 扣减 count → 创建订单（任一步失败整体回滚）
 func (r *MerchantOrder) CreateFromTask(ctx context.Context, buyerID int, taskID int, counts float64, payTypeInfo string, payTypeID int, buyType int, remark string) (*model.MerchantOrder, error) {
 	var out *model.MerchantOrder

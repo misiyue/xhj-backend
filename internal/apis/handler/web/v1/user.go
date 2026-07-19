@@ -573,6 +573,14 @@ func (u *User) merchantToStatusResponse(ctx context.Context, m *model.Merchant) 
 	if err != nil {
 		return nil, err
 	}
+	cancelApplyAt := ""
+	if m.CancelApplyAt != nil {
+		cancelApplyAt = timeutil.FormatDatetime(*m.CancelApplyAt)
+	}
+	cancelAt := ""
+	if m.CancelAt != nil {
+		cancelAt = timeutil.FormatDatetime(*m.CancelAt)
+	}
 	return &web.MerchantStatusResponse{
 		HasApplication: true,
 		Id:             int32(m.Id),
@@ -594,6 +602,9 @@ func (u *User) merchantToStatusResponse(ctx context.Context, m *model.Merchant) 
 		CreatedAt:      timeutil.FormatDatetime(m.CreatedAt),
 		UpdatedAt:      timeutil.FormatDatetime(m.UpdatedAt),
 		PayTypes:       payTypes,
+		CarReason:      m.CarReason,
+		CancelApplyAt:  cancelApplyAt,
+		CancelAt:       cancelAt,
 	}, nil
 }
 
@@ -636,8 +647,19 @@ func (u *User) MerchantCancelApply(ctx context.Context) (*MerchantCancelApplyRes
 		return nil, errorx.New(400, "存在未卖完的上架挂单，请先下架或等待售完后再申请注销")
 	}
 
+	if u.MerchantOrderRepo != nil {
+		hasActiveOrder, err := u.MerchantOrderRepo.HasActiveOrdersBySalerId(ctx, uid)
+		if err != nil {
+			return nil, err
+		}
+		if hasActiveOrder {
+			return nil, errorx.New(400, "你的商户有订单未结束")
+		}
+	}
+
 	if err := u.MerchantRepo.UpdateById(ctx, m.Id, map[string]any{
-		"status": model.MerchantStatusApplyCancel,
+		"status":          model.MerchantStatusApplyCancel,
+		"cancel_apply_at": time.Now(),
 	}); err != nil {
 		return nil, err
 	}
