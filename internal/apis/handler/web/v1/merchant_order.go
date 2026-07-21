@@ -27,6 +27,45 @@ import (
 
 const merchantThirdPayURLExpire = 2 * time.Minute
 
+const merchantThirdPayOrderBusyMsg = "当前下单人数较多，请稍后重试"
+
+func parseThirdPayOrderCallError(err error) (url, request, respond string, ok bool) {
+	var hd *hdpay.CreateOrderError
+	if errors.As(err, &hd) {
+		return hd.URL, hd.Request, hd.Response, true
+	}
+	var hm *hmpay.CreateOrderError
+	if errors.As(err, &hm) {
+		return hm.URL, hm.Request, hm.Response, true
+	}
+	return "", "", "", false
+}
+
+func (u *User) logMerchantOrderPayAPIErr(ctx context.Context, orderNo string, err error) {
+	url, request, respond, ok := parseThirdPayOrderCallError(err)
+	if !ok || u.MerchantOrderErrLogRepo == nil || orderNo == "" {
+		return
+	}
+	if logErr := u.MerchantOrderErrLogRepo.Create(ctx, &model.MerchantOrderErrLog{
+		No:      orderNo,
+		Request: request,
+		Respond: respond,
+		URL:     url,
+	}); logErr != nil {
+		logger.Errorf("merchant_order_err_log create err: order_no=%s %s", orderNo, logErr.Error())
+	}
+}
+
+func (u *User) merchantThirdPayOrderErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if _, _, _, ok := parseThirdPayOrderCallError(err); ok {
+		return errorx.New(400, merchantThirdPayOrderBusyMsg)
+	}
+	return errorx.New(400, err.Error())
+}
+
 func merchantOrderToListProto(o *model.MerchantOrder, merchantNickname string) *web.MerchantOrderListItem {
 	if o == nil {
 		return nil
@@ -545,7 +584,8 @@ func (u *User) merchantOrderPayHd(ctx context.Context, in *web.MerchantOrderPayR
 	}
 	data, err := client.CreateOrder(req)
 	if err != nil {
-		return nil, errorx.New(400, err.Error())
+		u.logMerchantOrderPayAPIErr(ctx, orderNo, err)
+		return nil, u.merchantThirdPayOrderErr(err)
 	}
 
 	amt, _ := strconv.ParseFloat(submitAmount, 64)
@@ -616,7 +656,8 @@ func (u *User) merchantOrderPayHm(ctx context.Context, in *web.MerchantOrderPayR
 		HrefBackURL: strings.TrimSpace(in.GetReturnUrl()),
 	})
 	if err != nil {
-		return nil, errorx.New(400, err.Error())
+		u.logMerchantOrderPayAPIErr(ctx, orderNo, err)
+		return nil, u.merchantThirdPayOrderErr(err)
 	}
 
 	row := &model.MerchantHmOrder{

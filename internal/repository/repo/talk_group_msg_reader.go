@@ -61,7 +61,10 @@ func (r *TalkGroupMsgReader) BatchInsert(ctx context.Context, userId int, msgIds
 	if len(rows) == 0 {
 		return 0, nil
 	}
-	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{DoNothing: true}).Create(&rows)
+	result := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "msg_id"}, {Name: "user_id"}},
+		DoNothing: true,
+	}).Omit("CreatedAt").Create(&rows)
 	return result.RowsAffected, result.Error
 }
 

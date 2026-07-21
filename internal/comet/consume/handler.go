@@ -6,6 +6,7 @@ import (
 
 	"github.com/gzydong/go-chat/config"
 	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/longnet"
 	"github.com/gzydong/go-chat/internal/repository/repo"
@@ -23,6 +24,8 @@ type Handler struct {
 	TalkRecordsService service.ITalkRecordService
 	ContactService     service.IContactService
 	MessageService     message.IService
+	TalkService        service.ITalkService
+	PushMessage        *logic.PushMessage
 	serv               longnet.IServer `wire:"-"`
 	GroupMemberRepo    *repo.GroupMember
 }
@@ -64,6 +67,22 @@ func (h *Handler) init() {
 
 func (h *Handler) SetServ(serv longnet.IServer) {
 	h.serv = serv
+	patchConsumeHandlerDeps(h)
+}
+
+func patchConsumeHandlerDeps(h *Handler) {
+	if h == nil {
+		return
+	}
+	ts, ok := h.TalkService.(*service.TalkService)
+	if !ok || ts == nil {
+		return
+	}
+	if ts.PushMessage == nil && h.PushMessage != nil {
+		ts.PushMessage = h.PushMessage
+	} else if h.PushMessage == nil && ts.PushMessage != nil {
+		h.PushMessage = ts.PushMessage
+	}
 }
 
 func (h *Handler) Call(ctx context.Context, event string, data []byte) {

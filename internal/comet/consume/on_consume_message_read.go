@@ -20,12 +20,7 @@ func (h *Handler) onConsumeMessageRead(ctx context.Context, body []byte) {
 		return
 	}
 
-	data := Message(entity.PushEventImMessageRead, entity.ImMessageReadPayload{
-		TalkMode:   in.TalkMode,
-		FromId:     in.FromId,
-		ReceiverId: in.ReceiverId,
-		MsgIds:     in.MsgIds,
-	})
+	data := buildMessageReadWS(in.TalkMode, in.FromId, in.ReceiverId, in.MsgIds)
 
 	switch in.TalkMode {
 	case entity.ChatPrivateMode:

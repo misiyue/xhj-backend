@@ -142,6 +142,30 @@ type CreateOrderResponse struct {
 	Data    *CreateOrderData `json:"data"`
 }
 
+// CreateOrderError 第三方下单接口调用失败（含请求/响应，供业务层写错误日志）
+type CreateOrderError struct {
+	URL      string
+	Request  string
+	Response string
+	Message  string
+}
+
+func (e *CreateOrderError) Error() string {
+	if e != nil && e.Message != "" {
+		return e.Message
+	}
+	return "下单失败"
+}
+
+func newCreateOrderError(url, request, response, message string) *CreateOrderError {
+	return &CreateOrderError{
+		URL:      url,
+		Request:  request,
+		Response: response,
+		Message:  message,
+	}
+}
+
 // CreateOrder 调用统一下单
 func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) {
 	if c == nil || c.OrderURL == "" {
@@ -178,6 +202,7 @@ func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) 
 	if err != nil {
 		return nil, err
 	}
+	requestBody := string(body)
 	httpReq, err := http.NewRequest(http.MethodPost, c.OrderURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
@@ -186,26 +211,27 @@ func (c *Client) CreateOrder(req *CreateOrderRequest) (*CreateOrderData, error) 
 
 	resp, err := c.HTTP.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, newCreateOrderError(c.OrderURL, requestBody, "", err.Error())
 	}
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, newCreateOrderError(c.OrderURL, requestBody, "", err.Error())
 	}
+	responseBody := string(respBody)
 	var out CreateOrderResponse
 	if err := json.Unmarshal(respBody, &out); err != nil {
-		return nil, fmt.Errorf("hdpay decode: %w, body=%s", err, string(respBody))
+		return nil, newCreateOrderError(c.OrderURL, requestBody, responseBody, fmt.Sprintf("hdpay decode: %v", err))
 	}
 	if out.Code != 0 {
 		msg := out.Message
 		if msg == "" {
 			msg = "下单失败"
 		}
-		return nil, fmt.Errorf("%s", msg)
+		return nil, newCreateOrderError(c.OrderURL, requestBody, responseBody, msg)
 	}
 	if out.Data == nil || out.Data.PayURL == "" {
-		return nil, fmt.Errorf("下单成功但未返回支付链接")
+		return nil, newCreateOrderError(c.OrderURL, requestBody, responseBody, "下单成功但未返回支付链接")
 	}
 	return out.Data, nil
 }

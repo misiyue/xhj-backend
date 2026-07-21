@@ -117,4 +117,5 @@ message MessageRecord{
   string quote = 12 [(google.api.field_behavior) = REQUIRED];
   int32 is_read = 13;
   repeated int32 reader_user_ids = 14;
+  repeated int32 unreader_user_ids = 15;
 }

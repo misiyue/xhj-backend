@@ -33,6 +33,7 @@ type ImMessagePayloadBody struct {
 	Nickname  string `json:"nickname"`
 	Avatar    string `json:"avatar"`
 	IsRevoked int    `json:"is_revoked"`
+	IsRead    int    `json:"is_read,omitempty"` // 私聊：0-未读 1-已读
 	SendTime  string `json:"send_time"`
 	Extra     any    `json:"extra"` // 额外参数
 	Quote     any    `json:"quote"` // 额外参数

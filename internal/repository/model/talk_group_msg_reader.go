@@ -6,7 +6,7 @@ import "time"
 type TalkGroupMsgReader struct {
 	MsgId     string    `gorm:"column:msg_id;type:varchar(64);primaryKey" json:"msg_id"`
 	UserId    int       `gorm:"column:user_id;primaryKey" json:"user_id"`
-	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
 }
 
 func (TalkGroupMsgReader) TableName() string {

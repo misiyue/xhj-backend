@@ -38,6 +38,8 @@ func (h *Handler) onConsumeTalkPrivateMessage(ctx context.Context, in entity.Sub
 		return
 	}
 
+	markReadOnDelivery := shouldMarkPrivateMessageReadOnDelivery(message)
+
 	body := entity.ImMessagePayloadBody{
 		MsgId:     message.MsgId,
 		MsgType:   message.MsgType,
@@ -46,6 +48,9 @@ func (h *Handler) onConsumeTalkPrivateMessage(ctx context.Context, in entity.Sub
 		SendTime:  message.CreatedAt.Format(time.DateTime),
 		Extra:     message.Extra,
 		Quote:     message.Quote,
+	}
+	if markReadOnDelivery {
+		body.IsRead = model.TalkUserMessageIsReadYes
 	}
 
 	if body.FromId > 0 {
@@ -65,11 +70,32 @@ func (h *Handler) onConsumeTalkPrivateMessage(ctx context.Context, in entity.Sub
 		Body:       body,
 	})
 
+	delivered := false
 	for _, session := range sessions {
 		if err := session.Write(data); err != nil {
 			slog.Error("session write message error", "error", err)
+			continue
 		}
+		delivered = true
 	}
+
+	if delivered && markReadOnDelivery {
+		h.markAndDeliverPrivateRead(ctx, message.UserId, message.FromId, []string{message.MsgId})
+	}
+}
+
+func shouldMarkPrivateMessageReadOnDelivery(message model.TalkUserMessage) bool {
+	if message.MsgId == "" || message.FromId <= 0 || message.UserId <= 0 {
+		return false
+	}
+	// 接收方副本：user_id 为收件人且不是发送者回显
+	if message.UserId == message.FromId {
+		return false
+	}
+	if message.IsRevoked == model.Yes {
+		return false
+	}
+	return true
 }
 
 // 群消息

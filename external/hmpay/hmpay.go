@@ -76,6 +76,30 @@ type CreateOrderResponse struct {
 	PayURL string `json:"payUrl"`
 }
 
+// CreateOrderError 第三方下单接口调用失败（含请求/响应，供业务层写错误日志）
+type CreateOrderError struct {
+	URL      string
+	Request  string
+	Response string
+	Message  string
+}
+
+func (e *CreateOrderError) Error() string {
+	if e != nil && e.Message != "" {
+		return e.Message
+	}
+	return "下单失败"
+}
+
+func newCreateOrderError(url, request, response, message string) *CreateOrderError {
+	return &CreateOrderError{
+		URL:      url,
+		Request:  request,
+		Response: response,
+		Message:  message,
+	}
+}
+
 func (c *Client) CreateOrder(req *CreateOrderRequest) (payURL string, err error) {
 	if c == nil || c.OrderURL == "" {
 		return "", fmt.Errorf("hmpay client not configured")
@@ -106,23 +130,24 @@ func (c *Client) CreateOrder(req *CreateOrderRequest) (payURL string, err error)
 	}
 	resp, err := c.HTTP.Do(httpReq)
 	if err != nil {
-		return "", err
+		return "", newCreateOrderError(reqURL, reqURL, "", err.Error())
 	}
 	defer resp.Body.Close()
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", newCreateOrderError(reqURL, reqURL, "", err.Error())
 	}
+	responseBody := string(respBody)
 	var out CreateOrderResponse
 	if err := json.Unmarshal(respBody, &out); err != nil {
-		return "", fmt.Errorf("hmpay decode: %w, body=%s", err, string(respBody))
+		return "", newCreateOrderError(reqURL, reqURL, responseBody, fmt.Sprintf("hmpay decode: %v", err))
 	}
 	if out.Code != "0" {
-		return "", fmt.Errorf("汇美支付下单失败(code=%s)", out.Code)
+		return "", newCreateOrderError(reqURL, reqURL, responseBody, fmt.Sprintf("汇美支付下单失败(code=%s)", out.Code))
 	}
 	payURL = strings.TrimSpace(out.PayURL)
 	if payURL == "" {
-		return "", fmt.Errorf("汇美支付未返回付款链接")
+		return "", newCreateOrderError(reqURL, reqURL, responseBody, "汇美支付未返回付款链接")
 	}
 	return payURL, nil
 }

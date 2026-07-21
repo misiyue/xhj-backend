@@ -37,6 +37,7 @@ type User struct {
 	MerchantPaytypeRepo   *repo.MerchantPaytype
 	MerchantPaymentRepo   *repo.MerchantPayment
 	MerchantOrderRepo     *repo.MerchantOrder
+	MerchantOrderErrLogRepo *repo.MerchantOrderErrLog
 	MerchantHdOrderRepo *repo.MerchantHdOrder
 	MerchantHmOrderRepo *repo.MerchantHmOrder
 	MerchantSessionRepo *repo.MerchantSession

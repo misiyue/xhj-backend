@@ -13,11 +13,16 @@ import (
 	v1 "github.com/gzydong/go-chat/internal/apis/handler/web/v1"
 	"github.com/gzydong/go-chat/internal/apis/handler/web/v1/talk"
 	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/jwtutil"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
+	"github.com/gzydong/go-chat/internal/repository/repo"
+	"github.com/gzydong/go-chat/internal/service"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"gorm.io/gorm"
 )
 
 // RegisterWebRoute 注册 Web 路由
@@ -87,6 +92,7 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 	web2.RegisterGroupVoteHandler(api, resp, handler.V1.GroupVote)
 	web2.RegisterGroupNoticeHandler(api, resp, handler.V1.GroupNotice)
 	web2.RegisterMessageHandler(api, resp, handler.V1.TalkMessage)
+	patchTalkMessageDeps(handler.V1)
 
 	// Invite 需要 *repo.Users：子 Handler 若未在 wire_gen 里注入 UsersRepo 会为空指针。
 	// 顶层 web.Handler.UserRepo 与之一致，此处补齐引用，避免 /api/v1/invite/friends 空指针 panic。
@@ -107,6 +113,85 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 	web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
 
 	registerCustomApiRouter(resp, router, api, handler)
+}
+
+// patchTalkMessageDeps 补齐 wire_gen 未更新时 talk.Message / TalkService 的已读相关依赖。
+func patchTalkMessageDeps(v1 *web.V1) {
+	if v1 == nil || v1.TalkMessage == nil {
+		return
+	}
+	msg := v1.TalkMessage
+	msg.PushMessage = bootstrapPushMessage(v1, msg)
+	if ts, ok := msg.TalkService.(*service.TalkService); ok && ts != nil {
+		if ts.PushMessage == nil {
+			ts.PushMessage = msg.PushMessage
+		} else if msg.PushMessage == nil {
+			msg.PushMessage = ts.PushMessage
+		}
+	}
+	if msg.PushMessage == nil {
+		logger.Warnf("PushMessage 未注入，私聊/群聊已读 WebSocket 推送将不可用")
+	}
+	if msg.TalkGroupMsgReaderRepo == nil {
+		msg.TalkGroupMsgReaderRepo = bootstrapTalkGroupMsgReaderRepo(msg)
+		if msg.TalkGroupMsgReaderRepo == nil {
+			logger.Warnf("TalkGroupMsgReaderRepo 未注入且无法从现有 DB 依赖初始化，群聊已读将不可用")
+		}
+	}
+	ts, ok := msg.TalkService.(*service.TalkService)
+	if !ok || ts == nil {
+		return
+	}
+	if ts.TalkGroupMsgReaderRepo == nil && msg.TalkGroupMsgReaderRepo != nil {
+		ts.TalkGroupMsgReaderRepo = msg.TalkGroupMsgReaderRepo
+	} else if msg.TalkGroupMsgReaderRepo == nil && ts.TalkGroupMsgReaderRepo != nil {
+		msg.TalkGroupMsgReaderRepo = ts.TalkGroupMsgReaderRepo
+	}
+	if ts.PushMessage == nil && msg.PushMessage != nil {
+		ts.PushMessage = msg.PushMessage
+	}
+}
+
+func bootstrapPushMessage(v1 *web.V1, msg *talk.Message) *logic.PushMessage {
+	if msg != nil && msg.PushMessage != nil {
+		return msg.PushMessage
+	}
+	if v1 == nil {
+		return nil
+	}
+	if v1.User != nil && v1.User.PushMessage != nil {
+		return v1.User.PushMessage
+	}
+	if v1.Talk != nil && v1.Talk.PushMessage != nil {
+		return v1.Talk.PushMessage
+	}
+	if v1.GroupApply != nil && v1.GroupApply.PushMessage != nil {
+		return v1.GroupApply.PushMessage
+	}
+	return nil
+}
+
+func bootstrapTalkGroupMsgReaderRepo(msg *talk.Message) *repo.TalkGroupMsgReader {
+	if msg == nil {
+		return nil
+	}
+	var db *gorm.DB
+	switch {
+	case msg.TalkRecordGroupRepo != nil && msg.TalkRecordGroupRepo.Db != nil:
+		db = msg.TalkRecordGroupRepo.Db
+	case msg.TalkRecordFriendRepo != nil && msg.TalkRecordFriendRepo.Db != nil:
+		db = msg.TalkRecordFriendRepo.Db
+	case msg.GroupMemberRepo != nil && msg.GroupMemberRepo.Db != nil:
+		db = msg.GroupMemberRepo.Db
+	case msg.TalkRecordsService != nil:
+		if trs, ok := msg.TalkRecordsService.(*service.TalkRecordService); ok && trs != nil && trs.Source != nil {
+			db = trs.Source.Db()
+		}
+	}
+	if db == nil {
+		return nil
+	}
+	return repo.NewTalkGroupMsgReader(db)
 }
 
 func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRoutes, handler *web.Handler) {
