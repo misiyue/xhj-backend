@@ -20,6 +20,8 @@ type IMessageHandler interface {
 	HistoryRecords(ctx context.Context, in *MessageHistoryRecordsRequest) (*MessageHistoryRecordsResponse, error)
 	// 转发消息记录
 	ForwardRecords(ctx context.Context, in *MessageForwardRecordsRequest) (*MessageRecordsClearResponse, error)
+	// 群消息已读/未读成员详情
+	MessageReaders(ctx context.Context, in *MessageReadersRequest) (*MessageReadersResponse, error)
 }
 
 // RegisterMessageHandler 注册服务路由处理器
@@ -78,6 +80,15 @@ func RegisterMessageHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.ForwardRecords(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/message/readers", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MessageReadersRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.MessageReaders(ctx.Request.Context(), &in)
 	}))
 
 }
