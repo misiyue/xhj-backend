@@ -117,38 +117,67 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 
 // patchTalkMessageDeps 补齐 wire_gen 未更新时 talk.Message / TalkService 的已读相关依赖。
 func patchTalkMessageDeps(v1 *web.V1) {
-	if v1 == nil || v1.TalkMessage == nil {
+	if v1 == nil {
 		return
 	}
-	msg := v1.TalkMessage
-	msg.PushMessage = bootstrapPushMessage(v1, msg)
-	if ts, ok := msg.TalkService.(*service.TalkService); ok && ts != nil {
-		if ts.PushMessage == nil {
-			ts.PushMessage = msg.PushMessage
-		} else if msg.PushMessage == nil {
-			msg.PushMessage = ts.PushMessage
+
+	var msg *talk.Message
+	if v1.TalkMessage != nil {
+		msg = v1.TalkMessage
+	}
+	if msg != nil {
+		msg.PushMessage = bootstrapPushMessage(v1, msg)
+		if msg.TalkGroupMsgReaderRepo == nil {
+			msg.TalkGroupMsgReaderRepo = bootstrapTalkGroupMsgReaderRepo(msg)
 		}
 	}
-	if msg.PushMessage == nil {
+
+	pushMessage := bootstrapPushMessage(v1, msg)
+	groupReaderRepo := bootstrapTalkGroupMsgReaderRepo(msg)
+	if pushMessage == nil {
 		logger.Warnf("PushMessage 未注入，私聊/群聊已读 WebSocket 推送将不可用")
 	}
-	if msg.TalkGroupMsgReaderRepo == nil {
-		msg.TalkGroupMsgReaderRepo = bootstrapTalkGroupMsgReaderRepo(msg)
-		if msg.TalkGroupMsgReaderRepo == nil {
-			logger.Warnf("TalkGroupMsgReaderRepo 未注入且无法从现有 DB 依赖初始化，群聊已读将不可用")
-		}
+	if groupReaderRepo == nil {
+		logger.Warnf("TalkGroupMsgReaderRepo 未注入，群聊已读将不可用")
 	}
-	ts, ok := msg.TalkService.(*service.TalkService)
-	if !ok || ts == nil {
+
+	patchTalkServiceReadDeps(v1.TalkMessage, pushMessage, groupReaderRepo)
+	patchTalkServiceReadDeps(v1.Talk, pushMessage, groupReaderRepo)
+}
+
+func patchTalkServiceReadDeps(handler any, pushMessage *logic.PushMessage, groupReaderRepo *repo.TalkGroupMsgReader) {
+	var ts *service.TalkService
+	switch h := handler.(type) {
+	case *talk.Message:
+		if h == nil {
+			return
+		}
+		if h.PushMessage == nil {
+			h.PushMessage = pushMessage
+		}
+		if h.TalkGroupMsgReaderRepo == nil {
+			h.TalkGroupMsgReaderRepo = groupReaderRepo
+		}
+		ts, _ = h.TalkService.(*service.TalkService)
+	case *talk.Session:
+		if h == nil {
+			return
+		}
+		if h.PushMessage == nil {
+			h.PushMessage = pushMessage
+		}
+		ts, _ = h.TalkService.(*service.TalkService)
+	default:
 		return
 	}
-	if ts.TalkGroupMsgReaderRepo == nil && msg.TalkGroupMsgReaderRepo != nil {
-		ts.TalkGroupMsgReaderRepo = msg.TalkGroupMsgReaderRepo
-	} else if msg.TalkGroupMsgReaderRepo == nil && ts.TalkGroupMsgReaderRepo != nil {
-		msg.TalkGroupMsgReaderRepo = ts.TalkGroupMsgReaderRepo
+	if ts == nil {
+		return
 	}
-	if ts.PushMessage == nil && msg.PushMessage != nil {
-		ts.PushMessage = msg.PushMessage
+	if ts.PushMessage == nil {
+		ts.PushMessage = pushMessage
+	}
+	if ts.TalkGroupMsgReaderRepo == nil {
+		ts.TalkGroupMsgReaderRepo = groupReaderRepo
 	}
 }
 

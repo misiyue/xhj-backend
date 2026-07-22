@@ -107,3 +107,12 @@ func Message(cmd string, body any) []byte {
 	data, _ := json.Marshal(msg)
 	return data
 }
+
+func buildMessageReadWS(talkMode, readerId, receiverId int, msgIds []string) []byte {
+	return Message(entity.PushEventImMessageRead, entity.ImMessageReadPayload{
+		TalkMode:   talkMode,
+		FromId:     readerId,
+		ReceiverId: receiverId,
+		MsgIds:     msgIds,
+	})
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
 	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
@@ -385,6 +386,12 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 func (s *Session) SessionClearUnreadNum(ctx context.Context, in *web.TalkSessionClearUnreadNumRequest) (*web.TalkSessionClearUnreadNumResponse, error) {
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
 	s.UnreadStorage.Reset(ctx, uid, int(in.TalkMode), int(in.ReceiverId))
+
+	if s.TalkService != nil {
+		if err := s.TalkService.ClearSessionRead(ctx, uid, int(in.TalkMode), int(in.ReceiverId)); err != nil {
+			logger.Errorf("clear session read err: user_id=%d talk_mode=%d receiver_id=%d %s", uid, in.TalkMode, in.ReceiverId, err.Error())
+		}
+	}
 
 	if s.PushMessage != nil {
 		_ = s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{

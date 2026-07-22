@@ -103,8 +103,8 @@ type SubEventTalkRevokePayload struct {
 
 type SubEventImMessageReadPayload struct {
 	TalkMode   int      `json:"talk_mode"`   // 1 私聊 2 群聊
-	FromId     int      `json:"from_id"`     // 私聊：发送方；群聊：阅读者
-	ReceiverId int      `json:"receiver_id"` // 私聊：阅读者；群聊：群 ID
+	FromId     int      `json:"from_id"`     // 本次阅读者 user_id
+	ReceiverId int      `json:"receiver_id"` // 私聊：对方 user_id；群聊：群 ID
 	MsgIds     []string `json:"msg_ids"`     // 已读消息 ID 列表
 }
 

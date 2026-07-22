@@ -35,9 +35,7 @@ type TalkDeleteRecordOption struct {
 type ITalkService interface {
 	DeleteRecord(ctx context.Context, opt *TalkDeleteRecordOption) error
 	Revoke(ctx context.Context, opt *TalkRevokeOption) error
-	MarkPrivateMessagesRead(ctx context.Context, readerId, peerId int, msgIds []string) ([]string, error)
-	NotifyPrivateMessagesRead(ctx context.Context, readerId, senderId int, msgIds []string) ([]string, error)
-	MarkGroupMessagesRead(ctx context.Context, readerId, groupId int, records []*model.TalkMessageRecord) error
+	ClearSessionRead(ctx context.Context, readerId, talkMode, receiverId int) error
 }
 
 type TalkService struct {
@@ -194,8 +192,7 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 	return errors.New("暂不支持撤回消息")
 }
 
-// MarkPrivateMessagesRead 接收方拉取私聊消息后，将对方发来的未读消息标记为已读。
-// 返回本次实际标记为已读的 msg_id 列表（由调用方推送 im.message.read）。
+// MarkPrivateMessagesRead 将指定私聊消息标记为已读，返回实际更新的 msg_id 列表。
 func (t *TalkService) MarkPrivateMessagesRead(ctx context.Context, readerId, peerId int, msgIds []string) ([]string, error) {
 	if readerId <= 0 || peerId <= 0 || len(msgIds) == 0 {
 		return nil, nil
@@ -231,100 +228,92 @@ func (t *TalkService) MarkPrivateMessagesRead(ctx context.Context, readerId, pee
 	return readMsgIds, nil
 }
 
-// NotifyPrivateMessagesRead 标记私聊已读并向发送方推送 im.message.read。
-func (t *TalkService) NotifyPrivateMessagesRead(ctx context.Context, readerId, senderId int, msgIds []string) ([]string, error) {
-	readMsgIds, err := t.MarkPrivateMessagesRead(ctx, readerId, senderId, msgIds)
-	if err != nil || len(readMsgIds) == 0 {
-		return readMsgIds, err
+// ClearSessionRead 清除会话未读：标记已读并推送 im.message.read（仅由 session-clear-unread-num 触发）。
+func (t *TalkService) ClearSessionRead(ctx context.Context, readerId, talkMode, receiverId int) error {
+	if readerId <= 0 || receiverId <= 0 {
+		return nil
 	}
-	if err := t.pushPrivateMessagesRead(ctx, senderId, readerId, readMsgIds); err != nil {
-		logger.Errorf("notify private messages read push err: sender_id=%d reader_id=%d %s", senderId, readerId, err.Error())
+	switch talkMode {
+	case entity.ChatPrivateMode:
+		return t.clearPrivateSessionRead(ctx, readerId, receiverId)
+	case entity.ChatGroupMode:
+		return t.clearGroupSessionRead(ctx, readerId, receiverId)
+	default:
+		return nil
 	}
-	return readMsgIds, nil
 }
 
-func (t *TalkService) pushPrivateMessagesRead(ctx context.Context, senderId, readerId int, msgIds []string) error {
+func (t *TalkService) clearPrivateSessionRead(ctx context.Context, readerId, peerId int) error {
+	if t.Source == nil {
+		return errors.New("talk service source is nil")
+	}
+	var msgIds []string
+	if err := t.Source.Db().WithContext(ctx).Model(&model.TalkUserMessage{}).
+		Where("from_id = ? and receiver_id = ? and is_read = ?", peerId, readerId, model.TalkUserMessageIsReadNo).
+		Pluck("msg_id", &msgIds).Error; err != nil {
+		return err
+	}
+	if len(msgIds) == 0 {
+		return nil
+	}
+	readMsgIds, err := t.MarkPrivateMessagesRead(ctx, readerId, peerId, msgIds)
+	if err != nil || len(readMsgIds) == 0 {
+		return err
+	}
+	return t.pushMessageReadEvent(ctx, readerId, peerId, entity.ChatPrivateMode, readMsgIds)
+}
+
+func (t *TalkService) clearGroupSessionRead(ctx context.Context, readerId, groupId int) error {
+	if t.Source == nil {
+		return errors.New("talk service source is nil")
+	}
+	if t.TalkGroupMsgReaderRepo == nil {
+		return errors.New("TalkGroupMsgReaderRepo is nil")
+	}
+
+	var candidates []string
+	if err := t.Source.Db().WithContext(ctx).Model(&model.TalkGroupMessage{}).
+		Where("group_id = ? and from_id != ? and is_revoked != ?", groupId, readerId, model.Yes).
+		Pluck("msg_id", &candidates).Error; err != nil {
+		return err
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	unread, err := t.TalkGroupMsgReaderRepo.FilterUnreadMsgIDs(ctx, readerId, candidates)
+	if err != nil {
+		return err
+	}
+	if len(unread) == 0 {
+		return nil
+	}
+
+	affected, err := t.TalkGroupMsgReaderRepo.BatchInsert(ctx, readerId, unread)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return nil
+	}
+	return t.pushMessageReadEvent(ctx, readerId, groupId, entity.ChatGroupMode, unread)
+}
+
+func (t *TalkService) pushMessageReadEvent(ctx context.Context, readerId, receiverId, talkMode int, msgIds []string) error {
 	if len(msgIds) == 0 {
 		return nil
 	}
 	if t.PushMessage == nil {
-		logger.Warnf("private message read push skipped: PushMessage is nil, sender_id=%d reader_id=%d", senderId, readerId)
+		logger.Warnf("message read push skipped: PushMessage is nil, reader_id=%d receiver_id=%d", readerId, receiverId)
 		return nil
 	}
 	return t.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventImMessageRead,
 		Payload: jsonutil.Encode(entity.SubEventImMessageReadPayload{
-			TalkMode:   entity.ChatPrivateMode,
-			FromId:     senderId,
-			ReceiverId: readerId,
+			TalkMode:   talkMode,
+			FromId:     readerId,
+			ReceiverId: receiverId,
 			MsgIds:     msgIds,
 		}),
 	})
-}
-
-// MarkGroupMessagesRead 群成员拉取历史消息后，将非本人发送且未撤回、未读的消息写入已读表并通知在线群成员。
-func (t *TalkService) MarkGroupMessagesRead(ctx context.Context, readerId, groupId int, records []*model.TalkMessageRecord) error {
-	if readerId <= 0 || groupId <= 0 || len(records) == 0 || t.TalkGroupMsgReaderRepo == nil {
-		return nil
-	}
-
-	msgIds := make([]string, 0, len(records))
-	for _, rec := range records {
-		if rec != nil && rec.MsgId != "" {
-			msgIds = append(msgIds, rec.MsgId)
-		}
-	}
-	if len(msgIds) == 0 {
-		return nil
-	}
-
-	readerMap, err := t.TalkGroupMsgReaderRepo.MapReaderUserIDsByMsgIDs(ctx, msgIds)
-	if err != nil {
-		return err
-	}
-
-	toInsert := make([]string, 0)
-	for _, rec := range records {
-		if rec == nil || rec.MsgId == "" {
-			continue
-		}
-		if rec.FromId == readerId || rec.IsRevoked == model.Yes {
-			continue
-		}
-		readers := readerMap[rec.MsgId]
-		found := false
-		for _, id := range readers {
-			if id == readerId {
-				found = true
-				break
-			}
-		}
-		if !found {
-			toInsert = append(toInsert, rec.MsgId)
-		}
-	}
-	if len(toInsert) == 0 {
-		return nil
-	}
-
-	affected, err := t.TalkGroupMsgReaderRepo.BatchInsert(ctx, readerId, toInsert)
-	if err != nil {
-		return err
-	}
-	if affected == 0 || t.PushMessage == nil {
-		return nil
-	}
-
-	if err := t.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
-		Event: entity.SubEventImMessageRead,
-		Payload: jsonutil.Encode(entity.SubEventImMessageReadPayload{
-			TalkMode:   entity.ChatGroupMode,
-			FromId:     readerId,
-			ReceiverId: groupId,
-			MsgIds:     toInsert,
-		}),
-	}); err != nil {
-		logger.Errorf("mark group messages read push error: reader_id=%d group_id=%d %s", readerId, groupId, err.Error())
-	}
-	return nil
 }

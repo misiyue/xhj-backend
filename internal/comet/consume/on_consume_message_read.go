@@ -24,12 +24,12 @@ func (h *Handler) onConsumeMessageRead(ctx context.Context, body []byte) {
 
 	switch in.TalkMode {
 	case entity.ChatPrivateMode:
-		if in.FromId <= 0 {
+		if in.ReceiverId <= 0 {
 			return
 		}
-		for _, session := range h.serv.SessionManager().GetSessions(int64(in.FromId)) {
+		for _, session := range h.serv.SessionManager().GetSessions(int64(in.ReceiverId)) {
 			if err := session.Write(data); err != nil {
-				slog.Error("[MessageRead] private session write error", "error", err, "from_id", in.FromId)
+				slog.Error("[MessageRead] private session write error", "error", err, "receiver_id", in.ReceiverId)
 			}
 		}
 	case entity.ChatGroupMode:
