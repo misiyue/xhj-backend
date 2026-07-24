@@ -23,6 +23,8 @@ type ICommonHandler interface {
 	ExploreList(ctx context.Context, in *CommonExploreListRequest) (*CommonExploreListResponse, error)
 	// 字典配置：按 key 批量获取（仅 status=启用），按 type 将 value 解析为 JSON 相应类型
 	AppDictGet(ctx context.Context, in *CommonAppDictGetRequest) (*CommonAppDictGetResponse, error)
+	// 功能模块列表
+	AppModules(ctx context.Context, in *CommonAppModulesRequest) (*CommonAppModulesResponse, error)
 }
 
 // RegisterCommonHandler 注册服务路由处理器
@@ -72,6 +74,15 @@ func RegisterCommonHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.AppDictGet(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/app-modules", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonAppModulesRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.AppModules(ctx.Request.Context(), &in)
 	}))
 
 }

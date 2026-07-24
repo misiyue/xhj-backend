@@ -27,6 +27,7 @@ type Common struct {
 	UsersRepo       *repo.Users
 	AppVersionRepo  *repo.AppVersion
 	AppExploreRepo  *repo.AppExplore
+	AppModuleRepo   *repo.AppModule
 	AppDictRepo     *repo.AppDict
 	SmsService      service.ISmsService
 	EmailService    service.IEmailService
@@ -216,6 +217,27 @@ func (c *Common) ExploreList(ctx context.Context, _ *web.CommonExploreListReques
 			Url:      row.Url,
 			Position: row.Position,
 			Sort:     int32(row.Sort),
+		})
+	}
+	return out, nil
+}
+
+// AppModules 功能模块列表
+func (c *Common) AppModules(ctx context.Context, _ *web.CommonAppModulesRequest) (*web.CommonAppModulesResponse, error) {
+	if c.AppModuleRepo == nil {
+		return nil, errors.New("AppModuleRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+	list, err := c.AppModuleRepo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := &web.CommonAppModulesResponse{Items: make([]*web.CommonAppModulesResponse_Item, 0, len(list))}
+	for _, row := range list {
+		out.Items = append(out.Items, &web.CommonAppModulesResponse_Item{
+			Id:     int32(row.Id),
+			Code:   row.Code,
+			Title:  row.Title,
+			IsOpen: int32(row.IsOpen),
 		})
 	}
 	return out, nil

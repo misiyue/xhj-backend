@@ -686,6 +686,86 @@ func (x *CommonAppDictGetResponse) GetItems() []*CommonAppDictItem {
 	return nil
 }
 
+type CommonAppModulesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommonAppModulesRequest) Reset() {
+	*x = CommonAppModulesRequest{}
+	mi := &file_web_v1_common_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommonAppModulesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommonAppModulesRequest) ProtoMessage() {}
+
+func (x *CommonAppModulesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_common_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommonAppModulesRequest.ProtoReflect.Descriptor instead.
+func (*CommonAppModulesRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_common_proto_rawDescGZIP(), []int{13}
+}
+
+type CommonAppModulesResponse struct {
+	state         protoimpl.MessageState           `protogen:"open.v1"`
+	Items         []*CommonAppModulesResponse_Item `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommonAppModulesResponse) Reset() {
+	*x = CommonAppModulesResponse{}
+	mi := &file_web_v1_common_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommonAppModulesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommonAppModulesResponse) ProtoMessage() {}
+
+func (x *CommonAppModulesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_common_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommonAppModulesResponse.ProtoReflect.Descriptor instead.
+func (*CommonAppModulesResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_common_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CommonAppModulesResponse) GetItems() []*CommonAppModulesResponse_Item {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
 type CommonExploreListResponse_Item struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -702,7 +782,7 @@ type CommonExploreListResponse_Item struct {
 
 func (x *CommonExploreListResponse_Item) Reset() {
 	*x = CommonExploreListResponse_Item{}
-	mi := &file_web_v1_common_proto_msgTypes[13]
+	mi := &file_web_v1_common_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -714,7 +794,7 @@ func (x *CommonExploreListResponse_Item) String() string {
 func (*CommonExploreListResponse_Item) ProtoMessage() {}
 
 func (x *CommonExploreListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_common_proto_msgTypes[13]
+	mi := &file_web_v1_common_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -772,6 +852,74 @@ func (x *CommonExploreListResponse_Item) GetSort() int32 {
 	return 0
 }
 
+type CommonAppModulesResponse_Item struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	IsOpen        int32                  `protobuf:"varint,4,opt,name=is_open,json=isOpen,proto3" json:"is_open,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommonAppModulesResponse_Item) Reset() {
+	*x = CommonAppModulesResponse_Item{}
+	mi := &file_web_v1_common_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommonAppModulesResponse_Item) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommonAppModulesResponse_Item) ProtoMessage() {}
+
+func (x *CommonAppModulesResponse_Item) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_common_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommonAppModulesResponse_Item.ProtoReflect.Descriptor instead.
+func (*CommonAppModulesResponse_Item) Descriptor() ([]byte, []int) {
+	return file_web_v1_common_proto_rawDescGZIP(), []int{14, 0}
+}
+
+func (x *CommonAppModulesResponse_Item) GetId() int32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *CommonAppModulesResponse_Item) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *CommonAppModulesResponse_Item) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *CommonAppModulesResponse_Item) GetIsOpen() int32 {
+	if x != nil {
+		return x.IsOpen
+	}
+	return 0
+}
+
 var File_web_v1_common_proto protoreflect.FileDescriptor
 
 const file_web_v1_common_proto_rawDesc = "" +
@@ -821,14 +969,24 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x129\n" +
 	"\fparsed_value\x18\x04 \x01(\v2\x16.google.protobuf.ValueR\vparsedValue\"H\n" +
 	"\x18CommonAppDictGetResponse\x12,\n" +
-	"\x05items\x18\x01 \x03(\v2\x16.web.CommonAppDictItemR\x05items2\xa7\x04\n" +
+	"\x05items\x18\x01 \x03(\v2\x16.web.CommonAppDictItemR\x05items\"\x19\n" +
+	"\x17CommonAppModulesRequest\"\xaf\x01\n" +
+	"\x18CommonAppModulesResponse\x128\n" +
+	"\x05items\x18\x01 \x03(\v2\".web.CommonAppModulesResponse.ItemR\x05items\x1aY\n" +
+	"\x04Item\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12\x14\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x17\n" +
+	"\ais_open\x18\x04 \x01(\x05R\x06isOpen2\x99\x05\n" +
 	"\x06Common\x12d\n" +
 	"\aSendSms\x12\x19.web.CommonSendSmsRequest\x1a\x1a.web.CommonSendSmsResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/common/send-sms\x12l\n" +
 	"\tSendEmail\x12\x1b.web.CommonSendEmailRequest\x1a\x1c.web.CommonSendEmailResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/common/send-email\x12d\n" +
 	"\x04Test\x12\x1a.web.CommonSendTestRequest\x1a\x1b.web.CommonSendTestResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/common/send-test\x12t\n" +
 	"\vExploreList\x12\x1d.web.CommonExploreListRequest\x1a\x1e.web.CommonExploreListResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/common/explore-list\x12m\n" +
 	"\n" +
-	"AppDictGet\x12\x1c.web.CommonAppDictGetRequest\x1a\x1d.web.CommonAppDictGetResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/common/app-dictB\fZ\n" +
+	"AppDictGet\x12\x1c.web.CommonAppDictGetRequest\x1a\x1d.web.CommonAppDictGetResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/common/app-dict\x12p\n" +
+	"\n" +
+	"AppModules\x12\x1c.web.CommonAppModulesRequest\x1a\x1d.web.CommonAppModulesResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/common/app-modulesB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -843,7 +1001,7 @@ func file_web_v1_common_proto_rawDescGZIP() []byte {
 	return file_web_v1_common_proto_rawDescData
 }
 
-var file_web_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_web_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_web_v1_common_proto_goTypes = []any{
 	(*CommonSendSmsRequest)(nil),           // 0: web.CommonSendSmsRequest
 	(*CommonSendSmsResponse)(nil),          // 1: web.CommonSendSmsResponse
@@ -858,31 +1016,37 @@ var file_web_v1_common_proto_goTypes = []any{
 	(*CommonAppDictGetRequest)(nil),        // 10: web.CommonAppDictGetRequest
 	(*CommonAppDictItem)(nil),              // 11: web.CommonAppDictItem
 	(*CommonAppDictGetResponse)(nil),       // 12: web.CommonAppDictGetResponse
-	(*CommonExploreListResponse_Item)(nil), // 13: web.CommonExploreListResponse.Item
-	(*structpb.ListValue)(nil),             // 14: google.protobuf.ListValue
-	(*structpb.Value)(nil),                 // 15: google.protobuf.Value
+	(*CommonAppModulesRequest)(nil),        // 13: web.CommonAppModulesRequest
+	(*CommonAppModulesResponse)(nil),       // 14: web.CommonAppModulesResponse
+	(*CommonExploreListResponse_Item)(nil), // 15: web.CommonExploreListResponse.Item
+	(*CommonAppModulesResponse_Item)(nil),  // 16: web.CommonAppModulesResponse.Item
+	(*structpb.ListValue)(nil),             // 17: google.protobuf.ListValue
+	(*structpb.Value)(nil),                 // 18: google.protobuf.Value
 }
 var file_web_v1_common_proto_depIdxs = []int32{
-	14, // 0: web.CommonAppVersionLatestResponse.release_notes:type_name -> google.protobuf.ListValue
-	14, // 1: web.CommonAppVersionLatestResponse.download_urls:type_name -> google.protobuf.ListValue
-	13, // 2: web.CommonExploreListResponse.items:type_name -> web.CommonExploreListResponse.Item
-	15, // 3: web.CommonAppDictItem.parsed_value:type_name -> google.protobuf.Value
+	17, // 0: web.CommonAppVersionLatestResponse.release_notes:type_name -> google.protobuf.ListValue
+	17, // 1: web.CommonAppVersionLatestResponse.download_urls:type_name -> google.protobuf.ListValue
+	15, // 2: web.CommonExploreListResponse.items:type_name -> web.CommonExploreListResponse.Item
+	18, // 3: web.CommonAppDictItem.parsed_value:type_name -> google.protobuf.Value
 	11, // 4: web.CommonAppDictGetResponse.items:type_name -> web.CommonAppDictItem
-	0,  // 5: web.Common.SendSms:input_type -> web.CommonSendSmsRequest
-	2,  // 6: web.Common.SendEmail:input_type -> web.CommonSendEmailRequest
-	4,  // 7: web.Common.Test:input_type -> web.CommonSendTestRequest
-	8,  // 8: web.Common.ExploreList:input_type -> web.CommonExploreListRequest
-	10, // 9: web.Common.AppDictGet:input_type -> web.CommonAppDictGetRequest
-	1,  // 10: web.Common.SendSms:output_type -> web.CommonSendSmsResponse
-	3,  // 11: web.Common.SendEmail:output_type -> web.CommonSendEmailResponse
-	5,  // 12: web.Common.Test:output_type -> web.CommonSendTestResponse
-	9,  // 13: web.Common.ExploreList:output_type -> web.CommonExploreListResponse
-	12, // 14: web.Common.AppDictGet:output_type -> web.CommonAppDictGetResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	16, // 5: web.CommonAppModulesResponse.items:type_name -> web.CommonAppModulesResponse.Item
+	0,  // 6: web.Common.SendSms:input_type -> web.CommonSendSmsRequest
+	2,  // 7: web.Common.SendEmail:input_type -> web.CommonSendEmailRequest
+	4,  // 8: web.Common.Test:input_type -> web.CommonSendTestRequest
+	8,  // 9: web.Common.ExploreList:input_type -> web.CommonExploreListRequest
+	10, // 10: web.Common.AppDictGet:input_type -> web.CommonAppDictGetRequest
+	13, // 11: web.Common.AppModules:input_type -> web.CommonAppModulesRequest
+	1,  // 12: web.Common.SendSms:output_type -> web.CommonSendSmsResponse
+	3,  // 13: web.Common.SendEmail:output_type -> web.CommonSendEmailResponse
+	5,  // 14: web.Common.Test:output_type -> web.CommonSendTestResponse
+	9,  // 15: web.Common.ExploreList:output_type -> web.CommonExploreListResponse
+	12, // 16: web.Common.AppDictGet:output_type -> web.CommonAppDictGetResponse
+	14, // 17: web.Common.AppModules:output_type -> web.CommonAppModulesResponse
+	12, // [12:18] is the sub-list for method output_type
+	6,  // [6:12] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_web_v1_common_proto_init() }
@@ -896,7 +1060,7 @@ func file_web_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_common_proto_rawDesc), len(file_web_v1_common_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

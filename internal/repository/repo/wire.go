@@ -40,6 +40,7 @@ var ProviderSet = wire.NewSet(
 	NewWalletUser,
 	NewAppVersion,
 	NewAppExplore,
+	NewAppModule,
 	NewMerchant,
 	NewMerchantTask,
 	NewMerchantPaytype,
