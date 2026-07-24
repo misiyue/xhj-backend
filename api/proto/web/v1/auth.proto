@@ -88,6 +88,14 @@ service Auth {
       body: "*"
     };
   }
+
+  // 注销账号（需登录；校验当前绑定邮箱的验证码）
+  rpc Cancel(AuthCancelRequest) returns (AuthCancelResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/cancel"
+      body: "*"
+    };
+  }
 }
 
 
@@ -255,3 +263,12 @@ message AuthEmailLoginResponse{
   // 过期时间
   int32 expires_in = 3 [(google.api.field_behavior) = REQUIRED];
 }
+
+// 注销账号请求参数
+message AuthCancelRequest{
+  // 邮箱验证码（发往当前账号绑定邮箱，渠道与 send-email 一致）
+  string email_code = 1 [(buf.validate.field).string.len = 6, (google.api.field_behavior) = REQUIRED];
+}
+
+// 注销账号响应参数
+message AuthCancelResponse{}

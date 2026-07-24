@@ -183,7 +183,7 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		if err != nil {
 			return nil, err
 		}
-		if inviter == nil || inviter.IsDisabled() {
+		if inviter == nil || inviter.IsUnavailable() {
 			if a.Config.App.RequireInviteCode {
 				return nil, errorx.New(400, "邀请码无效")
 			}
@@ -439,6 +439,17 @@ func (a *Auth) OauthLogin(ctx context.Context, in *web.AuthOauthLoginRequest) (*
 
 	// 有会员信息直接返回登录信息
 	if oAuthInfo.UserId > 0 {
+		user, err := a.UsersRepo.FindById(ctx, int(oAuthInfo.UserId))
+		if err != nil || user == nil || user.Id == 0 {
+			return nil, entity.ErrUserNotExist
+		}
+		if user.IsCancelled() {
+			return nil, entity.ErrAccountOrPassword
+		}
+		if user.IsDisabled() {
+			return nil, entity.ErrAccountDisabled
+		}
+
 		authorize, err := a.authorize(int(oAuthInfo.UserId))
 		if err != nil {
 			return nil, err
@@ -519,6 +530,13 @@ func (a *Auth) EmailLogin(ctx context.Context, in *web.AuthEmailLoginRequest) (*
 	user, err := a.UsersRepo.FindByEmail(ctx, in.Email)
 	if err != nil {
 		return nil, errorx.New(400, "该邮箱尚未注册")
+	}
+
+	if user.IsCancelled() {
+		return nil, entity.ErrAccountOrPassword
+	}
+	if user.IsDisabled() {
+		return nil, entity.ErrAccountDisabled
 	}
 
 	// 记录登录事件
@@ -636,4 +654,73 @@ func (a *Auth) Logout(ctx context.Context, _ *web.AuthLogoutRequest) (*web.AuthL
 		}
 	}
 	return &web.AuthLogoutResponse{Success: true, Message: "ok"}, nil
+}
+
+// Cancel 注销账号：校验邮箱验证码后给 username/email 追加日期后缀，status=3，并使当前 token 失效
+//
+//	@Summary		注销账号
+//	@Description	确认注销后无法再用原账号登录；username、email 追加 _YYYYMMDD 后缀，状态改为已注销
+//	@Tags			认证
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.AuthCancelRequest	true	"注销请求"
+//	@Success		200		{object}	web.AuthCancelResponse
+//	@Router			/api/v1/auth/cancel [post]
+//	@Security		Bearer
+func (a *Auth) Cancel(ctx context.Context, in *web.AuthCancelRequest) (*web.AuthCancelResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if uid == 0 {
+		return nil, errorx.New(401, "未授权")
+	}
+
+	user, err := a.UsersRepo.FindById(ctx, uid)
+	if err != nil || user == nil || user.Id == 0 {
+		return nil, entity.ErrUserNotExist
+	}
+	if user.IsCancelled() {
+		return nil, entity.ErrAccountCancelled
+	}
+	if user.IsDisabled() {
+		return nil, entity.ErrAccountDisabled
+	}
+
+	email := strings.TrimSpace(user.Email)
+	if email == "" {
+		return nil, errorx.New(400, "当前账号未绑定邮箱，无法注销")
+	}
+
+	if !a.EmailService.Verify(ctx, entity.EmailVerifyChannel, email, in.GetEmailCode()) {
+		return nil, errorx.New(400, "邮箱验证码错误或已过期")
+	}
+
+	suffix := "_" + time.Now().Format("20060102")
+	updates := map[string]any{
+		"username":   user.Username + suffix,
+		"email":      email + suffix,
+		"status":     model.UsersStatusCancelled,
+		"updated_at": time.Now(),
+	}
+	if _, err := a.UsersRepo.UpdateById(ctx, user.Id, updates); err != nil {
+		return nil, err
+	}
+	_ = a.UsersRepo.ClearTableCache(ctx, user.Id)
+	a.EmailService.Delete(ctx, entity.EmailVerifyChannel, email)
+
+	// 使当前 token 失效（与 Logout 一致）
+	token := middleware.GetAuthTokenFromContext(ctx)
+	if token != "" && a.JwtTokenStorage != nil {
+		claims, err := jwtutil.ParseWithClaims[entity.WebClaims]([]byte(a.Config.Jwt.Secret), token)
+		if err == nil && claims.ExpiresAt != nil {
+			exp := time.Until(claims.ExpiresAt.Time)
+			if exp > 0 {
+				_ = a.JwtTokenStorage.SetBlackList(ctx, token, exp)
+			} else {
+				_ = a.JwtTokenStorage.SetBlackList(ctx, token, 24*time.Hour)
+			}
+		} else {
+			_ = a.JwtTokenStorage.SetBlackList(ctx, token, 24*time.Hour)
+		}
+	}
+
+	return &web.AuthCancelResponse{}, nil
 }

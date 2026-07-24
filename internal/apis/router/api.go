@@ -40,6 +40,10 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 				return errors.New("授权异常，请登录后操作")
 			}
 
+			if user.IsCancelled() {
+				return entity.ErrAccountCancelled
+			}
+
 			if user.IsDisabled() {
 				return entity.ErrAccountDisabled
 			}

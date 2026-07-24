@@ -5,8 +5,9 @@ import "time"
 const (
 	UsersGenderDefault = 3
 
-	UsersStatusNormal   = 1
-	UsersStatusDisabled = 2
+	UsersStatusNormal    = 1
+	UsersStatusDisabled  = 2
+	UsersStatusCancelled = 3
 
 	UsersSubscribeNo  = 0
 	UsersSubscribeYes = 1
@@ -70,4 +71,13 @@ func (u Users) TablePrimaryIdValue() int {
 
 func (u Users) IsDisabled() bool {
 	return u.Status == UsersStatusDisabled
+}
+
+func (u Users) IsCancelled() bool {
+	return u.Status == UsersStatusCancelled
+}
+
+// IsUnavailable 账号不可用（停用或已注销）
+func (u Users) IsUnavailable() bool {
+	return u.IsDisabled() || u.IsCancelled()
 }

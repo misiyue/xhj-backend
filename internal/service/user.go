@@ -194,6 +194,10 @@ func (s *UserService) Login(ctx context.Context, account string, password string
 		return nil, entity.ErrAccountOrPassword
 	}
 
+	if user.IsCancelled() {
+		return nil, entity.ErrAccountOrPassword
+	}
+
 	if user.IsDisabled() {
 		return nil, entity.ErrAccountDisabled
 	}
