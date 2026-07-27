@@ -102,7 +102,7 @@ service Auth {
 
 // 登录接口请求参数
 message AuthLoginRequest{
-  // 登录账号（前端字段名仍为 mobile；服务端仅按 users.username 精确匹配）
+  // 登录账号（前端字段名仍为 mobile；服务端按 users.username 或 users.email 精确匹配）
   string mobile = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
   // 登录密码
   string password = 2 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];

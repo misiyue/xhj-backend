@@ -53,7 +53,7 @@ type Auth struct {
 // Login 登录
 //
 //	@Summary		登录
-//	@Description	使用账号（请求字段 mobile，对应 users.username）与密码进行身份验证
+//	@Description	使用账号（请求字段 mobile，按 users.username 或 users.email 精确匹配）与密码进行身份验证
 //	@Tags			认证
 //	@Accept			json
 //	@Produce		json

@@ -57,6 +57,14 @@ service User {
     };
   }
 
+  // 更新登录用户名（username）
+  rpc UsernameUpdate(UserUsernameUpdateRequest) returns (UserUsernameUpdateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/username-update"
+      body: "*"
+    };
+  }
+
   // 更新通知订阅状态
   rpc SubscribeUpdate(UserSubscribeUpdateRequest) returns (UserSubscribeUpdateResponse) {
     option (google.api.http) = {
@@ -315,6 +323,8 @@ message UserDetailResponse{
   string created_at = 14 [(google.api.field_behavior) = REQUIRED];
   // 是否订阅通知（0-否，1-是）
   int32 is_subscribe = 15 [(google.api.field_behavior) = REQUIRED];
+  // 上次修改 username 的时间（空表示从未通过本接口修改过）
+  string un_update_at = 16;
 }
 
 // 用户配置信息请求参数
@@ -395,6 +405,15 @@ message UserEmailUpdateRequest{
 
 // 用户邮箱更新接口响应参数
 message UserEmailUpdateResponse{}
+
+// 更新登录用户名请求参数
+message UserUsernameUpdateRequest{
+  // 新用户名：6-20 位，字母开头，仅字母/数字/下划线/减号
+  string username = 1 [(buf.validate.field).string = {min_len: 6, max_len: 20}, (google.api.field_behavior) = REQUIRED];
+}
+
+// 更新登录用户名响应参数
+message UserUsernameUpdateResponse{}
 
 // 更新通知订阅状态请求
 message UserSubscribeUpdateRequest {

@@ -24,6 +24,8 @@ type IUserHandler interface {
 	MobileUpdate(ctx context.Context, in *UserMobileUpdateRequest) (*UserMobileUpdateResponse, error)
 	// 更新用户邮箱接口
 	EmailUpdate(ctx context.Context, in *UserEmailUpdateRequest) (*UserEmailUpdateResponse, error)
+	// 更新登录用户名（username）
+	UsernameUpdate(ctx context.Context, in *UserUsernameUpdateRequest) (*UserUsernameUpdateResponse, error)
 	// 更新通知订阅状态
 	SubscribeUpdate(ctx context.Context, in *UserSubscribeUpdateRequest) (*UserSubscribeUpdateResponse, error)
 	// 当前用户各类未读数汇总
@@ -34,6 +36,8 @@ type IUserHandler interface {
 	MerchantStatus(ctx context.Context, in *MerchantStatusRequest) (*MerchantStatusResponse, error)
 	// 获取本人商户资料（供查看/编辑表单回填，字段与 merchant 表一致）
 	MerchantProfile(ctx context.Context, in *MerchantProfileRequest) (*MerchantStatusResponse, error)
+	// 商户注销申请（status 置为 -1 申请注销）
+	MerchantCancelApply(ctx context.Context, in *MerchantCancelApplyRequest) (*MerchantCancelApplyResponse, error)
 	// 发布商户挂售任务
 	MerchantTaskCreate(ctx context.Context, in *MerchantTaskCreateRequest) (*MerchantTaskCreateResponse, error)
 	// 本人商户任务列表
@@ -157,6 +161,15 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.EmailUpdate(ctx.Request.Context(), &in)
 	}))
 
+	r.POST("/api/v1/user/username-update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserUsernameUpdateRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.UsernameUpdate(ctx.Request.Context(), &in)
+	}))
+
 	r.POST("/api/v1/user/subscribe-update", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in UserSubscribeUpdateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
@@ -200,6 +213,15 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.MerchantProfile(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/merchant/cancel-apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantCancelApplyRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.MerchantCancelApply(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/merchant/task/create", interceptor.Do(func(ctx *gin.Context) (any, error) {

@@ -101,14 +101,14 @@ type UserRegisterOpt struct {
 	DeviceCode string
 }
 
-// Register 注册用户
+// Register 注册用户（仅校验邮箱/手机号是否重复，不校验 username 唯一性）
 func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*model.Users, error) {
 	// 检查手机号是否已存在
 	if opt.Mobile != "" && s.UsersRepo.IsMobileExist(ctx, opt.Mobile) {
 		return nil, errors.New("手机号已被注册")
 	}
 
-	// 检查邮箱是否已存在
+	// 检查邮箱是否已存在（不检查 username）
 	if opt.Email != "" {
 		if user, _ := s.UsersRepo.FindByEmail(ctx, opt.Email); user != nil && user.Id > 0 {
 			return nil, errors.New("邮箱已被注册")
@@ -175,9 +175,9 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 }
 
 // Login 登录处理
-// account 为前端登录框内容（接口字段名仍为 mobile）：仅与 users.username 精确匹配
+// account 为前端登录框内容（接口字段名仍为 mobile）：按 users.username 或 users.email 精确匹配
 func (s *UserService) Login(ctx context.Context, account string, password string) (*model.Users, error) {
-	user, err := s.UsersRepo.FindByUsername(ctx, account)
+	user, err := s.UsersRepo.FindByUsernameOrEmail(ctx, account)
 	if err != nil {
 		if utils.IsSqlNoRows(err) {
 			return nil, entity.ErrAccountOrPassword

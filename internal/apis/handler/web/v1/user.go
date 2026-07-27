@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -24,6 +25,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/samber/lo"
 )
+
+var usernamePattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{5,19}$`)
 
 var _ web.IUserHandler = (*User)(nil)
 
@@ -94,6 +97,12 @@ func (u *User) Detail(ctx context.Context, _ *web.UserDetailRequest) (*web.UserD
 		IsTrans:   int32(user.IsTrans),
 		CreatedAt: timeutil.FormatDatetime(user.CreatedAt),
 		IsSubscribe: int32(user.IsSubscribe),
+		UnUpdateAt: func() string {
+			if user.UnUpdateAt == nil {
+				return ""
+			}
+			return timeutil.FormatDatetime(*user.UnUpdateAt)
+		}(),
 	}, nil
 }
 
@@ -309,13 +318,9 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 	if other, _ := u.UsersRepo.FindByEmail(ctx, newEmail); other != nil && other.Id > 0 && other.Id != user.Id {
 		return nil, errorx.New(400, "该邮箱已被其他账号使用")
 	}
-	if other, _ := u.UsersRepo.FindByUsername(ctx, newEmail); other != nil && other.Id > 0 && other.Id != user.Id {
-		return nil, errorx.New(400, "该邮箱对应的登录名已被占用")
-	}
 
 	_, err = u.UsersRepo.UpdateById(ctx, user.Id, map[string]any{
-		"email":    newEmail,
-		"username": newEmail,
+		"email": newEmail,
 	})
 
 	if err != nil {
@@ -326,6 +331,65 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 
 	_ = u.UsersRepo.ClearTableCache(ctx, user.Id)
 	return &web.UserEmailUpdateResponse{}, nil
+}
+
+// UsernameUpdate 更新登录用户名
+//
+//	@Summary		更新用户名
+//	@Description	修改登录用户名（username）；6 个月仅可修改一次
+//	@Tags			用户
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.UserUsernameUpdateRequest	true	"更新用户名请求"
+//	@Success		200		{object}	web.UserUsernameUpdateResponse
+//	@Router			/api/v1/user/username-update [post]
+//	@Security		Bearer
+func (u *User) UsernameUpdate(ctx context.Context, req *web.UserUsernameUpdateRequest) (*web.UserUsernameUpdateResponse, error) {
+	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	uid := int(session.UserId)
+
+	username := strings.TrimSpace(req.GetUsername())
+	if !isValidUsername(username) {
+		return nil, errorx.New(400, "用户名须为 6-20 位，以字母开头，仅支持字母、数字、下划线、减号")
+	}
+
+	user, err := u.UsersRepo.FindById(ctx, uid)
+	if err != nil || user == nil || user.Id == 0 {
+		return nil, entity.ErrUserNotExist
+	}
+	if user.Username == username {
+		return nil, errorx.New(400, "用户名与原用户名一致无需修改")
+	}
+
+	if user.UnUpdateAt != nil {
+		nextAt := user.UnUpdateAt.AddDate(0, 6, 0)
+		if time.Now().Before(nextAt) {
+			return nil, errorx.New(400, fmt.Sprintf("用户名每 6 个月仅可修改一次，下次可修改时间：%s", nextAt.Format(time.DateTime)))
+		}
+	}
+
+	if other, _ := u.UsersRepo.FindByUsername(ctx, username); other != nil && other.Id > 0 && other.Id != user.Id {
+		return nil, errorx.New(400, "该用户名已被占用")
+	}
+
+	now := time.Now()
+	if _, err := u.UsersRepo.UpdateById(ctx, user.Id, map[string]any{
+		"username":     username,
+		"un_update_at": now,
+		"updated_at":   now,
+	}); err != nil {
+		return nil, err
+	}
+	_ = u.UsersRepo.ClearTableCache(ctx, user.Id)
+	return &web.UserUsernameUpdateResponse{}, nil
+}
+
+// isValidUsername 6-20 位；字母开头；仅字母、数字、下划线、减号
+func isValidUsername(username string) bool {
+	if len(username) < 6 || len(username) > 20 {
+		return false
+	}
+	return usernamePattern.MatchString(username)
 }
 
 // SubscribeUpdate 更新通知订阅状态
@@ -614,10 +678,8 @@ func (u *User) MerchantProfile(ctx context.Context, _ *web.MerchantProfileReques
 	return u.MerchantStatus(ctx, &web.MerchantStatusRequest{})
 }
 
-type MerchantCancelApplyResponse struct{}
-
 // MerchantCancelApply 商户注销申请（POST /api/v1/merchant/cancel-apply）
-func (u *User) MerchantCancelApply(ctx context.Context) (*MerchantCancelApplyResponse, error) {
+func (u *User) MerchantCancelApply(ctx context.Context, _ *web.MerchantCancelApplyRequest) (*web.MerchantCancelApplyResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 
@@ -664,5 +726,5 @@ func (u *User) MerchantCancelApply(ctx context.Context) (*MerchantCancelApplyRes
 	}); err != nil {
 		return nil, err
 	}
-	return &MerchantCancelApplyResponse{}, nil
+	return &web.MerchantCancelApplyResponse{}, nil
 }

@@ -60,6 +60,15 @@ func (u *Users) FindByUsername(ctx context.Context, username string) (*model.Use
 	return u.Repo.FindByWhere(ctx, "username = ?", username)
 }
 
+// FindByUsernameOrEmail 按 username 或 email 精确匹配（优先 username）
+func (u *Users) FindByUsernameOrEmail(ctx context.Context, account string) (*model.Users, error) {
+	user, err := u.Repo.FindByWhere(ctx, "username = ?", account)
+	if err == nil && user != nil && user.Id > 0 {
+		return user, nil
+	}
+	return u.Repo.FindByWhere(ctx, "email = ?", account)
+}
+
 // SearchByKeyword 通过关键词搜索用户（登录用：先精确再模糊）；排除停用/已注销
 func (u *Users) SearchByKeyword(ctx context.Context, keyword string) (*model.Users, error) {
 	active := "status = ?"
