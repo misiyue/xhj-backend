@@ -325,6 +325,8 @@ message UserDetailResponse{
   int32 is_subscribe = 15 [(google.api.field_behavior) = REQUIRED];
   // 上次修改 username 的时间（空表示从未通过本接口修改过）
   string un_update_at = 16;
+  // 是否可修改 username：0-否，1-是（3 个月可改一次）
+  int32 un_update_enable = 17 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 用户配置信息请求参数
@@ -410,6 +412,10 @@ message UserEmailUpdateResponse{}
 message UserUsernameUpdateRequest{
   // 新用户名：6-20 位，字母开头，仅字母/数字/下划线/减号
   string username = 1 [(buf.validate.field).string = {min_len: 6, max_len: 20}, (google.api.field_behavior) = REQUIRED];
+  // 登录密码（RSA 加密；与 email_code 二选一，至少提供一种）
+  string password = 2;
+  // 邮箱验证码（发往当前绑定邮箱；与 password 二选一，至少提供一种）
+  string email_code = 3;
 }
 
 // 更新登录用户名响应参数

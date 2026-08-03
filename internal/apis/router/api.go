@@ -336,10 +336,6 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 		return handler.V1.Trtc.GetSignature(c)
 	}))
 
-	api.POST("/api/v1/merchant/cancel-apply", HandlerFunc(resp, func(c *gin.Context) (any, error) {
-		return handler.V1.User.MerchantCancelApply(c.Request.Context())
-	}))
-
 	// KYC routes
 	api.POST("/api/v1/kyc/status", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.KYC.GetKYCStatus(c.Request.Context(), &v1.KYCStatusRequest{})

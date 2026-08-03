@@ -684,6 +684,11 @@ func (a *Auth) Cancel(ctx context.Context, in *web.AuthCancelRequest) (*web.Auth
 		return nil, entity.ErrAccountDisabled
 	}
 
+	// 注册未满 7 天不允许注销
+	if time.Since(user.CreatedAt) < 7*24*time.Hour {
+		return nil, errorx.New(400, "为防范恶意批量注册、保障账号安全，账号注册未满7天暂不支持注销操作。请于注册满7天后再次尝试。")
+	}
+
 	email := strings.TrimSpace(user.Email)
 	if email == "" {
 		return nil, errorx.New(400, "当前账号未绑定邮箱，无法注销")

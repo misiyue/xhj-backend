@@ -103,6 +103,7 @@ func (u *User) Detail(ctx context.Context, _ *web.UserDetailRequest) (*web.UserD
 			}
 			return timeutil.FormatDatetime(*user.UnUpdateAt)
 		}(),
+		UnUpdateEnable: usernameUpdateEnable(user.UnUpdateAt),
 	}, nil
 }
 
@@ -315,7 +316,8 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 		return nil, errorx.New(400, "邮箱验证码错误")
 	}
 
-	if other, _ := u.UsersRepo.FindByEmail(ctx, newEmail); other != nil && other.Id > 0 && other.Id != user.Id {
+	// 全局查重：已被其他未注销账号绑定则禁止
+	if other, _ := u.UsersRepo.FindByEmail(ctx, newEmail); other != nil && other.Id > 0 && other.Id != user.Id && !other.IsCancelled() {
 		return nil, errorx.New(400, "该邮箱已被其他账号使用")
 	}
 
@@ -336,7 +338,7 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 // UsernameUpdate 更新登录用户名
 //
 //	@Summary		更新用户名
-//	@Description	修改登录用户名（username）；6 个月仅可修改一次
+//	@Description	修改登录用户名（username）；3 个月仅可修改一次
 //	@Tags			用户
 //	@Accept			json
 //	@Produce		json
@@ -353,6 +355,12 @@ func (u *User) UsernameUpdate(ctx context.Context, req *web.UserUsernameUpdateRe
 		return nil, errorx.New(400, "用户名须为 6-20 位，以字母开头，仅支持字母、数字、下划线、减号")
 	}
 
+	password := strings.TrimSpace(req.GetPassword())
+	emailCode := strings.TrimSpace(req.GetEmailCode())
+	if password == "" && emailCode == "" {
+		return nil, errorx.New(400, "请提供登录密码或邮箱验证码进行验证")
+	}
+
 	user, err := u.UsersRepo.FindById(ctx, uid)
 	if err != nil || user == nil || user.Id == 0 {
 		return nil, entity.ErrUserNotExist
@@ -361,10 +369,42 @@ func (u *User) UsernameUpdate(ctx context.Context, req *web.UserUsernameUpdateRe
 		return nil, errorx.New(400, "用户名与原用户名一致无需修改")
 	}
 
+	// 密码或邮箱验证码至少一种验证通过
+	verified := false
+	var verifyErr error
+	if password != "" {
+		plain, decErr := u.Rsa.Decrypt(password)
+		if decErr != nil {
+			verifyErr = decErr
+		} else if encrypt.VerifyPassword(user.Password, string(plain), user.Salt) {
+			verified = true
+		} else {
+			verifyErr = entity.ErrAccountOrPasswordError
+		}
+	}
+	if !verified && emailCode != "" {
+		email := strings.TrimSpace(user.Email)
+		if email == "" {
+			return nil, errorx.New(400, "当前账号未绑定邮箱，无法使用邮箱验证码")
+		}
+		if u.EmailService.Verify(ctx, entity.EmailVerifyChannel, email, emailCode) {
+			verified = true
+			u.EmailService.Delete(ctx, entity.EmailVerifyChannel, email)
+		} else {
+			verifyErr = errorx.New(400, "邮箱验证码错误或已过期")
+		}
+	}
+	if !verified {
+		if verifyErr != nil {
+			return nil, verifyErr
+		}
+		return nil, errorx.New(400, "请提供登录密码或邮箱验证码进行验证")
+	}
+
 	if user.UnUpdateAt != nil {
-		nextAt := user.UnUpdateAt.AddDate(0, 6, 0)
+		nextAt := user.UnUpdateAt.AddDate(0, 3, 0)
 		if time.Now().Before(nextAt) {
-			return nil, errorx.New(400, fmt.Sprintf("用户名每 6 个月仅可修改一次，下次可修改时间：%s", nextAt.Format(time.DateTime)))
+			return nil, errorx.New(400, fmt.Sprintf("用户名每 3 个月仅可修改一次，下次可修改时间：%s", nextAt.Format(time.DateTime)))
 		}
 	}
 
@@ -390,6 +430,17 @@ func isValidUsername(username string) bool {
 		return false
 	}
 	return usernamePattern.MatchString(username)
+}
+
+// usernameUpdateEnable 是否可修改 username：0-否，1-是（从未改过或距上次已满 3 个月）
+func usernameUpdateEnable(unUpdateAt *time.Time) int32 {
+	if unUpdateAt == nil {
+		return 1
+	}
+	if time.Now().Before(unUpdateAt.AddDate(0, 3, 0)) {
+		return 0
+	}
+	return 1
 }
 
 // SubscribeUpdate 更新通知订阅状态

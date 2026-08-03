@@ -85,9 +85,11 @@ type UserDetailResponse struct {
 	// 是否订阅通知（0-否，1-是）
 	IsSubscribe int32 `protobuf:"varint,15,opt,name=is_subscribe,json=isSubscribe,proto3" json:"is_subscribe,omitempty"`
 	// 上次修改 username 的时间（空表示从未通过本接口修改过）
-	UnUpdateAt    string `protobuf:"bytes,16,opt,name=un_update_at,json=unUpdateAt,proto3" json:"un_update_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	UnUpdateAt string `protobuf:"bytes,16,opt,name=un_update_at,json=unUpdateAt,proto3" json:"un_update_at,omitempty"`
+	// 是否可修改 username：0-否，1-是（3 个月可改一次）
+	UnUpdateEnable int32 `protobuf:"varint,17,opt,name=un_update_enable,json=unUpdateEnable,proto3" json:"un_update_enable,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *UserDetailResponse) Reset() {
@@ -230,6 +232,13 @@ func (x *UserDetailResponse) GetUnUpdateAt() string {
 		return x.UnUpdateAt
 	}
 	return ""
+}
+
+func (x *UserDetailResponse) GetUnUpdateEnable() int32 {
+	if x != nil {
+		return x.UnUpdateEnable
+	}
+	return 0
 }
 
 // 用户配置信息请求参数
@@ -726,7 +735,11 @@ func (*UserEmailUpdateResponse) Descriptor() ([]byte, []int) {
 type UserUsernameUpdateRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 新用户名：6-20 位，字母开头，仅字母/数字/下划线/减号
-	Username      string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	Username string `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
+	// 登录密码（RSA 加密；与 email_code 二选一，至少提供一种）
+	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// 邮箱验证码（发往当前绑定邮箱；与 password 二选一，至少提供一种）
+	EmailCode     string `protobuf:"bytes,3,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -764,6 +777,20 @@ func (*UserUsernameUpdateRequest) Descriptor() ([]byte, []int) {
 func (x *UserUsernameUpdateRequest) GetUsername() string {
 	if x != nil {
 		return x.Username
+	}
+	return ""
+}
+
+func (x *UserUsernameUpdateRequest) GetPassword() string {
+	if x != nil {
+		return x.Password
+	}
+	return ""
+}
+
+func (x *UserUsernameUpdateRequest) GetEmailCode() string {
+	if x != nil {
+		return x.EmailCode
 	}
 	return ""
 }
@@ -5071,7 +5098,7 @@ var File_web_v1_user_proto protoreflect.FileDescriptor
 const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"\x11web/v1/user.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\x13\n" +
-	"\x11UserDetailRequest\"\x8f\x04\n" +
+	"\x11UserDetailRequest\"\xbf\x04\n" +
 	"\x12UserDetailResponse\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x1d\n" +
 	"\auser_id\x18\t \x01(\x05B\x04\xe2A\x01\x02R\x06userId\x12 \n" +
@@ -5091,7 +5118,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"created_at\x18\x0e \x01(\tB\x04\xe2A\x01\x02R\tcreatedAt\x12'\n" +
 	"\fis_subscribe\x18\x0f \x01(\x05B\x04\xe2A\x01\x02R\visSubscribe\x12 \n" +
 	"\fun_update_at\x18\x10 \x01(\tR\n" +
-	"unUpdateAt\"\x14\n" +
+	"unUpdateAt\x12.\n" +
+	"\x10un_update_enable\x18\x11 \x01(\x05B\x04\xe2A\x01\x02R\x0eunUpdateEnable\"\x14\n" +
 	"\x12UserSettingRequest\"\xa4\x06\n" +
 	"\x13UserSettingResponse\x12D\n" +
 	"\tuser_info\x18\x01 \x01(\v2!.web.UserSettingResponse.UserInfoB\x04\xe2A\x01\x02R\buserInfo\x12C\n" +
@@ -5141,9 +5169,12 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x05email\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05email\x12#\n" +
 	"\bpassword\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bpassword\x12\x1c\n" +
 	"\x04code\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x98\x01\x06R\x04code\"\x19\n" +
-	"\x17UserEmailUpdateResponse\"F\n" +
+	"\x17UserEmailUpdateResponse\"\x81\x01\n" +
 	"\x19UserUsernameUpdateRequest\x12)\n" +
-	"\busername\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x06\x18\x14R\busername\"\x1c\n" +
+	"\busername\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x06\x18\x14R\busername\x12\x1a\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\x12\x1d\n" +
+	"\n" +
+	"email_code\x18\x03 \x01(\tR\temailCode\"\x1c\n" +
 	"\x1aUserUsernameUpdateResponse\"J\n" +
 	"\x1aUserSubscribeUpdateRequest\x12,\n" +
 	"\fis_subscribe\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x040\x000\x01R\visSubscribe\"\x1d\n" +
