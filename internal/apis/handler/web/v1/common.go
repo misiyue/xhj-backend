@@ -29,6 +29,7 @@ type Common struct {
 	AppExploreRepo  *repo.AppExplore
 	AppModuleRepo   *repo.AppModule
 	AppDictRepo     *repo.AppDict
+	AppNewsRepo     *repo.AppNews
 	SmsService      service.ISmsService
 	EmailService    service.IEmailService
 	UserService     service.IUserService
@@ -239,6 +240,95 @@ func (c *Common) AppModules(ctx context.Context, _ *web.CommonAppModulesRequest)
 			Title:  row.Title,
 			IsOpen: int32(row.IsOpen),
 		})
+	}
+	return out, nil
+}
+
+// NewsList 火箭资讯列表（仅已发布；支持 news_type、source 筛选与分页）
+func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*web.CommonNewsListResponse, error) {
+	if c.AppNewsRepo == nil {
+		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	page := int(in.GetPage())
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := int(in.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	total, list, err := c.AppNewsRepo.ListPublished(ctx, page, pageSize, in.GetNewsType(), in.GetSource())
+	if err != nil {
+		return nil, err
+	}
+
+	out := &web.CommonNewsListResponse{
+		Items: make([]*web.CommonNewsListResponse_Item, 0, len(list)),
+		Total: int32(total),
+		Paginate: &web.Paginate{
+			Page:  int32(page),
+			Size:  int32(pageSize),
+			Total: int32(total),
+		},
+	}
+	for _, row := range list {
+		item := &web.CommonNewsListResponse_Item{
+			Id:          int32(row.Id),
+			Title:       row.Title,
+			CollectType: row.CollectType,
+			NewsType:    row.NewsType,
+			Source:      row.Source,
+			Cover:       row.Cover,
+			Status:      int32(row.Status),
+			CreatedAt:   timeutil.FormatDatetime(row.CreatedAt),
+		}
+		if row.UploadTime != nil {
+			item.UploadTime = timeutil.FormatDatetime(*row.UploadTime)
+		}
+		if row.PublishTime != nil {
+			item.PublishTime = timeutil.FormatDatetime(*row.PublishTime)
+		}
+		out.Items = append(out.Items, item)
+	}
+	return out, nil
+}
+
+// NewsDetail 火箭资讯详情（仅已发布；含 content、source_url）
+func (c *Common) NewsDetail(ctx context.Context, in *web.CommonNewsDetailRequest) (*web.CommonNewsDetailResponse, error) {
+	if c.AppNewsRepo == nil {
+		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	row, err := c.AppNewsRepo.FindPublishedById(ctx, int(in.GetId()))
+	if err != nil {
+		return nil, err
+	}
+	if row == nil || row.Id == 0 {
+		return nil, entity.ErrDataNotFound
+	}
+
+	out := &web.CommonNewsDetailResponse{
+		Id:          int32(row.Id),
+		Title:       row.Title,
+		CollectType: row.CollectType,
+		NewsType:    row.NewsType,
+		Source:      row.Source,
+		Content:     row.Content,
+		Cover:       row.Cover,
+		SourceUrl:   row.SourceURL,
+		Status:      int32(row.Status),
+		CreatedAt:   timeutil.FormatDatetime(row.CreatedAt),
+	}
+	if row.UploadTime != nil {
+		out.UploadTime = timeutil.FormatDatetime(*row.UploadTime)
+	}
+	if row.PublishTime != nil {
+		out.PublishTime = timeutil.FormatDatetime(*row.PublishTime)
 	}
 	return out, nil
 }

@@ -89,6 +89,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.AppVersion{},
 		&model.AppExplore{},
 		&model.AppModule{},
+		&model.AppNews{},
 
 		// 商户 C2C
 		&model.Merchant{},

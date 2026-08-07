@@ -25,6 +25,10 @@ type ICommonHandler interface {
 	AppDictGet(ctx context.Context, in *CommonAppDictGetRequest) (*CommonAppDictGetResponse, error)
 	// 功能模块列表
 	AppModules(ctx context.Context, in *CommonAppModulesRequest) (*CommonAppModulesResponse, error)
+	// 火箭资讯列表（仅已发布；支持 news_type、source 筛选与分页）
+	NewsList(ctx context.Context, in *CommonNewsListRequest) (*CommonNewsListResponse, error)
+	// 火箭资讯详情（仅已发布；含 content、source_url）
+	NewsDetail(ctx context.Context, in *CommonNewsDetailRequest) (*CommonNewsDetailResponse, error)
 }
 
 // RegisterCommonHandler 注册服务路由处理器
@@ -67,6 +71,15 @@ func RegisterCommonHandler(r gin.IRoutes, interceptor interface {
 		return handler.Test(ctx.Request.Context(), &in)
 	}))
 
+	r.POST("/api/v1/common/explore-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonExploreListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.ExploreList(ctx.Request.Context(), &in)
+	}))
+
 	r.POST("/api/v1/common/app-dict", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in CommonAppDictGetRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
@@ -83,6 +96,24 @@ func RegisterCommonHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.AppModules(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/news-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsList(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/news-detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsDetailRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsDetail(ctx.Request.Context(), &in)
 	}))
 
 }
