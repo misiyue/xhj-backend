@@ -36,6 +36,7 @@ type V1 struct {
 	KYC          *v1.KYC
 	Wallet       *v1.Wallet
 	GroupRobot   *v1.GroupRobot
+	Marzban      *v1.Marzban
 }
 
 type Handler struct {

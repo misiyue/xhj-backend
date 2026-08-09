@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"buf.build/go/protovalidate"
-	_ "github.com/gzydong/go-chat/docs" // 注册 swag 文档，/swagger/doc.json 依赖此包 init
 	"github.com/gin-gonic/gin"
 	web2 "github.com/gzydong/go-chat/api/pb/web/v1"
+	_ "github.com/gzydong/go-chat/docs" // 注册 swag 文档，/swagger/doc.json 依赖此包 init
 	"github.com/gzydong/go-chat/internal/apis/handler/web"
 	v1 "github.com/gzydong/go-chat/internal/apis/handler/web/v1"
 	"github.com/gzydong/go-chat/internal/apis/handler/web/v1/talk"
@@ -99,6 +99,14 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 }
 
 func registerCustomApiRouter(resp *Interceptor, api gin.IRoutes, handler *web.Handler) {
+	api.POST("/api/v1/marzban/user", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.CreateUser(c)
+	}))
+
+	api.GET("/api/v1/marzban/user/:id", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.GetUser(c)
+	}))
+
 	api.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
 		in := &web2.CommonAppVersionLatestRequest{
 			Platform: strings.ToLower(strings.TrimSpace(c.Query("platform"))),
