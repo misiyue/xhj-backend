@@ -71,7 +71,7 @@ func NewRouter(conf *config.Config, handler *handler.Handler, session *cache.Jwt
 	// Prometheus metrics 端点
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	RegisterWebRoute(conf.Jwt.Secret, router, handler.Api, session)
+	RegisterWebRoute(conf, router, handler.Api, session)
 	RegisterAdminRoute(conf.Jwt.Secret, router, handler.Admin, session)
 	RegisterOpenRoute(router, handler.Open)
 
