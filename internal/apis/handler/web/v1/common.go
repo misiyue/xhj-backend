@@ -29,12 +29,13 @@ type Common struct {
 	AppExploreRepo  *repo.AppExplore
 	AppModuleRepo   *repo.AppModule
 	AppDictRepo     *repo.AppDict
-	AppNewsRepo     *repo.AppNews
-	SmsService      service.ISmsService
-	EmailService    service.IEmailService
-	UserService     service.IUserService
-	EmailClient     *email.Client
-	TemplateService service.ITemplateService
+	AppNewsRepo         *repo.AppNews
+	AppNewsCategoryRepo *repo.AppNewsCategory
+	SmsService          service.ISmsService
+	EmailService        service.IEmailService
+	UserService         service.IUserService
+	EmailClient         *email.Client
+	TemplateService     service.ITemplateService
 }
 
 // SendSms 发送短信验证码接口
@@ -244,7 +245,7 @@ func (c *Common) AppModules(ctx context.Context, _ *web.CommonAppModulesRequest)
 	return out, nil
 }
 
-// NewsList 火箭资讯列表（仅已发布；支持 news_type、source 筛选与分页）
+// NewsList 火箭资讯列表（仅已发布；支持 category_id、is_index 筛选与分页）
 func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*web.CommonNewsListResponse, error) {
 	if c.AppNewsRepo == nil {
 		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
@@ -262,7 +263,13 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 		pageSize = 100
 	}
 
-	total, list, err := c.AppNewsRepo.ListPublished(ctx, page, pageSize, in.GetNewsType(), in.GetSource())
+	var isIndex *int
+	if in.IsIndex != nil {
+		v := int(in.GetIsIndex())
+		isIndex = &v
+	}
+
+	total, list, err := c.AppNewsRepo.ListPublished(ctx, page, pageSize, int(in.GetCategoryId()), isIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -278,14 +285,16 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 	}
 	for _, row := range list {
 		item := &web.CommonNewsListResponse_Item{
-			Id:          int32(row.Id),
-			Title:       row.Title,
-			CollectType: row.CollectType,
-			NewsType:    row.NewsType,
-			Source:      row.Source,
-			Cover:       row.Cover,
-			Status:      int32(row.Status),
-			CreatedAt:   timeutil.FormatDatetime(row.CreatedAt),
+			Id:         int32(row.Id),
+			Title:      row.Title,
+			CategoryId: int32(row.CategoryId),
+			Cover:      row.Cover,
+			Status:     int32(row.Status),
+			IsIndex:    int32(row.IsIndex),
+			CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
+		}
+		if row.TypeId != nil {
+			item.TypeId = int32(*row.TypeId)
 		}
 		if row.UploadTime != nil {
 			item.UploadTime = timeutil.FormatDatetime(*row.UploadTime)
@@ -313,22 +322,50 @@ func (c *Common) NewsDetail(ctx context.Context, in *web.CommonNewsDetailRequest
 	}
 
 	out := &web.CommonNewsDetailResponse{
-		Id:          int32(row.Id),
-		Title:       row.Title,
-		CollectType: row.CollectType,
-		NewsType:    row.NewsType,
-		Source:      row.Source,
-		Content:     row.Content,
-		Cover:       row.Cover,
-		SourceUrl:   row.SourceURL,
-		Status:      int32(row.Status),
-		CreatedAt:   timeutil.FormatDatetime(row.CreatedAt),
+		Id:         int32(row.Id),
+		Title:      row.Title,
+		CategoryId: int32(row.CategoryId),
+		Content:    row.Content,
+		Cover:      row.Cover,
+		SourceUrl:  row.SourceURL,
+		Status:     int32(row.Status),
+		IsIndex:    int32(row.IsIndex),
+		CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
+	}
+	if row.TypeId != nil {
+		out.TypeId = int32(*row.TypeId)
 	}
 	if row.UploadTime != nil {
 		out.UploadTime = timeutil.FormatDatetime(*row.UploadTime)
 	}
 	if row.PublishTime != nil {
 		out.PublishTime = timeutil.FormatDatetime(*row.PublishTime)
+	}
+	return out, nil
+}
+
+// NewsCategoryList 资讯分类列表（status=1，sort 倒序，不分页）
+func (c *Common) NewsCategoryList(ctx context.Context, in *web.CommonNewsCategoryListRequest) (*web.CommonNewsCategoryListResponse, error) {
+	if c.AppNewsCategoryRepo == nil {
+		return nil, errors.New("AppNewsCategoryRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	list, err := c.AppNewsCategoryRepo.ListVisibleByCollect(ctx, in.GetCollect())
+	if err != nil {
+		return nil, err
+	}
+
+	out := &web.CommonNewsCategoryListResponse{
+		Items: make([]*web.CommonNewsCategoryListResponse_Item, 0, len(list)),
+	}
+	for _, row := range list {
+		out.Items = append(out.Items, &web.CommonNewsCategoryListResponse_Item{
+			Id:      int32(row.Id),
+			Title:   row.Title,
+			Collect: row.Collect,
+			Status:  int32(row.Status),
+			Sort:    int32(row.Sort),
+		})
 	}
 	return out, nil
 }

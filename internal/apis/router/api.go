@@ -69,6 +69,7 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 				"/api/v1/common/explore-list",
 				"/api/v1/common/news-list",
 				"/api/v1/common/news-detail",
+				"/api/v1/common/news-category-list",
 				"/api/v1/notice/article",
 				"/api/v1/merchant/order/hdpay-notify",
 				"/api/v1/merchant/order/hmpay-notify",

@@ -47,6 +47,7 @@ var ProviderSet = wire.NewSet(
 	NewMerchantPayment,
 	NewAppDict,
 	NewAppNews,
+	NewAppNewsCategory,
 	NewMerchantOrder,
 	NewMerchantOrderErrLog,
 	NewMerchantHdOrder,

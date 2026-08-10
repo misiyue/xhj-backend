@@ -25,10 +25,12 @@ type ICommonHandler interface {
 	AppDictGet(ctx context.Context, in *CommonAppDictGetRequest) (*CommonAppDictGetResponse, error)
 	// 功能模块列表
 	AppModules(ctx context.Context, in *CommonAppModulesRequest) (*CommonAppModulesResponse, error)
-	// 火箭资讯列表（仅已发布；支持 news_type、source 筛选与分页）
+	// 火箭资讯列表（仅已发布；支持 category_id、is_index 筛选与分页）
 	NewsList(ctx context.Context, in *CommonNewsListRequest) (*CommonNewsListResponse, error)
 	// 火箭资讯详情（仅已发布；含 content、source_url）
 	NewsDetail(ctx context.Context, in *CommonNewsDetailRequest) (*CommonNewsDetailResponse, error)
+	// 资讯分类列表（仅显示 status=1；按 sort 倒序；不分页）
+	NewsCategoryList(ctx context.Context, in *CommonNewsCategoryListRequest) (*CommonNewsCategoryListResponse, error)
 }
 
 // RegisterCommonHandler 注册服务路由处理器
@@ -114,6 +116,15 @@ func RegisterCommonHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.NewsDetail(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/news-category-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsCategoryListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsCategoryList(ctx.Request.Context(), &in)
 	}))
 
 }

@@ -90,6 +90,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.AppExplore{},
 		&model.AppModule{},
 		&model.AppNews{},
+		&model.AppNewsCategory{},
 
 		// 商户 C2C
 		&model.Merchant{},

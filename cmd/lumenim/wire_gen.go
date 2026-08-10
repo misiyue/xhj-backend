@@ -52,6 +52,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	appModule := repo.NewAppModule(db)
 	appDict := repo.NewAppDict(db)
 	appNews := repo.NewAppNews(db)
+	appNewsCategory := repo.NewAppNewsCategory(db)
 	smsStorage := cache.NewSmsStorage(client)
 	smsService := &service.SmsService{
 		Storage: smsStorage,
@@ -75,8 +76,9 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		AppExploreRepo:  appExplore,
 		AppModuleRepo:   appModule,
 		AppDictRepo:     appDict,
-		AppNewsRepo:     appNews,
-		SmsService:      smsService,
+		AppNewsRepo:         appNews,
+		AppNewsCategoryRepo: appNewsCategory,
+		SmsService:          smsService,
 		EmailService:    emailService,
 		UserService:     userService,
 		EmailClient:     emailClient,
