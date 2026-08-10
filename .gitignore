@@ -14,5 +14,8 @@ custom.mk
 config.local.yaml
 deploy/
 docs/
-lumenim
+/lumenim
+/lumenim.exe
 cmd/stress-test/stress-test
+cmd/lumenim/lumenim
+cmd/lumenim/lumenim.exe
