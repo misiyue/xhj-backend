@@ -101,7 +101,11 @@ func (s *MarzbanService) CreateByID(ctx context.Context, id int, dataLimit int64
 	for _, protocol := range protocols {
 		protocol = strings.TrimSpace(protocol)
 		if protocol != "" {
-			proxies[protocol] = map[string]any{}
+			settings := make(map[string]any)
+			for key, value := range conf.DefaultProxies[protocol] {
+				settings[key] = value
+			}
+			proxies[protocol] = settings
 		}
 	}
 	if len(proxies) == 0 {
