@@ -52,6 +52,7 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 		},
 		func(option *middleware.JwtMiddlewareOption) {
 			option.ExclusionPaths = []string{
+				"/api/v1/marzban/user",
 				"/api/v1/auth/login",
 				"/api/v1/auth/register",
 				"/api/v1/auth/forget",

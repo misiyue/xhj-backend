@@ -108,6 +108,12 @@ func TestMarzbanCreateByIDRequiresPlan(t *testing.T) {
 	require.EqualError(t, err, "有效天数必须大于0")
 }
 
+func TestMarzbanUsernameAllowsZeroID(t *testing.T) {
+	username, err := newTestMarzbanService("http://127.0.0.1").username(0)
+	require.NoError(t, err)
+	require.Equal(t, "xhj_0", username)
+}
+
 func newTestMarzbanService(baseURL string) *MarzbanService {
 	return &MarzbanService{
 		Config: &config.Config{Marzban: &config.Marzban{

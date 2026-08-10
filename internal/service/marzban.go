@@ -66,9 +66,6 @@ type marzbanUserResponse struct {
 }
 
 func (s *MarzbanService) CreateByID(ctx context.Context, id int, dataLimit int64, expireDays int) (*MarzbanUserInfo, error) {
-	if id <= 0 {
-		return nil, errors.New("用户ID无效")
-	}
 	if dataLimit <= 0 {
 		return nil, errors.New("流量额度必须大于0")
 	}

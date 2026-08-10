@@ -20,7 +20,7 @@ type Marzban struct {
 const bytesPerGB = int64(1 << 30)
 
 type MarzbanCreateUserRequest struct {
-	ID          int     `json:"id" binding:"required,gt=0"`
+	ID          *int    `json:"id" binding:"required"`
 	DataLimitGB float64 `json:"data_limit_gb" binding:"required,gt=0"`
 	ExpireDays  int     `json:"expire_days" binding:"required,gt=0"`
 }
@@ -43,30 +43,26 @@ type MarzbanUserResponse struct {
 	Message               string  `json:"message"`
 }
 
-// CreateUser 按当前系统用户ID幂等创建 Marzban 用户。
+// CreateUser 按传入的系统用户ID幂等创建 Marzban 用户。
 //
 //	@Summary		创建 Marzban 用户
-//	@Description	按本系统用户ID创建 Marzban 用户；用户已存在时直接返回现有账户
+//	@Description	无需登录，按传入的系统用户ID创建 Marzban 用户；用户已存在时直接返回现有账户
 //	@Tags			Marzban
 //	@Accept			json
 //	@Produce		json
 //	@Param			request	body		MarzbanCreateUserRequest	true	"创建用户请求"
 //	@Success		200		{object}	MarzbanUserResponse
 //	@Router			/api/v1/marzban/user [post]
-//	@Security		Bearer
 func (m *Marzban) CreateUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	var req MarzbanCreateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		return nil, errorx.New(400, "用户ID、流量额度（GB）和有效天数均为必填项，且必须大于0")
-	}
-	if err := validateMarzbanOwner(ctx.Request.Context(), req.ID); err != nil {
-		return nil, err
+		return nil, errorx.New(400, "用户ID为必填项，流量额度（GB）和有效天数必须大于0")
 	}
 	dataLimitBytes, err := dataLimitGBToBytes(req.DataLimitGB)
 	if err != nil {
 		return nil, err
 	}
-	user, err := m.MarzbanService.CreateByID(ctx.Request.Context(), req.ID, dataLimitBytes, req.ExpireDays)
+	user, err := m.MarzbanService.CreateByID(ctx.Request.Context(), *req.ID, dataLimitBytes, req.ExpireDays)
 	if err != nil {
 		return nil, err
 	}
