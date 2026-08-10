@@ -23,6 +23,8 @@ type AppNews struct {
 	UploadTime  *time.Time `gorm:"column:upload_time" json:"upload_time"`
 	PublishTime *time.Time `gorm:"column:publish_time;index:idx_publish_time" json:"publish_time"`
 	Status      int        `gorm:"column:status;type:tinyint(4);not null;default:0;index:idx_status" json:"status"`
+	Pv          int        `gorm:"column:pv;type:int(11);default:0" json:"pv"`
+	Uv          int        `gorm:"column:uv;type:int(11);default:0" json:"uv"`
 	CreatedAt   time.Time  `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt   time.Time  `gorm:"column:updated_at" json:"updated_at"`
 }

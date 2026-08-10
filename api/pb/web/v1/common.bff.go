@@ -31,6 +31,8 @@ type ICommonHandler interface {
 	NewsDetail(ctx context.Context, in *CommonNewsDetailRequest) (*CommonNewsDetailResponse, error)
 	// 资讯分类列表（仅显示 status=1；按 sort 倒序；不分页）
 	NewsCategoryList(ctx context.Context, in *CommonNewsCategoryListRequest) (*CommonNewsCategoryListResponse, error)
+	// 资讯阅读上报（未登录直接返回；已登录记 pv/uv，同用户同资讯 30s 内去重）
+	NewsView(ctx context.Context, in *CommonNewsViewRequest) (*CommonNewsViewResponse, error)
 }
 
 // RegisterCommonHandler 注册服务路由处理器
@@ -118,13 +120,22 @@ func RegisterCommonHandler(r gin.IRoutes, interceptor interface {
 		return handler.NewsDetail(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/common/news-category-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+	r.POST("/api/v1/common/category-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
 		var in CommonNewsCategoryListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
 
 		return handler.NewsCategoryList(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/news-view", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsViewRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsView(ctx.Request.Context(), &in)
 	}))
 
 }

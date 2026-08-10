@@ -53,6 +53,8 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	appDict := repo.NewAppDict(db)
 	appNews := repo.NewAppNews(db)
 	appNewsCategory := repo.NewAppNewsCategory(db)
+	appNewsView := repo.NewAppNewsView(db)
+	appNewsViewStorage := cache.NewAppNewsViewStorage(client)
 	smsStorage := cache.NewSmsStorage(client)
 	smsService := &service.SmsService{
 		Storage: smsStorage,
@@ -70,19 +72,21 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	}
 	templateService := &service.TemplateService{}
 	common := &v1.Common{
-		Config:          c,
-		UsersRepo:       users,
-		AppVersionRepo:  appVersion,
-		AppExploreRepo:  appExplore,
-		AppModuleRepo:   appModule,
-		AppDictRepo:     appDict,
+		Config:              c,
+		UsersRepo:           users,
+		AppVersionRepo:      appVersion,
+		AppExploreRepo:      appExplore,
+		AppModuleRepo:       appModule,
+		AppDictRepo:         appDict,
 		AppNewsRepo:         appNews,
 		AppNewsCategoryRepo: appNewsCategory,
+		AppNewsViewRepo:     appNewsView,
+		AppNewsViewCache:    appNewsViewStorage,
 		SmsService:          smsService,
-		EmailService:    emailService,
-		UserService:     userService,
-		EmailClient:     emailClient,
-		TemplateService: templateService,
+		EmailService:        emailService,
+		UserService:         userService,
+		EmailClient:         emailClient,
+		TemplateService:     templateService,
 	}
 	registerLimiter := cache.NewRegisterLimiter(client)
 	jwtTokenStorage := cache.NewJwtTokenStorage(client)

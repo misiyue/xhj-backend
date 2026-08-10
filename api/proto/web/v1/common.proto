@@ -78,7 +78,15 @@ service Common {
   // 资讯分类列表（仅显示 status=1；按 sort 倒序；不分页）
   rpc NewsCategoryList(CommonNewsCategoryListRequest) returns (CommonNewsCategoryListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/common/news-category-list"
+      post: "/api/v1/common/category-list"
+      body: "*"
+    };
+  }
+
+  // 资讯阅读上报（未登录直接返回；已登录记 pv/uv，同用户同资讯 30s 内去重）
+  rpc NewsView(CommonNewsViewRequest) returns (CommonNewsViewResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/news-view"
       body: "*"
     };
   }
@@ -197,6 +205,8 @@ message CommonNewsListResponse {
     string publish_time = 7;
     int32 status = 8;
     string created_at = 9;
+    int32 pv = 10;
+    int32 uv = 11;
   }
   repeated Item items = 1;
   int32 total = 2 [(google.api.field_behavior) = REQUIRED];
@@ -221,6 +231,8 @@ message CommonNewsDetailResponse {
   string publish_time = 9;
   int32 status = 10;
   string created_at = 11;
+  int32 pv = 12;
+  int32 uv = 13;
 }
 
 // 资讯分类列表请求
@@ -239,3 +251,10 @@ message CommonNewsCategoryListResponse {
   }
   repeated Item items = 1;
 }
+
+// 资讯阅读上报请求
+message CommonNewsViewRequest {
+  int32 news_id = 1 [(buf.validate.field).int32.gt = 0, (google.api.field_behavior) = REQUIRED];
+}
+
+message CommonNewsViewResponse {}

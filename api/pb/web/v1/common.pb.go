@@ -949,6 +949,8 @@ type CommonNewsDetailResponse struct {
 	PublishTime   string `protobuf:"bytes,9,opt,name=publish_time,json=publishTime,proto3" json:"publish_time,omitempty"`
 	Status        int32  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
 	CreatedAt     string `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Pv            int32  `protobuf:"varint,12,opt,name=pv,proto3" json:"pv,omitempty"`
+	Uv            int32  `protobuf:"varint,13,opt,name=uv,proto3" json:"uv,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1060,6 +1062,20 @@ func (x *CommonNewsDetailResponse) GetCreatedAt() string {
 	return ""
 }
 
+func (x *CommonNewsDetailResponse) GetPv() int32 {
+	if x != nil {
+		return x.Pv
+	}
+	return 0
+}
+
+func (x *CommonNewsDetailResponse) GetUv() int32 {
+	if x != nil {
+		return x.Uv
+	}
+	return 0
+}
+
 // 资讯分类列表请求
 type CommonNewsCategoryListRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1150,6 +1166,87 @@ func (x *CommonNewsCategoryListResponse) GetItems() []*CommonNewsCategoryListRes
 	return nil
 }
 
+// 资讯阅读上报请求
+type CommonNewsViewRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NewsId        int32                  `protobuf:"varint,1,opt,name=news_id,json=newsId,proto3" json:"news_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommonNewsViewRequest) Reset() {
+	*x = CommonNewsViewRequest{}
+	mi := &file_web_v1_common_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommonNewsViewRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommonNewsViewRequest) ProtoMessage() {}
+
+func (x *CommonNewsViewRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_common_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommonNewsViewRequest.ProtoReflect.Descriptor instead.
+func (*CommonNewsViewRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_common_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CommonNewsViewRequest) GetNewsId() int32 {
+	if x != nil {
+		return x.NewsId
+	}
+	return 0
+}
+
+type CommonNewsViewResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommonNewsViewResponse) Reset() {
+	*x = CommonNewsViewResponse{}
+	mi := &file_web_v1_common_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommonNewsViewResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommonNewsViewResponse) ProtoMessage() {}
+
+func (x *CommonNewsViewResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_common_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommonNewsViewResponse.ProtoReflect.Descriptor instead.
+func (*CommonNewsViewResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_common_proto_rawDescGZIP(), []int{22}
+}
+
 type CommonExploreListResponse_Item struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1166,7 +1263,7 @@ type CommonExploreListResponse_Item struct {
 
 func (x *CommonExploreListResponse_Item) Reset() {
 	*x = CommonExploreListResponse_Item{}
-	mi := &file_web_v1_common_proto_msgTypes[21]
+	mi := &file_web_v1_common_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1178,7 +1275,7 @@ func (x *CommonExploreListResponse_Item) String() string {
 func (*CommonExploreListResponse_Item) ProtoMessage() {}
 
 func (x *CommonExploreListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_common_proto_msgTypes[21]
+	mi := &file_web_v1_common_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1248,7 +1345,7 @@ type CommonAppModulesResponse_Item struct {
 
 func (x *CommonAppModulesResponse_Item) Reset() {
 	*x = CommonAppModulesResponse_Item{}
-	mi := &file_web_v1_common_proto_msgTypes[22]
+	mi := &file_web_v1_common_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1260,7 +1357,7 @@ func (x *CommonAppModulesResponse_Item) String() string {
 func (*CommonAppModulesResponse_Item) ProtoMessage() {}
 
 func (x *CommonAppModulesResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_common_proto_msgTypes[22]
+	mi := &file_web_v1_common_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1316,13 +1413,15 @@ type CommonNewsListResponse_Item struct {
 	PublishTime   string `protobuf:"bytes,7,opt,name=publish_time,json=publishTime,proto3" json:"publish_time,omitempty"`
 	Status        int32  `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`
 	CreatedAt     string `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Pv            int32  `protobuf:"varint,10,opt,name=pv,proto3" json:"pv,omitempty"`
+	Uv            int32  `protobuf:"varint,11,opt,name=uv,proto3" json:"uv,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CommonNewsListResponse_Item) Reset() {
 	*x = CommonNewsListResponse_Item{}
-	mi := &file_web_v1_common_proto_msgTypes[23]
+	mi := &file_web_v1_common_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1334,7 +1433,7 @@ func (x *CommonNewsListResponse_Item) String() string {
 func (*CommonNewsListResponse_Item) ProtoMessage() {}
 
 func (x *CommonNewsListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_common_proto_msgTypes[23]
+	mi := &file_web_v1_common_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1413,6 +1512,20 @@ func (x *CommonNewsListResponse_Item) GetCreatedAt() string {
 	return ""
 }
 
+func (x *CommonNewsListResponse_Item) GetPv() int32 {
+	if x != nil {
+		return x.Pv
+	}
+	return 0
+}
+
+func (x *CommonNewsListResponse_Item) GetUv() int32 {
+	if x != nil {
+		return x.Uv
+	}
+	return 0
+}
+
 type CommonNewsCategoryListResponse_Item struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1426,7 +1539,7 @@ type CommonNewsCategoryListResponse_Item struct {
 
 func (x *CommonNewsCategoryListResponse_Item) Reset() {
 	*x = CommonNewsCategoryListResponse_Item{}
-	mi := &file_web_v1_common_proto_msgTypes[24]
+	mi := &file_web_v1_common_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1438,7 +1551,7 @@ func (x *CommonNewsCategoryListResponse_Item) String() string {
 func (*CommonNewsCategoryListResponse_Item) ProtoMessage() {}
 
 func (x *CommonNewsCategoryListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_common_proto_msgTypes[24]
+	mi := &file_web_v1_common_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1551,11 +1664,11 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\x12(\n" +
 	"\vcategory_id\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\n" +
-	"categoryId\"\x91\x03\n" +
+	"categoryId\"\xb1\x03\n" +
 	"\x16CommonNewsListResponse\x126\n" +
 	"\x05items\x18\x01 \x03(\v2 .web.CommonNewsListResponse.ItemR\x05items\x12\x1a\n" +
 	"\x05total\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x05total\x12)\n" +
-	"\bpaginate\x18\x03 \x01(\v2\r.web.PaginateR\bpaginate\x1a\xf7\x01\n" +
+	"\bpaginate\x18\x03 \x01(\v2\r.web.PaginateR\bpaginate\x1a\x97\x02\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1f\n" +
@@ -1568,9 +1681,12 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\fpublish_time\x18\a \x01(\tR\vpublishTime\x12\x16\n" +
 	"\x06status\x18\b \x01(\x05R\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\t \x01(\tR\tcreatedAt\"6\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x0e\n" +
+	"\x02pv\x18\n" +
+	" \x01(\x05R\x02pv\x12\x0e\n" +
+	"\x02uv\x18\v \x01(\x05R\x02uv\"6\n" +
 	"\x17CommonNewsDetailRequest\x12\x1b\n" +
-	"\x02id\x18\x01 \x01(\x05B\v\xe2A\x01\x02\xbaH\x04\x1a\x02 \x00R\x02id\"\xc4\x02\n" +
+	"\x02id\x18\x01 \x01(\x05B\v\xe2A\x01\x02\xbaH\x04\x1a\x02 \x00R\x02id\"\xe4\x02\n" +
 	"\x18CommonNewsDetailResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1f\n" +
@@ -1587,7 +1703,9 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x06status\x18\n" +
 	" \x01(\x05R\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\v \x01(\tR\tcreatedAt\"B\n" +
+	"created_at\x18\v \x01(\tR\tcreatedAt\x12\x0e\n" +
+	"\x02pv\x18\f \x01(\x05R\x02pv\x12\x0e\n" +
+	"\x02uv\x18\r \x01(\x05R\x02uv\"B\n" +
 	"\x1dCommonNewsCategoryListRequest\x12!\n" +
 	"\acollect\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\acollect\"\xd4\x01\n" +
 	"\x1eCommonNewsCategoryListResponse\x12>\n" +
@@ -1597,7 +1715,10 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +
 	"\acollect\x18\x03 \x01(\tR\acollect\x12\x16\n" +
 	"\x06status\x18\x04 \x01(\x05R\x06status\x12\x12\n" +
-	"\x04sort\x18\x05 \x01(\x05R\x04sort2\x81\b\n" +
+	"\x04sort\x18\x05 \x01(\x05R\x04sort\"=\n" +
+	"\x15CommonNewsViewRequest\x12$\n" +
+	"\anews_id\x18\x01 \x01(\x05B\v\xe2A\x01\x02\xbaH\x04\x1a\x02 \x00R\x06newsId\"\x18\n" +
+	"\x16CommonNewsViewResponse2\xe6\b\n" +
 	"\x06Common\x12d\n" +
 	"\aSendSms\x12\x19.web.CommonSendSmsRequest\x1a\x1a.web.CommonSendSmsResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/common/send-sms\x12l\n" +
 	"\tSendEmail\x12\x1b.web.CommonSendEmailRequest\x1a\x1c.web.CommonSendEmailResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/common/send-email\x12d\n" +
@@ -1609,8 +1730,9 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"AppModules\x12\x1c.web.CommonAppModulesRequest\x1a\x1d.web.CommonAppModulesResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/common/app-modules\x12h\n" +
 	"\bNewsList\x12\x1a.web.CommonNewsListRequest\x1a\x1b.web.CommonNewsListResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/common/news-list\x12p\n" +
 	"\n" +
-	"NewsDetail\x12\x1c.web.CommonNewsDetailRequest\x1a\x1d.web.CommonNewsDetailResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/common/news-detail\x12\x89\x01\n" +
-	"\x10NewsCategoryList\x12\".web.CommonNewsCategoryListRequest\x1a#.web.CommonNewsCategoryListResponse\",\x82\xd3\xe4\x93\x02&:\x01*\"!/api/v1/common/news-category-listB\fZ\n" +
+	"NewsDetail\x12\x1c.web.CommonNewsDetailRequest\x1a\x1d.web.CommonNewsDetailResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/common/news-detail\x12\x84\x01\n" +
+	"\x10NewsCategoryList\x12\".web.CommonNewsCategoryListRequest\x1a#.web.CommonNewsCategoryListResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/common/category-list\x12h\n" +
+	"\bNewsView\x12\x1a.web.CommonNewsViewRequest\x1a\x1b.web.CommonNewsViewResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/common/news-viewB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -1625,7 +1747,7 @@ func file_web_v1_common_proto_rawDescGZIP() []byte {
 	return file_web_v1_common_proto_rawDescData
 }
 
-var file_web_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_web_v1_common_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
 var file_web_v1_common_proto_goTypes = []any{
 	(*CommonSendSmsRequest)(nil),                // 0: web.CommonSendSmsRequest
 	(*CommonSendSmsResponse)(nil),               // 1: web.CommonSendSmsResponse
@@ -1648,24 +1770,26 @@ var file_web_v1_common_proto_goTypes = []any{
 	(*CommonNewsDetailResponse)(nil),            // 18: web.CommonNewsDetailResponse
 	(*CommonNewsCategoryListRequest)(nil),       // 19: web.CommonNewsCategoryListRequest
 	(*CommonNewsCategoryListResponse)(nil),      // 20: web.CommonNewsCategoryListResponse
-	(*CommonExploreListResponse_Item)(nil),      // 21: web.CommonExploreListResponse.Item
-	(*CommonAppModulesResponse_Item)(nil),       // 22: web.CommonAppModulesResponse.Item
-	(*CommonNewsListResponse_Item)(nil),         // 23: web.CommonNewsListResponse.Item
-	(*CommonNewsCategoryListResponse_Item)(nil), // 24: web.CommonNewsCategoryListResponse.Item
-	(*structpb.ListValue)(nil),                  // 25: google.protobuf.ListValue
-	(*structpb.Value)(nil),                      // 26: google.protobuf.Value
-	(*Paginate)(nil),                            // 27: web.Paginate
+	(*CommonNewsViewRequest)(nil),               // 21: web.CommonNewsViewRequest
+	(*CommonNewsViewResponse)(nil),              // 22: web.CommonNewsViewResponse
+	(*CommonExploreListResponse_Item)(nil),      // 23: web.CommonExploreListResponse.Item
+	(*CommonAppModulesResponse_Item)(nil),       // 24: web.CommonAppModulesResponse.Item
+	(*CommonNewsListResponse_Item)(nil),         // 25: web.CommonNewsListResponse.Item
+	(*CommonNewsCategoryListResponse_Item)(nil), // 26: web.CommonNewsCategoryListResponse.Item
+	(*structpb.ListValue)(nil),                  // 27: google.protobuf.ListValue
+	(*structpb.Value)(nil),                      // 28: google.protobuf.Value
+	(*Paginate)(nil),                            // 29: web.Paginate
 }
 var file_web_v1_common_proto_depIdxs = []int32{
-	25, // 0: web.CommonAppVersionLatestResponse.release_notes:type_name -> google.protobuf.ListValue
-	25, // 1: web.CommonAppVersionLatestResponse.download_urls:type_name -> google.protobuf.ListValue
-	21, // 2: web.CommonExploreListResponse.items:type_name -> web.CommonExploreListResponse.Item
-	26, // 3: web.CommonAppDictItem.parsed_value:type_name -> google.protobuf.Value
+	27, // 0: web.CommonAppVersionLatestResponse.release_notes:type_name -> google.protobuf.ListValue
+	27, // 1: web.CommonAppVersionLatestResponse.download_urls:type_name -> google.protobuf.ListValue
+	23, // 2: web.CommonExploreListResponse.items:type_name -> web.CommonExploreListResponse.Item
+	28, // 3: web.CommonAppDictItem.parsed_value:type_name -> google.protobuf.Value
 	11, // 4: web.CommonAppDictGetResponse.items:type_name -> web.CommonAppDictItem
-	22, // 5: web.CommonAppModulesResponse.items:type_name -> web.CommonAppModulesResponse.Item
-	23, // 6: web.CommonNewsListResponse.items:type_name -> web.CommonNewsListResponse.Item
-	27, // 7: web.CommonNewsListResponse.paginate:type_name -> web.Paginate
-	24, // 8: web.CommonNewsCategoryListResponse.items:type_name -> web.CommonNewsCategoryListResponse.Item
+	24, // 5: web.CommonAppModulesResponse.items:type_name -> web.CommonAppModulesResponse.Item
+	25, // 6: web.CommonNewsListResponse.items:type_name -> web.CommonNewsListResponse.Item
+	29, // 7: web.CommonNewsListResponse.paginate:type_name -> web.Paginate
+	26, // 8: web.CommonNewsCategoryListResponse.items:type_name -> web.CommonNewsCategoryListResponse.Item
 	0,  // 9: web.Common.SendSms:input_type -> web.CommonSendSmsRequest
 	2,  // 10: web.Common.SendEmail:input_type -> web.CommonSendEmailRequest
 	4,  // 11: web.Common.Test:input_type -> web.CommonSendTestRequest
@@ -1675,17 +1799,19 @@ var file_web_v1_common_proto_depIdxs = []int32{
 	15, // 15: web.Common.NewsList:input_type -> web.CommonNewsListRequest
 	17, // 16: web.Common.NewsDetail:input_type -> web.CommonNewsDetailRequest
 	19, // 17: web.Common.NewsCategoryList:input_type -> web.CommonNewsCategoryListRequest
-	1,  // 18: web.Common.SendSms:output_type -> web.CommonSendSmsResponse
-	3,  // 19: web.Common.SendEmail:output_type -> web.CommonSendEmailResponse
-	5,  // 20: web.Common.Test:output_type -> web.CommonSendTestResponse
-	9,  // 21: web.Common.ExploreList:output_type -> web.CommonExploreListResponse
-	12, // 22: web.Common.AppDictGet:output_type -> web.CommonAppDictGetResponse
-	14, // 23: web.Common.AppModules:output_type -> web.CommonAppModulesResponse
-	16, // 24: web.Common.NewsList:output_type -> web.CommonNewsListResponse
-	18, // 25: web.Common.NewsDetail:output_type -> web.CommonNewsDetailResponse
-	20, // 26: web.Common.NewsCategoryList:output_type -> web.CommonNewsCategoryListResponse
-	18, // [18:27] is the sub-list for method output_type
-	9,  // [9:18] is the sub-list for method input_type
+	21, // 18: web.Common.NewsView:input_type -> web.CommonNewsViewRequest
+	1,  // 19: web.Common.SendSms:output_type -> web.CommonSendSmsResponse
+	3,  // 20: web.Common.SendEmail:output_type -> web.CommonSendEmailResponse
+	5,  // 21: web.Common.Test:output_type -> web.CommonSendTestResponse
+	9,  // 22: web.Common.ExploreList:output_type -> web.CommonExploreListResponse
+	12, // 23: web.Common.AppDictGet:output_type -> web.CommonAppDictGetResponse
+	14, // 24: web.Common.AppModules:output_type -> web.CommonAppModulesResponse
+	16, // 25: web.Common.NewsList:output_type -> web.CommonNewsListResponse
+	18, // 26: web.Common.NewsDetail:output_type -> web.CommonNewsDetailResponse
+	20, // 27: web.Common.NewsCategoryList:output_type -> web.CommonNewsCategoryListResponse
+	22, // 28: web.Common.NewsView:output_type -> web.CommonNewsViewResponse
+	19, // [19:29] is the sub-list for method output_type
+	9,  // [9:19] is the sub-list for method input_type
 	9,  // [9:9] is the sub-list for extension type_name
 	9,  // [9:9] is the sub-list for extension extendee
 	0,  // [0:9] is the sub-list for field type_name
@@ -1703,7 +1829,7 @@ func file_web_v1_common_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_common_proto_rawDesc), len(file_web_v1_common_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   25,
+			NumMessages:   27,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
