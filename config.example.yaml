@@ -193,6 +193,19 @@ wallet:
   base_url: "https://example.com/api"
   key: "mh**************************"
 
+# Marzban 面板配置
+marzban:
+  base_url: "https://marzban.example.com"
+  admin_username: "admin"
+  admin_password: "请填写Marzban管理员密码"
+  # 本系统用户ID为 123 时，对应的 Marzban 用户名为 xhj_123
+  user_prefix: "xhj_"
+  # 协议必须已在 Marzban 的 Xray 配置中启用
+  default_protocols:
+    - vless
+  # 留空时，Marzban 会自动使用该协议下的全部可用入站
+  default_inbounds: {}
+
 # 安全配置
 security:
   # IP限流配置
