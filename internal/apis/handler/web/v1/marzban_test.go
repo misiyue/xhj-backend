@@ -28,3 +28,18 @@ func TestValidateMarzbanOwnerRequiresLogin(t *testing.T) {
 	require.ErrorAs(t, err, &businessErr)
 	require.Equal(t, 401, businessErr.Code)
 }
+
+func TestDataLimitGBToBytes(t *testing.T) {
+	bytes, err := dataLimitGBToBytes(100)
+	require.NoError(t, err)
+	require.Equal(t, int64(100*(1<<30)), bytes)
+
+	bytes, err = dataLimitGBToBytes(1.5)
+	require.NoError(t, err)
+	require.Equal(t, int64(1536*(1<<20)), bytes)
+}
+
+func TestDataLimitGBToBytesRejectsInvalidValue(t *testing.T) {
+	_, err := dataLimitGBToBytes(0)
+	require.Error(t, err)
+}

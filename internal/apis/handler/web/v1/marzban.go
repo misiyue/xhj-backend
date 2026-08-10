@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"errors"
+	"math"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +17,12 @@ type Marzban struct {
 	MarzbanService service.IMarzbanService
 }
 
+const bytesPerGB = int64(1 << 30)
+
 type MarzbanCreateUserRequest struct {
-	ID             int   `json:"id" binding:"required,gt=0"`
-	DataLimitBytes int64 `json:"data_limit_bytes" binding:"required,gt=0"`
-	ExpireDays     int   `json:"expire_days" binding:"required,gt=0"`
+	ID          int     `json:"id" binding:"required,gt=0"`
+	DataLimitGB float64 `json:"data_limit_gb" binding:"required,gt=0"`
+	ExpireDays  int     `json:"expire_days" binding:"required,gt=0"`
 }
 
 type MarzbanUserResponse struct {
@@ -27,6 +30,7 @@ type MarzbanUserResponse struct {
 	Username              string  `json:"username"`
 	Status                string  `json:"status"`
 	DataLimitBytes        int64   `json:"data_limit_bytes"`
+	DataLimitGB           float64 `json:"data_limit_gb"`
 	UsedTrafficBytes      int64   `json:"used_traffic_bytes"`
 	RemainingTrafficBytes int64   `json:"remaining_traffic_bytes"`
 	RemainingTrafficGB    float64 `json:"remaining_traffic_gb"`
@@ -53,12 +57,16 @@ type MarzbanUserResponse struct {
 func (m *Marzban) CreateUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	var req MarzbanCreateUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		return nil, errorx.New(400, "用户ID、流量额度和有效天数均为必填项，且必须大于0")
+		return nil, errorx.New(400, "用户ID、流量额度（GB）和有效天数均为必填项，且必须大于0")
 	}
 	if err := validateMarzbanOwner(ctx.Request.Context(), req.ID); err != nil {
 		return nil, err
 	}
-	user, err := m.MarzbanService.CreateByID(ctx.Request.Context(), req.ID, req.DataLimitBytes, req.ExpireDays)
+	dataLimitBytes, err := dataLimitGBToBytes(req.DataLimitGB)
+	if err != nil {
+		return nil, err
+	}
+	user, err := m.MarzbanService.CreateByID(ctx.Request.Context(), req.ID, dataLimitBytes, req.ExpireDays)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +126,7 @@ func marzbanUserResponse(user *service.MarzbanUserInfo) *MarzbanUserResponse {
 		Username:              user.Username,
 		Status:                user.Status,
 		DataLimitBytes:        user.DataLimit,
+		DataLimitGB:           float64(user.DataLimit) / float64(bytesPerGB),
 		UsedTrafficBytes:      user.UsedTraffic,
 		RemainingTrafficBytes: user.RemainingTraffic,
 		RemainingTrafficGB:    float64(user.RemainingTraffic) / float64(1<<30),
@@ -129,4 +138,16 @@ func marzbanUserResponse(user *service.MarzbanUserInfo) *MarzbanUserResponse {
 		Created:               user.Created,
 		Message:               message,
 	}
+}
+
+func dataLimitGBToBytes(dataLimitGB float64) (int64, error) {
+	maxGB := float64(math.MaxInt64) / float64(bytesPerGB)
+	if dataLimitGB <= 0 || dataLimitGB > maxGB {
+		return 0, errorx.New(400, "流量额度必须大于0且不能超过系统上限")
+	}
+	dataLimitBytes := int64(math.Round(dataLimitGB * float64(bytesPerGB)))
+	if dataLimitBytes <= 0 {
+		return 0, errorx.New(400, "流量额度过小")
+	}
+	return dataLimitBytes, nil
 }
