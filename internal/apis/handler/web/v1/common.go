@@ -12,8 +12,10 @@ import (
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/email"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
+	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
@@ -23,14 +25,16 @@ import (
 var _ web.ICommonHandler = (*Common)(nil)
 
 type Common struct {
-	Config          *config.Config
-	UsersRepo       *repo.Users
-	AppVersionRepo  *repo.AppVersion
-	AppExploreRepo  *repo.AppExplore
-	AppModuleRepo   *repo.AppModule
-	AppDictRepo     *repo.AppDict
+	Config              *config.Config
+	UsersRepo           *repo.Users
+	AppVersionRepo      *repo.AppVersion
+	AppExploreRepo      *repo.AppExplore
+	AppModuleRepo       *repo.AppModule
+	AppDictRepo         *repo.AppDict
 	AppNewsRepo         *repo.AppNews
 	AppNewsCategoryRepo *repo.AppNewsCategory
+	AppNewsViewRepo     *repo.AppNewsView
+	AppNewsViewCache    *cache.AppNewsViewStorage
 	SmsService          service.ISmsService
 	EmailService        service.IEmailService
 	UserService         service.IUserService
@@ -285,6 +289,8 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 			Cover:      row.Cover,
 			Status:     int32(row.Status),
 			CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
+			Pv:         int32(row.Pv),
+			Uv:         int32(row.Uv),
 		}
 		if row.TypeId != nil {
 			item.TypeId = int32(*row.TypeId)
@@ -323,6 +329,8 @@ func (c *Common) NewsDetail(ctx context.Context, in *web.CommonNewsDetailRequest
 		SourceUrl:  row.SourceURL,
 		Status:     int32(row.Status),
 		CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
+		Pv:         int32(row.Pv),
+		Uv:         int32(row.Uv),
 	}
 	if row.TypeId != nil {
 		out.TypeId = int32(*row.TypeId)
@@ -360,6 +368,31 @@ func (c *Common) NewsCategoryList(ctx context.Context, in *web.CommonNewsCategor
 		})
 	}
 	return out, nil
+}
+
+// NewsView 资讯阅读上报：未登录直接返回；已登录写 pv/uv，同用户同资讯 Redis 30s 去重
+func (c *Common) NewsView(ctx context.Context, in *web.CommonNewsViewRequest) (*web.CommonNewsViewResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if uid <= 0 {
+		return &web.CommonNewsViewResponse{}, nil
+	}
+	if c.AppNewsViewRepo == nil || c.AppNewsViewCache == nil {
+		return nil, errors.New("AppNewsView 依赖未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	newsId := int(in.GetNewsId())
+	ok, err := c.AppNewsViewCache.Acquire(ctx, newsId, uid)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return &web.CommonNewsViewResponse{}, nil
+	}
+
+	if err := c.AppNewsViewRepo.RecordView(ctx, newsId, uid); err != nil {
+		return nil, err
+	}
+	return &web.CommonNewsViewResponse{}, nil
 }
 
 func dedupeAppDictKeys(keys []string) []string {
