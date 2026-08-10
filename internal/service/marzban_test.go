@@ -38,6 +38,14 @@ func TestMarzbanCreateByID(t *testing.T) {
 			require.Equal(t, "xhj_42", body["username"])
 			require.Equal(t, float64(dataLimit), body["data_limit"])
 			require.Equal(t, "active", body["status"])
+			proxies, ok := body["proxies"].(map[string]any)
+			require.True(t, ok)
+			vless, ok := proxies["vless"].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, "xtls-rprx-vision", vless["flow"])
+			inbounds, ok := body["inbounds"].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, []any{"VLESS TCP REALITY TEST"}, inbounds["vless"])
 			writeMarzbanJSON(t, w, http.StatusOK, map[string]any{
 				"username": "xhj_42", "status": "active", "data_limit": dataLimit,
 				"used_traffic": used, "expire": expire,
@@ -119,6 +127,12 @@ func newTestMarzbanService(baseURL string) *MarzbanService {
 		Config: &config.Config{Marzban: &config.Marzban{
 			BaseURL: baseURL, AdminUsername: "admin", AdminPassword: "secret",
 			UserPrefix: "xhj_", DefaultProtocols: []string{"vless"},
+			DefaultProxies: map[string]map[string]any{
+				"vless": {"flow": "xtls-rprx-vision"},
+			},
+			DefaultInbounds: map[string][]string{
+				"vless": {"VLESS TCP REALITY TEST"},
+			},
 		}},
 		HTTPClient: &http.Client{Timeout: time.Second},
 	}
