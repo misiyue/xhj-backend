@@ -774,9 +774,7 @@ type CommonNewsListRequest struct {
 	// 每页条数；未传或 0 时默认 20，最大 100
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// 资讯分类 id；0 或不传表示不限
-	CategoryId int32 `protobuf:"varint,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
-	// 是否首页：0-否，1-是；不传表示不限
-	IsIndex       *int32 `protobuf:"varint,4,opt,name=is_index,json=isIndex,proto3,oneof" json:"is_index,omitempty"`
+	CategoryId    int32 `protobuf:"varint,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -828,13 +826,6 @@ func (x *CommonNewsListRequest) GetPageSize() int32 {
 func (x *CommonNewsListRequest) GetCategoryId() int32 {
 	if x != nil {
 		return x.CategoryId
-	}
-	return 0
-}
-
-func (x *CommonNewsListRequest) GetIsIndex() int32 {
-	if x != nil && x.IsIndex != nil {
-		return *x.IsIndex
 	}
 	return 0
 }
@@ -950,16 +941,14 @@ type CommonNewsDetailResponse struct {
 	Title      string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	CategoryId int32                  `protobuf:"varint,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	// 1-图文，2-视频
-	TypeId      int32  `protobuf:"varint,4,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
-	Content     string `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
-	Cover       string `protobuf:"bytes,6,opt,name=cover,proto3" json:"cover,omitempty"`
-	SourceUrl   string `protobuf:"bytes,7,opt,name=source_url,json=sourceUrl,proto3" json:"source_url,omitempty"`
-	UploadTime  string `protobuf:"bytes,8,opt,name=upload_time,json=uploadTime,proto3" json:"upload_time,omitempty"`
-	PublishTime string `protobuf:"bytes,9,opt,name=publish_time,json=publishTime,proto3" json:"publish_time,omitempty"`
-	Status      int32  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
-	// 0-否，1-是
-	IsIndex       int32  `protobuf:"varint,11,opt,name=is_index,json=isIndex,proto3" json:"is_index,omitempty"`
-	CreatedAt     string `protobuf:"bytes,12,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	TypeId        int32  `protobuf:"varint,4,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	Content       string `protobuf:"bytes,5,opt,name=content,proto3" json:"content,omitempty"`
+	Cover         string `protobuf:"bytes,6,opt,name=cover,proto3" json:"cover,omitempty"`
+	SourceUrl     string `protobuf:"bytes,7,opt,name=source_url,json=sourceUrl,proto3" json:"source_url,omitempty"`
+	UploadTime    string `protobuf:"bytes,8,opt,name=upload_time,json=uploadTime,proto3" json:"upload_time,omitempty"`
+	PublishTime   string `protobuf:"bytes,9,opt,name=publish_time,json=publishTime,proto3" json:"publish_time,omitempty"`
+	Status        int32  `protobuf:"varint,10,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt     string `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1060,13 +1049,6 @@ func (x *CommonNewsDetailResponse) GetPublishTime() string {
 func (x *CommonNewsDetailResponse) GetStatus() int32 {
 	if x != nil {
 		return x.Status
-	}
-	return 0
-}
-
-func (x *CommonNewsDetailResponse) GetIsIndex() int32 {
-	if x != nil {
-		return x.IsIndex
 	}
 	return 0
 }
@@ -1328,14 +1310,12 @@ type CommonNewsListResponse_Item struct {
 	Title      string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	CategoryId int32                  `protobuf:"varint,3,opt,name=category_id,json=categoryId,proto3" json:"category_id,omitempty"`
 	// 1-图文，2-视频
-	TypeId      int32  `protobuf:"varint,4,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
-	Cover       string `protobuf:"bytes,5,opt,name=cover,proto3" json:"cover,omitempty"`
-	UploadTime  string `protobuf:"bytes,6,opt,name=upload_time,json=uploadTime,proto3" json:"upload_time,omitempty"`
-	PublishTime string `protobuf:"bytes,7,opt,name=publish_time,json=publishTime,proto3" json:"publish_time,omitempty"`
-	Status      int32  `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`
-	// 0-否，1-是
-	IsIndex       int32  `protobuf:"varint,9,opt,name=is_index,json=isIndex,proto3" json:"is_index,omitempty"`
-	CreatedAt     string `protobuf:"bytes,10,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	TypeId        int32  `protobuf:"varint,4,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	Cover         string `protobuf:"bytes,5,opt,name=cover,proto3" json:"cover,omitempty"`
+	UploadTime    string `protobuf:"bytes,6,opt,name=upload_time,json=uploadTime,proto3" json:"upload_time,omitempty"`
+	PublishTime   string `protobuf:"bytes,7,opt,name=publish_time,json=publishTime,proto3" json:"publish_time,omitempty"`
+	Status        int32  `protobuf:"varint,8,opt,name=status,proto3" json:"status,omitempty"`
+	CreatedAt     string `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1422,13 +1402,6 @@ func (x *CommonNewsListResponse_Item) GetPublishTime() string {
 func (x *CommonNewsListResponse_Item) GetStatus() int32 {
 	if x != nil {
 		return x.Status
-	}
-	return 0
-}
-
-func (x *CommonNewsListResponse_Item) GetIsIndex() int32 {
-	if x != nil {
-		return x.IsIndex
 	}
 	return 0
 }
@@ -1573,18 +1546,16 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x14\n" +
 	"\x05title\x18\x03 \x01(\tR\x05title\x12\x17\n" +
-	"\ais_open\x18\x04 \x01(\x05R\x06isOpen\"\xbe\x01\n" +
+	"\ais_open\x18\x04 \x01(\x05R\x06isOpen\"\x86\x01\n" +
 	"\x15CommonNewsListRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\x12(\n" +
 	"\vcategory_id\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\n" +
-	"categoryId\x12)\n" +
-	"\bis_index\x18\x04 \x01(\x05B\t\xbaH\x06\x1a\x040\x000\x01H\x00R\aisIndex\x88\x01\x01B\v\n" +
-	"\t_is_index\"\xac\x03\n" +
+	"categoryId\"\x91\x03\n" +
 	"\x16CommonNewsListResponse\x126\n" +
 	"\x05items\x18\x01 \x03(\v2 .web.CommonNewsListResponse.ItemR\x05items\x12\x1a\n" +
 	"\x05total\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x05total\x12)\n" +
-	"\bpaginate\x18\x03 \x01(\v2\r.web.PaginateR\bpaginate\x1a\x92\x02\n" +
+	"\bpaginate\x18\x03 \x01(\v2\r.web.PaginateR\bpaginate\x1a\xf7\x01\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1f\n" +
@@ -1595,13 +1566,11 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\vupload_time\x18\x06 \x01(\tR\n" +
 	"uploadTime\x12!\n" +
 	"\fpublish_time\x18\a \x01(\tR\vpublishTime\x12\x16\n" +
-	"\x06status\x18\b \x01(\x05R\x06status\x12\x19\n" +
-	"\bis_index\x18\t \x01(\x05R\aisIndex\x12\x1d\n" +
+	"\x06status\x18\b \x01(\x05R\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\n" +
-	" \x01(\tR\tcreatedAt\"6\n" +
+	"created_at\x18\t \x01(\tR\tcreatedAt\"6\n" +
 	"\x17CommonNewsDetailRequest\x12\x1b\n" +
-	"\x02id\x18\x01 \x01(\x05B\v\xe2A\x01\x02\xbaH\x04\x1a\x02 \x00R\x02id\"\xdf\x02\n" +
+	"\x02id\x18\x01 \x01(\x05B\v\xe2A\x01\x02\xbaH\x04\x1a\x02 \x00R\x02id\"\xc4\x02\n" +
 	"\x18CommonNewsDetailResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1f\n" +
@@ -1616,10 +1585,9 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"uploadTime\x12!\n" +
 	"\fpublish_time\x18\t \x01(\tR\vpublishTime\x12\x16\n" +
 	"\x06status\x18\n" +
-	" \x01(\x05R\x06status\x12\x19\n" +
-	"\bis_index\x18\v \x01(\x05R\aisIndex\x12\x1d\n" +
+	" \x01(\x05R\x06status\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\f \x01(\tR\tcreatedAt\"B\n" +
+	"created_at\x18\v \x01(\tR\tcreatedAt\"B\n" +
 	"\x1dCommonNewsCategoryListRequest\x12!\n" +
 	"\acollect\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\acollect\"\xd4\x01\n" +
 	"\x1eCommonNewsCategoryListResponse\x12>\n" +
@@ -1729,7 +1697,6 @@ func file_web_v1_common_proto_init() {
 		return
 	}
 	file_web_v1_paginate_proto_init()
-	file_web_v1_common_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

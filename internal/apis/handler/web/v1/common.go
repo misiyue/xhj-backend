@@ -245,7 +245,7 @@ func (c *Common) AppModules(ctx context.Context, _ *web.CommonAppModulesRequest)
 	return out, nil
 }
 
-// NewsList 火箭资讯列表（仅已发布；支持 category_id、is_index 筛选与分页）
+// NewsList 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
 func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*web.CommonNewsListResponse, error) {
 	if c.AppNewsRepo == nil {
 		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
@@ -263,13 +263,7 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 		pageSize = 100
 	}
 
-	var isIndex *int
-	if in.IsIndex != nil {
-		v := int(in.GetIsIndex())
-		isIndex = &v
-	}
-
-	total, list, err := c.AppNewsRepo.ListPublished(ctx, page, pageSize, int(in.GetCategoryId()), isIndex)
+	total, list, err := c.AppNewsRepo.ListPublished(ctx, page, pageSize, int(in.GetCategoryId()))
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +284,6 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 			CategoryId: int32(row.CategoryId),
 			Cover:      row.Cover,
 			Status:     int32(row.Status),
-			IsIndex:    int32(row.IsIndex),
 			CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
 		}
 		if row.TypeId != nil {
@@ -329,7 +322,6 @@ func (c *Common) NewsDetail(ctx context.Context, in *web.CommonNewsDetailRequest
 		Cover:      row.Cover,
 		SourceUrl:  row.SourceURL,
 		Status:     int32(row.Status),
-		IsIndex:    int32(row.IsIndex),
 		CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
 	}
 	if row.TypeId != nil {

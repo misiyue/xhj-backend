@@ -25,7 +25,7 @@ type ICommonHandler interface {
 	AppDictGet(ctx context.Context, in *CommonAppDictGetRequest) (*CommonAppDictGetResponse, error)
 	// 功能模块列表
 	AppModules(ctx context.Context, in *CommonAppModulesRequest) (*CommonAppModulesResponse, error)
-	// 火箭资讯列表（仅已发布；支持 category_id、is_index 筛选与分页）
+	// 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
 	NewsList(ctx context.Context, in *CommonNewsListRequest) (*CommonNewsListResponse, error)
 	// 火箭资讯详情（仅已发布；含 content、source_url）
 	NewsDetail(ctx context.Context, in *CommonNewsDetailRequest) (*CommonNewsDetailResponse, error)

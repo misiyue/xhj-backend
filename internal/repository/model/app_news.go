@@ -9,9 +9,6 @@ const (
 
 	AppNewsTypeImageText = 1 // 图文
 	AppNewsTypeVideo     = 2 // 视频
-
-	AppNewsIsIndexNo  = 0 // 非首页
-	AppNewsIsIndexYes = 1 // 首页
 )
 
 // AppNews 对应表 app_news（火箭资讯）
@@ -26,7 +23,6 @@ type AppNews struct {
 	UploadTime  *time.Time `gorm:"column:upload_time" json:"upload_time"`
 	PublishTime *time.Time `gorm:"column:publish_time;index:idx_publish_time" json:"publish_time"`
 	Status      int        `gorm:"column:status;type:tinyint(4);not null;default:0;index:idx_status" json:"status"`
-	IsIndex     int        `gorm:"column:is_index;type:tinyint(4);not null;default:0" json:"is_index"` // 0-否，1-是
 	CreatedAt   time.Time  `gorm:"column:created_at" json:"created_at"`
 	UpdatedAt   time.Time  `gorm:"column:updated_at" json:"updated_at"`
 }

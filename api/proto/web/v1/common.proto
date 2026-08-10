@@ -59,7 +59,7 @@ service Common {
     };
   }
 
-  // 火箭资讯列表（仅已发布；支持 category_id、is_index 筛选与分页）
+  // 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
   rpc NewsList(CommonNewsListRequest) returns (CommonNewsListResponse) {
     option (google.api.http) = {
       post: "/api/v1/common/news-list"
@@ -183,8 +183,6 @@ message CommonNewsListRequest {
   int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
   // 资讯分类 id；0 或不传表示不限
   int32 category_id = 3 [(buf.validate.field).int32.gte = 0];
-  // 是否首页：0-否，1-是；不传表示不限
-  optional int32 is_index = 4 [(buf.validate.field).int32 = {in: [0, 1]}];
 }
 
 message CommonNewsListResponse {
@@ -198,9 +196,7 @@ message CommonNewsListResponse {
     string upload_time = 6;
     string publish_time = 7;
     int32 status = 8;
-    // 0-否，1-是
-    int32 is_index = 9;
-    string created_at = 10;
+    string created_at = 9;
   }
   repeated Item items = 1;
   int32 total = 2 [(google.api.field_behavior) = REQUIRED];
@@ -224,9 +220,7 @@ message CommonNewsDetailResponse {
   string upload_time = 8;
   string publish_time = 9;
   int32 status = 10;
-  // 0-否，1-是
-  int32 is_index = 11;
-  string created_at = 12;
+  string created_at = 11;
 }
 
 // 资讯分类列表请求
