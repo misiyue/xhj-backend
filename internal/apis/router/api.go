@@ -3,11 +3,14 @@ package router
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"github.com/gin-gonic/gin"
 	web2 "github.com/gzydong/go-chat/api/pb/web/v1"
+	"github.com/gzydong/go-chat/config"
 	_ "github.com/gzydong/go-chat/docs" // 注册 swag 文档，/swagger/doc.json 依赖此包 init
 	"github.com/gzydong/go-chat/internal/apis/handler/web"
 	v1 "github.com/gzydong/go-chat/internal/apis/handler/web/v1"
@@ -26,10 +29,12 @@ import (
 )
 
 // RegisterWebRoute 注册 Web 路由
-func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, storage middleware.IStorage) {
+func RegisterWebRoute(conf *config.Config, router *gin.Engine, handler *web.Handler, storage middleware.IStorage) {
+	patchMarzbanDeps(conf, handler)
+
 	// 授权验证中间件
 	authorize := middleware.NewJwtMiddleware[entity.WebClaims](
-		[]byte(secret), storage,
+		[]byte(conf.Jwt.Secret), storage,
 		func(ctx context.Context, claims *jwtutil.JwtClaims[entity.WebClaims]) error {
 			if claims.RegisteredClaims.Issuer != entity.JwtIssuerWeb {
 				return errors.New("授权异常，请登录后操作")
@@ -124,6 +129,22 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 	web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
 
 	registerCustomApiRouter(resp, router, api, handler)
+}
+
+// patchMarzbanDeps 兼容未重新生成 Wire 代码的部署，避免访问 Marzban 路由时空指针。
+func patchMarzbanDeps(conf *config.Config, handler *web.Handler) {
+	if handler == nil || handler.V1 == nil {
+		return
+	}
+	if handler.V1.Marzban == nil {
+		handler.V1.Marzban = &v1.Marzban{}
+	}
+	if handler.V1.Marzban.MarzbanService == nil {
+		handler.V1.Marzban.MarzbanService = &service.MarzbanService{
+			Config:     conf,
+			HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		}
+	}
 }
 
 // patchTalkMessageDeps 补齐 wire_gen 未更新时 talk.Message / TalkService 的已读相关依赖。
