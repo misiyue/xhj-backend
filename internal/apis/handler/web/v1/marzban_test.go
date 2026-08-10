@@ -7,15 +7,13 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gzydong/go-chat/internal/entity"
-	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
-	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/service"
 	"github.com/stretchr/testify/require"
 )
 
 type marzbanServiceStub struct {
 	createdID int
+	queriedID int
 }
 
 func (s *marzbanServiceStub) CreateByID(_ context.Context, id int, dataLimit int64, _ int) (*service.MarzbanUserInfo, error) {
@@ -28,8 +26,9 @@ func (s *marzbanServiceStub) CreateByID(_ context.Context, id int, dataLimit int
 	}, nil
 }
 
-func (s *marzbanServiceStub) GetByID(_ context.Context, _ int) (*service.MarzbanUserInfo, error) {
-	return nil, service.ErrMarzbanUserNotFound
+func (s *marzbanServiceStub) GetByID(_ context.Context, id int) (*service.MarzbanUserInfo, error) {
+	s.queriedID = id
+	return &service.MarzbanUserInfo{ID: id, Username: "xhj_0"}, nil
 }
 
 func TestCreateMarzbanUserAllowsZeroIDWithoutLogin(t *testing.T) {
@@ -52,23 +51,20 @@ func TestCreateMarzbanUserAllowsZeroIDWithoutLogin(t *testing.T) {
 	require.Equal(t, 0, result.ID)
 }
 
-func TestValidateMarzbanOwner(t *testing.T) {
-	ctx := context.WithValue(context.Background(), middleware.AuthClaimsKey{}, entity.WebClaims{UserId: 12})
-	require.NoError(t, validateMarzbanOwner(ctx, 12))
+func TestGetMarzbanUserAllowsZeroIDWithoutLogin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	stub := &marzbanServiceStub{}
+	handler := &Marzban{MarzbanService: stub}
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Params = gin.Params{{Key: "id", Value: "0"}}
+	ctx.Request = httptest.NewRequest("GET", "/api/v1/marzban/user/0", nil)
 
-	err := validateMarzbanOwner(ctx, 13)
-	require.Error(t, err)
-	var businessErr *errorx.Error
-	require.ErrorAs(t, err, &businessErr)
-	require.Equal(t, 403, businessErr.Code)
-}
+	result, err := handler.GetUser(ctx)
 
-func TestValidateMarzbanOwnerRequiresLogin(t *testing.T) {
-	err := validateMarzbanOwner(context.Background(), 12)
-	require.Error(t, err)
-	var businessErr *errorx.Error
-	require.ErrorAs(t, err, &businessErr)
-	require.Equal(t, 401, businessErr.Code)
+	require.NoError(t, err)
+	require.Equal(t, 0, stub.queriedID)
+	require.Equal(t, 0, result.ID)
 }
 
 func TestDataLimitGBToBytes(t *testing.T) {

@@ -143,9 +143,6 @@ func (s *MarzbanService) CreateByID(ctx context.Context, id int, dataLimit int64
 }
 
 func (s *MarzbanService) GetByID(ctx context.Context, id int) (*MarzbanUserInfo, error) {
-	if id <= 0 {
-		return nil, errors.New("用户ID无效")
-	}
 	username, err := s.username(id)
 	if err != nil {
 		return nil, err
