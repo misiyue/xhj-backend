@@ -21,3 +21,8 @@ func TestPatchMarzbanDeps(t *testing.T) {
 	require.Same(t, conf, marzbanService.Config)
 	require.NotNil(t, marzbanService.HTTPClient)
 }
+
+func TestFormatPanicMessage(t *testing.T) {
+	require.Equal(t, "系统错误：运行时异常", formatPanicMessage("运行时异常"))
+	require.Equal(t, "系统错误：未知异常", formatPanicMessage(nil))
+}

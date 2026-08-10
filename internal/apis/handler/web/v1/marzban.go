@@ -1,15 +1,12 @@
 package v1
 
 import (
-	"context"
 	"errors"
 	"math"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
-	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/service"
 )
 
@@ -73,23 +70,19 @@ func (m *Marzban) CreateUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	return resp, nil
 }
 
-// GetUser 按当前系统用户ID获取 Marzban 剩余流量和到期日期。
+// GetUser 按传入的系统用户ID获取 Marzban 剩余流量和到期日期。
 //
 //	@Summary		获取 Marzban 用户信息
-//	@Description	获取当前用户的剩余流量、到期日期和订阅地址
+//	@Description	无需登录，获取指定用户的剩余流量、到期日期和订阅地址
 //	@Tags			Marzban
 //	@Produce		json
 //	@Param			id	path		int	true	"本系统用户ID"
 //	@Success		200	{object}	MarzbanUserResponse
 //	@Router			/api/v1/marzban/user/{id} [get]
-//	@Security		Bearer
 func (m *Marzban) GetUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	id, err := strconv.Atoi(ctx.Param("id"))
-	if err != nil || id <= 0 {
+	if err != nil {
 		return nil, errorx.New(400, "用户ID无效")
-	}
-	if err := validateMarzbanOwner(ctx.Request.Context(), id); err != nil {
-		return nil, err
 	}
 	user, err := m.MarzbanService.GetByID(ctx.Request.Context(), id)
 	if err != nil {
@@ -100,18 +93,6 @@ func (m *Marzban) GetUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	}
 	return marzbanUserResponse(user), nil
 }
-
-func validateMarzbanOwner(ctx context.Context, id int) error {
-	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
-	if uid <= 0 {
-		return errorx.New(401, "请先登录")
-	}
-	if uid != id {
-		return errorx.New(403, "无权操作其他用户的 Marzban 账号")
-	}
-	return nil
-}
-
 func marzbanUserResponse(user *service.MarzbanUserInfo) *MarzbanUserResponse {
 	message := "查询成功"
 	if user.Created {

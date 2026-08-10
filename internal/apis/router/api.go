@@ -285,7 +285,7 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 		return handler.V1.Marzban.CreateUser(c)
 	}))
 
-	api.GET("/api/v1/marzban/user/:id", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+	router.GET("/api/v1/marzban/user/:id", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.Marzban.GetUser(c)
 	}))
 	// 第三方支付回调：无 JWT，响应纯文本 success / fail
