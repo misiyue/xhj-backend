@@ -16,10 +16,10 @@ func NewAppNews(db *gorm.DB) *AppNews {
 	return &AppNews{Repo: core.NewRepo[model.AppNews](db)}
 }
 
-// ListPublished 分页查询已发布资讯，可按 category_id 筛选；按 publish_time、id 倒序（不含 content/source_url）
+// ListPublished 分页查询已发布资讯，可按 category_id 筛选；按 publish_time、id 倒序（不含 source_url）
 func (r *AppNews) ListPublished(ctx context.Context, page, pageSize int, categoryId int) (int64, []*model.AppNews, error) {
 	return r.Repo.Pagination(ctx, page, pageSize, func(tx *gorm.DB) *gorm.DB {
-		tx = tx.Select("id, title, category_id, type_id, cover, upload_time, publish_time, status, pv, uv, created_at, updated_at").
+		tx = tx.Select("id, title, category_id, type_id, content, cover, upload_time, publish_time, status, pv, uv, created_at, updated_at").
 			Where("status = ?", model.AppNewsStatusPublished)
 		if categoryId > 0 {
 			tx = tx.Where("category_id = ?", categoryId)

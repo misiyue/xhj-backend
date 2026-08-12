@@ -138,7 +138,10 @@ message CommonAppVersionLatestResponse {
   string published_at = 9;
 }
 
-message CommonExploreListRequest {}
+message CommonExploreListRequest {
+  // 位置筛选，多个用英文逗号分隔，如 index,tab；空表示不限
+  string positions = 1;
+}
 
 message CommonExploreListResponse {
   message Item {
@@ -150,6 +153,8 @@ message CommonExploreListResponse {
     string position = 5;
     // 排序权重，越大越靠前（与库 sort 一致）
     int32 sort = 6;
+    // 描述
+    string digest = 7;
   }
   repeated Item items = 1;
 }
@@ -207,6 +212,7 @@ message CommonNewsListResponse {
     string created_at = 9;
     int32 pv = 10;
     int32 uv = 11;
+    string content = 12;
   }
   repeated Item items = 1;
   int32 total = 2 [(google.api.field_behavior) = REQUIRED];

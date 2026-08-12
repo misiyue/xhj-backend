@@ -449,7 +449,9 @@ func (x *CommonAppVersionLatestResponse) GetPublishedAt() string {
 }
 
 type CommonExploreListRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 位置筛选，多个用英文逗号分隔，如 index,tab；空表示不限
+	Positions     string `protobuf:"bytes,1,opt,name=positions,proto3" json:"positions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -482,6 +484,13 @@ func (x *CommonExploreListRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CommonExploreListRequest.ProtoReflect.Descriptor instead.
 func (*CommonExploreListRequest) Descriptor() ([]byte, []int) {
 	return file_web_v1_common_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CommonExploreListRequest) GetPositions() string {
+	if x != nil {
+		return x.Positions
+	}
+	return ""
 }
 
 type CommonExploreListResponse struct {
@@ -1256,7 +1265,9 @@ type CommonExploreListResponse_Item struct {
 	// index-首页，tab-选项
 	Position string `protobuf:"bytes,5,opt,name=position,proto3" json:"position,omitempty"`
 	// 排序权重，越大越靠前（与库 sort 一致）
-	Sort          int32 `protobuf:"varint,6,opt,name=sort,proto3" json:"sort,omitempty"`
+	Sort int32 `protobuf:"varint,6,opt,name=sort,proto3" json:"sort,omitempty"`
+	// 描述
+	Digest        string `protobuf:"bytes,7,opt,name=digest,proto3" json:"digest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1331,6 +1342,13 @@ func (x *CommonExploreListResponse_Item) GetSort() int32 {
 		return x.Sort
 	}
 	return 0
+}
+
+func (x *CommonExploreListResponse_Item) GetDigest() string {
+	if x != nil {
+		return x.Digest
+	}
+	return ""
 }
 
 type CommonAppModulesResponse_Item struct {
@@ -1415,6 +1433,7 @@ type CommonNewsListResponse_Item struct {
 	CreatedAt     string `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	Pv            int32  `protobuf:"varint,10,opt,name=pv,proto3" json:"pv,omitempty"`
 	Uv            int32  `protobuf:"varint,11,opt,name=uv,proto3" json:"uv,omitempty"`
+	Content       string `protobuf:"bytes,12,opt,name=content,proto3" json:"content,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1526,6 +1545,13 @@ func (x *CommonNewsListResponse_Item) GetUv() int32 {
 	return 0
 }
 
+func (x *CommonNewsListResponse_Item) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
 type CommonNewsCategoryListResponse_Item struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1631,17 +1657,19 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x05title\x18\x06 \x01(\tR\x05title\x12?\n" +
 	"\rrelease_notes\x18\a \x01(\v2\x1a.google.protobuf.ListValueR\freleaseNotes\x12?\n" +
 	"\rdownload_urls\x18\b \x01(\v2\x1a.google.protobuf.ListValueR\fdownloadUrls\x12!\n" +
-	"\fpublished_at\x18\t \x01(\tR\vpublishedAt\"\x1a\n" +
-	"\x18CommonExploreListRequest\"\xdd\x01\n" +
+	"\fpublished_at\x18\t \x01(\tR\vpublishedAt\"8\n" +
+	"\x18CommonExploreListRequest\x12\x1c\n" +
+	"\tpositions\x18\x01 \x01(\tR\tpositions\"\xf5\x01\n" +
 	"\x19CommonExploreListResponse\x129\n" +
-	"\x05items\x18\x01 \x03(\v2#.web.CommonExploreListResponse.ItemR\x05items\x1a\x84\x01\n" +
+	"\x05items\x18\x01 \x03(\v2#.web.CommonExploreListResponse.ItemR\x05items\x1a\x9c\x01\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x14\n" +
 	"\x05image\x18\x03 \x01(\tR\x05image\x12\x10\n" +
 	"\x03url\x18\x04 \x01(\tR\x03url\x12\x1a\n" +
 	"\bposition\x18\x05 \x01(\tR\bposition\x12\x12\n" +
-	"\x04sort\x18\x06 \x01(\x05R\x04sort\"9\n" +
+	"\x04sort\x18\x06 \x01(\x05R\x04sort\x12\x16\n" +
+	"\x06digest\x18\a \x01(\tR\x06digest\"9\n" +
 	"\x17CommonAppDictGetRequest\x12\x1e\n" +
 	"\x04keys\x18\x01 \x03(\tB\n" +
 	"\xbaH\a\x92\x01\x04\b\x01\x10dR\x04keys\"\x8a\x01\n" +
@@ -1664,11 +1692,11 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\x12(\n" +
 	"\vcategory_id\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\n" +
-	"categoryId\"\xb1\x03\n" +
+	"categoryId\"\xcb\x03\n" +
 	"\x16CommonNewsListResponse\x126\n" +
 	"\x05items\x18\x01 \x03(\v2 .web.CommonNewsListResponse.ItemR\x05items\x12\x1a\n" +
 	"\x05total\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x05total\x12)\n" +
-	"\bpaginate\x18\x03 \x01(\v2\r.web.PaginateR\bpaginate\x1a\x97\x02\n" +
+	"\bpaginate\x18\x03 \x01(\v2\r.web.PaginateR\bpaginate\x1a\xb1\x02\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1f\n" +
@@ -1684,7 +1712,8 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"created_at\x18\t \x01(\tR\tcreatedAt\x12\x0e\n" +
 	"\x02pv\x18\n" +
 	" \x01(\x05R\x02pv\x12\x0e\n" +
-	"\x02uv\x18\v \x01(\x05R\x02uv\"6\n" +
+	"\x02uv\x18\v \x01(\x05R\x02uv\x12\x18\n" +
+	"\acontent\x18\f \x01(\tR\acontent\"6\n" +
 	"\x17CommonNewsDetailRequest\x12\x1b\n" +
 	"\x02id\x18\x01 \x01(\x05B\v\xe2A\x01\x02\xbaH\x04\x1a\x02 \x00R\x02id\"\xe4\x02\n" +
 	"\x18CommonNewsDetailResponse\x12\x0e\n" +

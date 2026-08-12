@@ -205,12 +205,12 @@ func (c *Common) AppVersionLatest(ctx context.Context, in *web.CommonAppVersionL
 	}, nil
 }
 
-// ExploreList 探索位列表（仅 is_open=1）
-func (c *Common) ExploreList(ctx context.Context, _ *web.CommonExploreListRequest) (*web.CommonExploreListResponse, error) {
+// ExploreList 探索位列表（仅 is_open=1；支持 positions 逗号筛选）
+func (c *Common) ExploreList(ctx context.Context, in *web.CommonExploreListRequest) (*web.CommonExploreListResponse, error) {
 	if c.AppExploreRepo == nil {
 		return nil, errors.New("AppExploreRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	list, err := c.AppExploreRepo.ListOpen(ctx)
+	list, err := c.AppExploreRepo.ListOpen(ctx, in.GetPositions())
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +223,7 @@ func (c *Common) ExploreList(ctx context.Context, _ *web.CommonExploreListReques
 			Url:      row.Url,
 			Position: row.Position,
 			Sort:     int32(row.Sort),
+			Digest:   row.Digest,
 		})
 	}
 	return out, nil
@@ -291,6 +292,7 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 			CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
 			Pv:         int32(row.Pv),
 			Uv:         int32(row.Uv),
+			Content:    row.Content,
 		}
 		if row.TypeId != nil {
 			item.TypeId = int32(*row.TypeId)
