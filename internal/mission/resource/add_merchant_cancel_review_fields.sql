@@ -1,0 +1,8 @@
+ALTER TABLE merchant
+    ADD COLUMN cancel_status INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE merchant
+    ADD COLUMN cancel_reason VARCHAR(255) NOT NULL DEFAULT '';
+
+ALTER TABLE merchant
+    ADD COLUMN cancel_updated_at INTEGER NOT NULL DEFAULT 0;

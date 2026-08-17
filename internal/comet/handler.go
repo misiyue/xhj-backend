@@ -55,48 +55,6 @@ func (h *Handler) OnMessage(smg longnet.ISessionManager, c longnet.ISession, mes
 			}),
 		})
 
-	case "im.call.invite", "im.call.accept", "im.call.reject", "im.call.hangup", "im.call.cancel":
-		subEvent := ""
-		switch event {
-		case "im.call.invite":
-			subEvent = entity.SubEventImCallInvite
-		case "im.call.accept":
-			subEvent = entity.SubEventImCallAccept
-		case "im.call.reject":
-			subEvent = entity.SubEventImCallReject
-		case "im.call.hangup":
-			subEvent = entity.SubEventImCallHangup
-		case "im.call.cancel":
-			subEvent = entity.SubEventImCallCancel
-		}
-
-		// Parse fields from frontend payload (uses to_user_id and call_type)
-		// Note: accept, reject, and hangup events may not include call_type, from_user_name, from_user_avatar
-		toId := int(gjson.GetBytes(message, "payload.to_user_id").Int())
-		roomId := int(gjson.GetBytes(message, "payload.room_id").Int())
-		callType := int(gjson.GetBytes(message, "payload.call_type").Int())            // Optional: only in invite
-		fromUserName := gjson.GetBytes(message, "payload.from_user_name").String()     // Optional: only in invite
-		fromUserAvatar := gjson.GetBytes(message, "payload.from_user_avatar").String() // Optional: only in invite
-
-		slog.Info("[CallEvent] Received from WebSocket", "event", event, "from_user_id", c.UserId(), "to_user_id", toId, "room_id", roomId, "call_type", callType)
-
-		err := h.PushMessage.Push(context.Background(), entity.ImTopicChat, &entity.SubscribeMessage{
-			Event: subEvent,
-			Payload: jsonutil.Encode(entity.SubEventImCallPayload{
-				FromId:         int(c.UserId()),
-				ToId:           toId,
-				RoomId:         roomId,
-				CallType:       callType,
-				FromUserName:   fromUserName,
-				FromUserAvatar: fromUserAvatar,
-			}),
-		})
-
-		if err != nil {
-			slog.Error("[CallEvent] Failed to push to Redis", "error", err, "event", event, "from_user_id", c.UserId(), "to_user_id", toId)
-		} else {
-			slog.Info("[CallEvent] Successfully pushed to Redis", "event", event, "from_user_id", c.UserId(), "to_user_id", toId)
-		}
 	}
 }
 

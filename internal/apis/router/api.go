@@ -358,8 +358,8 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 		return handler.V1.Message.Send(c)
 	}))
 
-	api.GET("/api/v1/trtc/user-sig", HandlerFunc(resp, func(c *gin.Context) (any, error) {
-		return handler.V1.Trtc.GetSignature(c)
+	api.GET("/api/v1/yunxin/credentials", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Yunxin.Credentials(c)
 	}))
 
 	// KYC routes

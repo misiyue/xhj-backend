@@ -467,9 +467,10 @@ func (c *Publish) onMixedMessage(ctx *gin.Context) error {
 type onSendRTCCallMessage struct {
 	BaseMessageRequest
 	Body struct {
-		Type     int `json:"type" binding:"required"`   // 1:语音 2:视频
-		Status   int `json:"status" binding:"required"` // 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
-		Duration int `json:"duration"`                  // 通话时长
+		Type     int    `json:"type" binding:"required"`            // 1:语音 2:视频
+		Status   int    `json:"status" binding:"required"`          // 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
+		Duration int    `json:"duration"`                           // 通话时长
+		CallId   string `json:"call_id" binding:"required,max=128"` // 云信 CallKit 通话 ID
 	} `json:"body" binding:"required"`
 }
 
@@ -478,6 +479,15 @@ func (c *Publish) onSendRTCCall(ctx *gin.Context) error {
 	in := &onSendRTCCallMessage{}
 	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
 		return errorx.New(400, err.Error())
+	}
+	if in.TalkMode != entity.ChatPrivateMode {
+		return errorx.New(400, "音视频通话仅支持私聊")
+	}
+	if in.Body.Type != 1 && in.Body.Type != 2 {
+		return errorx.New(400, "无效的通话类型")
+	}
+	if in.Body.Status < 1 || in.Body.Status > 4 || in.Body.Duration < 0 {
+		return errorx.New(400, "无效的通话状态")
 	}
 
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
@@ -489,32 +499,9 @@ func (c *Publish) onSendRTCCall(ctx *gin.Context) error {
 		Type:       in.Body.Type,
 		Status:     in.Body.Status,
 		Duration:   in.Body.Duration,
+		CallId:     in.Body.CallId,
 	})
 
-	if err != nil {
-		return ctx.Error(err)
-	}
-
-	return nil
-}
-
-// 音视频通话邀请（仅 OneSignal VoIP 推送，不落库、不推 WebSocket）
-func (c *Publish) onSendRTCInvite(ctx *gin.Context) error {
-	in := &BaseMessageRequest{}
-	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
-		return errorx.New(400, err.Error())
-	}
-
-	if in.TalkMode != entity.ChatPrivateMode {
-		return errorx.New(400, "rtc_invite 仅支持私聊")
-	}
-
-	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
-	err := c.MessageService.SendRTCCallInvite(ctx.Request.Context(), message.SendRTCCallInvite{
-		TalkMode:   in.TalkMode,
-		FromId:     uid,
-		ReceiverId: in.ReceiverId,
-	})
 	if err != nil {
 		return ctx.Error(err)
 	}
@@ -609,7 +596,6 @@ func (c *Publish) transfer(ctx *gin.Context, typeValue string) error {
 		mapping["forward"] = c.onSendForward
 		mapping["mixed"] = c.onMixedMessage
 		mapping["rtc"] = c.onSendRTCCall
-		mapping["rtc_invite"] = c.onSendRTCInvite
 		mapping["red_envelope"] = c.onSendRedEnvelope
 		mapping["transfer"] = c.onSendTransfer
 	}
@@ -620,4 +606,3 @@ func (c *Publish) transfer(ctx *gin.Context, typeValue string) error {
 
 	return nil
 }
-

@@ -178,13 +178,7 @@ type CreateRTCCallMessage struct {
 	Type       int    `json:"type"`        // 通话类型 1:语音 2:视频
 	Status     int    `json:"status"`      // 通话状态 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
 	Duration   int    `json:"duration"`    // 通话时长
-}
-
-// SendRTCCallInvite 音视频通话邀请（仅离线 VoIP 唤醒，不写消息、不推 WebSocket）
-type SendRTCCallInvite struct {
-	TalkMode   int `json:"talk_mode"`
-	FromId     int `json:"from_id"`
-	ReceiverId int `json:"receiver_id"`
+	CallId     string `json:"call_id"`     // 云信 CallKit 通话 ID
 }
 
 type CreateRedEnvelopeMessage struct {
@@ -208,4 +202,3 @@ type CreateTransferMessage struct {
 	Amount     float64 `json:"amount"`      // 转账金额（单位：分）
 	Remark     string  `json:"remark"`      // 转账备注
 }
-

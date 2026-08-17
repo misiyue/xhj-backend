@@ -23,7 +23,7 @@ var ProviderSet = wire.NewSet(
 	wire.Struct(new(v1.Wallet), "*"),
 	wire.Struct(new(v1.GroupRobot), "*"),
 	wire.Struct(new(v1.Marzban), "*"),
-	v1.NewTrtc,
+	v1.NewYunxin,
 
 	wire.Struct(new(contact.Contact), "*"),
 	wire.Struct(new(contact.Apply), "*"),

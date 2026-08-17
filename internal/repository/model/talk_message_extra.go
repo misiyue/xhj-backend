@@ -212,9 +212,10 @@ type TalkRecordExtraGroupShare struct {
 
 // TalkRecordExtraRTC 音视频通话消息
 type TalkRecordExtraRTC struct {
-	Type     int `json:"type"`     // 通话类型 1:语音 2:视频
-	Status   int `json:"status"`   // 通话状态 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
-	Duration int `json:"duration"` // 通话时长
+	Type     int    `json:"type"`              // 通话类型 1:语音 2:视频
+	Status   int    `json:"status"`            // 通话状态 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
+	Duration int    `json:"duration"`          // 通话时长
+	CallId   string `json:"call_id,omitempty"` // 云信 CallKit 通话 ID
 }
 
 // TalkRecordExtraRedEnvelope 红包消息

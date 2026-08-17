@@ -19,7 +19,7 @@ type V1 struct {
 	Emoticon     *v1.Emoticon
 	Upload       *v1.Upload
 	STS          *v1.STS
-	Trtc         *v1.Trtc
+	Yunxin       *v1.Yunxin
 	Group        *group.Group
 	GroupNotice  *group.Notice
 	GroupApply   *group.Apply

@@ -183,10 +183,13 @@ oauth:
     client_secret: "33402xbbeafeb20cfc1bb"
     redirect_uri: "http://localhost:5173/oauth/callback/gitee"
 
-# TRTC Config
-trtc:
-  sdk_app_id: 1400000000
-  secret_key: "your_secret_key_here"
+# 网易云信音视频通话配置。请在部署环境填写真实值，勿提交密钥。
+yunxin:
+  enabled: false
+  app_key: "your_yunxin_app_key"
+  app_secret: "your_yunxin_app_secret"
+  # 私有化部署或测试可覆盖，公有云留空。
+  server_api_base_url: ""
 
 # 钱包平台配置
 wallet:

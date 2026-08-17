@@ -18,7 +18,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 	defer logger.Infof("数据库初始化完成")
 
 	// 使用 GORM AutoMigrate 自动创建或更新数据库表结构
-	// 
+	//
 	// 此迁移包括所有应用程序表：
 	// 1. 原 lumenim.sql 中的 28 张表（admin, users, contact*, group*, article*, talk*, emoticon*, organize*, robot, file_upload）
 	// 2. 系统表（sys_*, group_robot*, invite_code, oauth_user, wallet_user, red_envelope, sequence）
@@ -28,12 +28,12 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		// 用户相关
 		&model.Users{},
 		&model.Admin{},
-		
+
 		// 联系人相关
 		&model.Contact{},
 		&model.ContactApply{},
 		&model.ContactGroup{},
-		
+
 		// 群组相关
 		&model.Group{},
 		&model.GroupApply{},
@@ -41,49 +41,50 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.GroupNotice{},
 		&model.GroupVote{},
 		&model.GroupVoteAnswer{},
-		
+
 		// 文章相关
 		&model.Article{},
 		&model.ArticleAnnex{},
 		&model.ArticleClass{},
 		&model.ArticleTag{},
 		&model.ArticleHistory{},
-		
+
 		// 消息相关
 		&model.TalkSession{},
 		&model.TalkUserMessage{},
 		&model.TalkGroupMessage{},
 		&model.TalkGroupMessageDel{},
 		&model.TalkGroupMsgReader{},
-		
+
 		// 表情包相关
 		&model.Emoticon{},
 		&model.EmoticonItem{},
 		&model.UsersEmoticon{},
-		
+
 		// 组织架构相关
 		&model.Organize{},
 		&model.OrganizeDept{},
 		&model.OrganizePost{},
-		
+
 		// 机器人相关
 		&model.Robot{},
 		&model.GroupRobot{},
 		&model.GroupRobotMessage{},
-		
+
 		// 文件上传相关
 		&model.FileUpload{},
-		
+
 		// 系统管理相关
 		&model.SysMenu{},
 		&model.SysRole{},
 		&model.SysResource{},
 		&model.SysAdminTotp{},
-		
+
 		// 其他
 		&model.InviteCode{},
 		&model.OAuthUser{},
 		&model.WalletUser{},
+		&model.YunxinCredential{},
 		&model.RedEnvelope{},
 		&model.Sequence{},
 		&model.AppVersion{},
@@ -110,7 +111,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.NoticeTemplate{},
 		&model.NoticeArticle{},
 	)
-	
+
 	if err != nil {
 		logger.Errorf("数据库表结构迁移失败 Err: %v", err)
 		return err

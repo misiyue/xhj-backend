@@ -56,6 +56,7 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		&model.GroupRobot{},
 		&model.GroupRobotMessage{},
 		&model.WalletUser{},
+		&model.YunxinCredential{},
 		&model.AppVersion{},
 		&model.AppExplore{},
 		&model.AppModule{},
