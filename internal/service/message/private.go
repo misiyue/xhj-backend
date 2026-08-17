@@ -97,6 +97,10 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 		return err
 	}
 
+	if option.MsgType != entity.ChatMsgTypeRTCCall {
+		s.tryOneSignalUserChat(ctx, option.ReceiverId, entity.ChatPrivateMode, option.FromId)
+	}
+
 	// 推送消息给双方用户
 	pipe := s.Source.Redis().Pipeline()
 
@@ -182,6 +186,8 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 		return err
 	}
 
+	s.tryOneSignalUserChat(ctx, data.ReceiverId, entity.ChatPrivateMode, data.FromId)
+
 	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventImMessage,
 		Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
@@ -216,5 +222,14 @@ func (s *Service) CreatePrivateSysMessage(ctx context.Context, option CreatePriv
 		}),
 		Quote:    "{}",
 		SendTime: time.Now(),
+	})
+}
+
+func (s *Service) CreatePrivateRetainDaysSetMessage(ctx context.Context, fromId, receiverId, retainDays int) error {
+	return s.CreatePrivateMessage(ctx, CreatePrivateMessageOption{
+		MsgType:    entity.ChatMsgSysRetainDaysSet,
+		FromId:     fromId,
+		ReceiverId: receiverId,
+		Extra:      jsonutil.Encode(map[string]int{"retain_days": retainDays}),
 	})
 }

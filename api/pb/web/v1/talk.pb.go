@@ -40,6 +40,10 @@ type TalkSessionItem struct {
 	UpdatedAt  string                 `protobuf:"bytes,13,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// 该会话中 @ 我的消息条数（群聊有效，单聊为 0），前端 atMeUserCount
 	AtMeUserCount int32 `protobuf:"varint,14,opt,name=at_me_user_count,json=atMeUserCount,proto3" json:"at_me_user_count,omitempty"`
+	// 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
+	SessionId int32 `protobuf:"varint,15,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// 消息保留天数，0 表示不限制（私聊有效）
+	RetainDays    int32 `protobuf:"varint,16,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -161,6 +165,20 @@ func (x *TalkSessionItem) GetUpdatedAt() string {
 func (x *TalkSessionItem) GetAtMeUserCount() int32 {
 	if x != nil {
 		return x.AtMeUserCount
+	}
+	return 0
+}
+
+func (x *TalkSessionItem) GetSessionId() int32 {
+	if x != nil {
+		return x.SessionId
+	}
+	return 0
+}
+
+func (x *TalkSessionItem) GetRetainDays() int32 {
+	if x != nil {
+		return x.RetainDays
 	}
 	return 0
 }
@@ -718,9 +736,12 @@ func (x *TalkSessionDetailRequest) GetReceiverId() int32 {
 
 // 会话详情接口响应参数
 type TalkSessionDetailResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsTop         int32                  `protobuf:"varint,1,opt,name=is_top,json=isTop,proto3" json:"is_top,omitempty"`
-	IsDisturb     int32                  `protobuf:"varint,2,opt,name=is_disturb,json=isDisturb,proto3" json:"is_disturb,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	IsTop      int32                  `protobuf:"varint,1,opt,name=is_top,json=isTop,proto3" json:"is_top,omitempty"`
+	IsDisturb  int32                  `protobuf:"varint,2,opt,name=is_disturb,json=isDisturb,proto3" json:"is_disturb,omitempty"`
+	RetainDays int32                  `protobuf:"varint,3,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
+	// 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
+	SessionId     int32 `protobuf:"varint,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -769,6 +790,118 @@ func (x *TalkSessionDetailResponse) GetIsDisturb() int32 {
 	return 0
 }
 
+func (x *TalkSessionDetailResponse) GetRetainDays() int32 {
+	if x != nil {
+		return x.RetainDays
+	}
+	return 0
+}
+
+func (x *TalkSessionDetailResponse) GetSessionId() int32 {
+	if x != nil {
+		return x.SessionId
+	}
+	return 0
+}
+
+// 设置消息保留天数（私聊成对 session_id）
+type TalkSessionSetRetainDaysRequest struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	SessionId int32                  `protobuf:"varint,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// 0 表示不限制；最大 3650 天
+	RetainDays    int32 `protobuf:"varint,2,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TalkSessionSetRetainDaysRequest) Reset() {
+	*x = TalkSessionSetRetainDaysRequest{}
+	mi := &file_web_v1_talk_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TalkSessionSetRetainDaysRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TalkSessionSetRetainDaysRequest) ProtoMessage() {}
+
+func (x *TalkSessionSetRetainDaysRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_talk_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TalkSessionSetRetainDaysRequest.ProtoReflect.Descriptor instead.
+func (*TalkSessionSetRetainDaysRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_talk_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *TalkSessionSetRetainDaysRequest) GetSessionId() int32 {
+	if x != nil {
+		return x.SessionId
+	}
+	return 0
+}
+
+func (x *TalkSessionSetRetainDaysRequest) GetRetainDays() int32 {
+	if x != nil {
+		return x.RetainDays
+	}
+	return 0
+}
+
+type TalkSessionSetRetainDaysResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RetainDays    int32                  `protobuf:"varint,1,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TalkSessionSetRetainDaysResponse) Reset() {
+	*x = TalkSessionSetRetainDaysResponse{}
+	mi := &file_web_v1_talk_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TalkSessionSetRetainDaysResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TalkSessionSetRetainDaysResponse) ProtoMessage() {}
+
+func (x *TalkSessionSetRetainDaysResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_talk_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TalkSessionSetRetainDaysResponse.ProtoReflect.Descriptor instead.
+func (*TalkSessionSetRetainDaysResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_talk_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *TalkSessionSetRetainDaysResponse) GetRetainDays() int32 {
+	if x != nil {
+		return x.RetainDays
+	}
+	return 0
+}
+
 // 会话列表接口请求参数
 type TalkSessionListRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -778,7 +911,7 @@ type TalkSessionListRequest struct {
 
 func (x *TalkSessionListRequest) Reset() {
 	*x = TalkSessionListRequest{}
-	mi := &file_web_v1_talk_proto_msgTypes[11]
+	mi := &file_web_v1_talk_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -790,7 +923,7 @@ func (x *TalkSessionListRequest) String() string {
 func (*TalkSessionListRequest) ProtoMessage() {}
 
 func (x *TalkSessionListRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_talk_proto_msgTypes[11]
+	mi := &file_web_v1_talk_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -803,7 +936,7 @@ func (x *TalkSessionListRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TalkSessionListRequest.ProtoReflect.Descriptor instead.
 func (*TalkSessionListRequest) Descriptor() ([]byte, []int) {
-	return file_web_v1_talk_proto_rawDescGZIP(), []int{11}
+	return file_web_v1_talk_proto_rawDescGZIP(), []int{13}
 }
 
 // 会话列表接口响应参数
@@ -816,7 +949,7 @@ type TalkSessionListResponse struct {
 
 func (x *TalkSessionListResponse) Reset() {
 	*x = TalkSessionListResponse{}
-	mi := &file_web_v1_talk_proto_msgTypes[12]
+	mi := &file_web_v1_talk_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -828,7 +961,7 @@ func (x *TalkSessionListResponse) String() string {
 func (*TalkSessionListResponse) ProtoMessage() {}
 
 func (x *TalkSessionListResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_talk_proto_msgTypes[12]
+	mi := &file_web_v1_talk_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -841,7 +974,7 @@ func (x *TalkSessionListResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TalkSessionListResponse.ProtoReflect.Descriptor instead.
 func (*TalkSessionListResponse) Descriptor() ([]byte, []int) {
-	return file_web_v1_talk_proto_rawDescGZIP(), []int{12}
+	return file_web_v1_talk_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *TalkSessionListResponse) GetItems() []*TalkSessionItem {
@@ -862,7 +995,7 @@ type TalkSessionClearUnreadNumRequest struct {
 
 func (x *TalkSessionClearUnreadNumRequest) Reset() {
 	*x = TalkSessionClearUnreadNumRequest{}
-	mi := &file_web_v1_talk_proto_msgTypes[13]
+	mi := &file_web_v1_talk_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -874,7 +1007,7 @@ func (x *TalkSessionClearUnreadNumRequest) String() string {
 func (*TalkSessionClearUnreadNumRequest) ProtoMessage() {}
 
 func (x *TalkSessionClearUnreadNumRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_talk_proto_msgTypes[13]
+	mi := &file_web_v1_talk_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -887,7 +1020,7 @@ func (x *TalkSessionClearUnreadNumRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TalkSessionClearUnreadNumRequest.ProtoReflect.Descriptor instead.
 func (*TalkSessionClearUnreadNumRequest) Descriptor() ([]byte, []int) {
-	return file_web_v1_talk_proto_rawDescGZIP(), []int{13}
+	return file_web_v1_talk_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *TalkSessionClearUnreadNumRequest) GetTalkMode() int32 {
@@ -913,7 +1046,7 @@ type TalkSessionClearUnreadNumResponse struct {
 
 func (x *TalkSessionClearUnreadNumResponse) Reset() {
 	*x = TalkSessionClearUnreadNumResponse{}
-	mi := &file_web_v1_talk_proto_msgTypes[14]
+	mi := &file_web_v1_talk_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -925,7 +1058,7 @@ func (x *TalkSessionClearUnreadNumResponse) String() string {
 func (*TalkSessionClearUnreadNumResponse) ProtoMessage() {}
 
 func (x *TalkSessionClearUnreadNumResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_talk_proto_msgTypes[14]
+	mi := &file_web_v1_talk_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -938,14 +1071,14 @@ func (x *TalkSessionClearUnreadNumResponse) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use TalkSessionClearUnreadNumResponse.ProtoReflect.Descriptor instead.
 func (*TalkSessionClearUnreadNumResponse) Descriptor() ([]byte, []int) {
-	return file_web_v1_talk_proto_rawDescGZIP(), []int{14}
+	return file_web_v1_talk_proto_rawDescGZIP(), []int{16}
 }
 
 var File_web_v1_talk_proto protoreflect.FileDescriptor
 
 const file_web_v1_talk_proto_rawDesc = "" +
 	"\n" +
-	"\x11web/v1/talk.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\xbe\x03\n" +
+	"\x11web/v1/talk.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\xfe\x03\n" +
 	"\x0fTalkSessionItem\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12!\n" +
 	"\ttalk_mode\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\btalkMode\x12%\n" +
@@ -964,7 +1097,11 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\bmsg_text\x18\f \x01(\tB\x04\xe2A\x01\x02R\amsgText\x12#\n" +
 	"\n" +
 	"updated_at\x18\r \x01(\tB\x04\xe2A\x01\x02R\tupdatedAt\x12'\n" +
-	"\x10at_me_user_count\x18\x0e \x01(\x05R\ratMeUserCount\"l\n" +
+	"\x10at_me_user_count\x18\x0e \x01(\x05R\ratMeUserCount\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x0f \x01(\x05R\tsessionId\x12\x1f\n" +
+	"\vretain_days\x18\x10 \x01(\x05R\n" +
+	"retainDays\"l\n" +
 	"\x18TalkSessionCreateRequest\x12&\n" +
 	"\ttalk_mode\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x040\x010\x02R\btalkMode\x12(\n" +
 	"\vreceiver_id\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +
@@ -1011,11 +1148,24 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\x18TalkSessionDetailRequest\x12&\n" +
 	"\ttalk_mode\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x040\x010\x02R\btalkMode\x12(\n" +
 	"\vreceiver_id\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +
-	"receiverId\"]\n" +
+	"receiverId\"\x9d\x01\n" +
 	"\x19TalkSessionDetailResponse\x12\x1b\n" +
 	"\x06is_top\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x05isTop\x12#\n" +
 	"\n" +
-	"is_disturb\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\tisDisturb\"\x18\n" +
+	"is_disturb\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\tisDisturb\x12\x1f\n" +
+	"\vretain_days\x18\x03 \x01(\x05R\n" +
+	"retainDays\x12\x1d\n" +
+	"\n" +
+	"session_id\x18\x04 \x01(\x05R\tsessionId\"v\n" +
+	"\x1fTalkSessionSetRetainDaysRequest\x12&\n" +
+	"\n" +
+	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\tsessionId\x12+\n" +
+	"\vretain_days\x18\x02 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xc2\x1c(\x00R\n" +
+	"retainDays\"I\n" +
+	" TalkSessionSetRetainDaysResponse\x12%\n" +
+	"\vretain_days\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\n" +
+	"retainDays\"\x18\n" +
 	"\x16TalkSessionListRequest\"E\n" +
 	"\x17TalkSessionListResponse\x12*\n" +
 	"\x05items\x18\x01 \x03(\v2\x14.web.TalkSessionItemR\x05items\"t\n" +
@@ -1023,7 +1173,7 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\ttalk_mode\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x040\x010\x02R\btalkMode\x12(\n" +
 	"\vreceiver_id\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +
 	"receiverId\"#\n" +
-	"!TalkSessionClearUnreadNumResponse2\xe1\x06\n" +
+	"!TalkSessionClearUnreadNumResponse2\xf8\a\n" +
 	"\x04Talk\x12v\n" +
 	"\rSessionCreate\x12\x1d.web.TalkSessionCreateRequest\x1a\x1e.web.TalkSessionCreateResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/talk/session-create\x12v\n" +
 	"\rSessionDelete\x12\x1d.web.TalkSessionDeleteRequest\x1a\x1e.web.TalkSessionDeleteResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/talk/session-delete\x12j\n" +
@@ -1032,7 +1182,8 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\x0eSessionDisturb\x12\x1e.web.TalkSessionDisturbRequest\x1a\x1f.web.TalkSessionDisturbResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/talk/session-disturb\x12v\n" +
 	"\rSessionDetail\x12\x1d.web.TalkSessionDetailRequest\x1a\x1e.web.TalkSessionDetailResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/v1/talk/session-detail\x12n\n" +
 	"\vSessionList\x12\x1b.web.TalkSessionListRequest\x1a\x1c.web.TalkSessionListResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/talk/session-list\x12\x98\x01\n" +
-	"\x15SessionClearUnreadNum\x12%.web.TalkSessionClearUnreadNumRequest\x1a&.web.TalkSessionClearUnreadNumResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/api/v1/talk/session-clear-unread-numB\fZ\n" +
+	"\x15SessionClearUnreadNum\x12%.web.TalkSessionClearUnreadNumRequest\x1a&.web.TalkSessionClearUnreadNumResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/api/v1/talk/session-clear-unread-num\x12\x94\x01\n" +
+	"\x14SessionSetRetainDays\x12$.web.TalkSessionSetRetainDaysRequest\x1a%.web.TalkSessionSetRetainDaysResponse\"/\x82\xd3\xe4\x93\x02):\x01*\"$/api/v1/talk/session-set-retain-daysB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -1047,7 +1198,7 @@ func file_web_v1_talk_proto_rawDescGZIP() []byte {
 	return file_web_v1_talk_proto_rawDescData
 }
 
-var file_web_v1_talk_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_web_v1_talk_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_web_v1_talk_proto_goTypes = []any{
 	(*TalkSessionItem)(nil),                   // 0: web.TalkSessionItem
 	(*TalkSessionCreateRequest)(nil),          // 1: web.TalkSessionCreateRequest
@@ -1060,10 +1211,12 @@ var file_web_v1_talk_proto_goTypes = []any{
 	(*TalkSessionDisturbResponse)(nil),        // 8: web.TalkSessionDisturbResponse
 	(*TalkSessionDetailRequest)(nil),          // 9: web.TalkSessionDetailRequest
 	(*TalkSessionDetailResponse)(nil),         // 10: web.TalkSessionDetailResponse
-	(*TalkSessionListRequest)(nil),            // 11: web.TalkSessionListRequest
-	(*TalkSessionListResponse)(nil),           // 12: web.TalkSessionListResponse
-	(*TalkSessionClearUnreadNumRequest)(nil),  // 13: web.TalkSessionClearUnreadNumRequest
-	(*TalkSessionClearUnreadNumResponse)(nil), // 14: web.TalkSessionClearUnreadNumResponse
+	(*TalkSessionSetRetainDaysRequest)(nil),   // 11: web.TalkSessionSetRetainDaysRequest
+	(*TalkSessionSetRetainDaysResponse)(nil),  // 12: web.TalkSessionSetRetainDaysResponse
+	(*TalkSessionListRequest)(nil),            // 13: web.TalkSessionListRequest
+	(*TalkSessionListResponse)(nil),           // 14: web.TalkSessionListResponse
+	(*TalkSessionClearUnreadNumRequest)(nil),  // 15: web.TalkSessionClearUnreadNumRequest
+	(*TalkSessionClearUnreadNumResponse)(nil), // 16: web.TalkSessionClearUnreadNumResponse
 }
 var file_web_v1_talk_proto_depIdxs = []int32{
 	0,  // 0: web.TalkSessionListResponse.items:type_name -> web.TalkSessionItem
@@ -1072,17 +1225,19 @@ var file_web_v1_talk_proto_depIdxs = []int32{
 	5,  // 3: web.Talk.SessionTop:input_type -> web.TalkSessionTopRequest
 	7,  // 4: web.Talk.SessionDisturb:input_type -> web.TalkSessionDisturbRequest
 	9,  // 5: web.Talk.SessionDetail:input_type -> web.TalkSessionDetailRequest
-	11, // 6: web.Talk.SessionList:input_type -> web.TalkSessionListRequest
-	13, // 7: web.Talk.SessionClearUnreadNum:input_type -> web.TalkSessionClearUnreadNumRequest
-	2,  // 8: web.Talk.SessionCreate:output_type -> web.TalkSessionCreateResponse
-	4,  // 9: web.Talk.SessionDelete:output_type -> web.TalkSessionDeleteResponse
-	6,  // 10: web.Talk.SessionTop:output_type -> web.TalkSessionTopResponse
-	8,  // 11: web.Talk.SessionDisturb:output_type -> web.TalkSessionDisturbResponse
-	10, // 12: web.Talk.SessionDetail:output_type -> web.TalkSessionDetailResponse
-	12, // 13: web.Talk.SessionList:output_type -> web.TalkSessionListResponse
-	14, // 14: web.Talk.SessionClearUnreadNum:output_type -> web.TalkSessionClearUnreadNumResponse
-	8,  // [8:15] is the sub-list for method output_type
-	1,  // [1:8] is the sub-list for method input_type
+	13, // 6: web.Talk.SessionList:input_type -> web.TalkSessionListRequest
+	15, // 7: web.Talk.SessionClearUnreadNum:input_type -> web.TalkSessionClearUnreadNumRequest
+	11, // 8: web.Talk.SessionSetRetainDays:input_type -> web.TalkSessionSetRetainDaysRequest
+	2,  // 9: web.Talk.SessionCreate:output_type -> web.TalkSessionCreateResponse
+	4,  // 10: web.Talk.SessionDelete:output_type -> web.TalkSessionDeleteResponse
+	6,  // 11: web.Talk.SessionTop:output_type -> web.TalkSessionTopResponse
+	8,  // 12: web.Talk.SessionDisturb:output_type -> web.TalkSessionDisturbResponse
+	10, // 13: web.Talk.SessionDetail:output_type -> web.TalkSessionDetailResponse
+	14, // 14: web.Talk.SessionList:output_type -> web.TalkSessionListResponse
+	16, // 15: web.Talk.SessionClearUnreadNum:output_type -> web.TalkSessionClearUnreadNumResponse
+	12, // 16: web.Talk.SessionSetRetainDays:output_type -> web.TalkSessionSetRetainDaysResponse
+	9,  // [9:17] is the sub-list for method output_type
+	1,  // [1:9] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
@@ -1099,7 +1254,7 @@ func file_web_v1_talk_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_talk_proto_rawDesc), len(file_web_v1_talk_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

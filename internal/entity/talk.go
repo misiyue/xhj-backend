@@ -1,5 +1,10 @@
 package entity
 
+import (
+	"fmt"
+	"strings"
+)
+
 // 聊天模式
 const (
 	ChatPrivateMode  = 1 // 私信模式
@@ -12,6 +17,7 @@ const (
 	PushEventImMessageMerchantC2c   = "im.message.c2c"            // 商户订单对话消息（C2C）
 	PushEventImMessageKeyboard      = "im.message.keyboard"       // 键盘输入事件推送
 	PushEventImMessageRevoke        = "im.message.revoke"         // 聊天消息撤销推送
+	PushEventImMessageRead          = "im.message.read"           // 消息已读推送（私聊/群聊）
 	PushEventImSessionUnreadCleared = "im.session.unread.cleared" // 会话未读清零推送
 	PushEventImMessageMention       = "im.message.mention"        // @提及通知推送
 	PushEventContactApply           = "im.contact.apply"          // 好友申请消息推送
@@ -23,6 +29,7 @@ const (
 	PushEventImCallReject           = "im.call.reject"            // 拒绝通话
 	PushEventImCallHangup           = "im.call.hangup"            // 挂断通话
 	PushEventImCallCancel           = "im.call.cancel"            // 取消通话
+	PushEventSysNotice              = "im.sys.notice"             // 系统通知
 )
 
 // IM消息类型
@@ -59,6 +66,7 @@ const (
 	ChatMsgSysGroupMemberCancelMuted = 1110 // 群成员解除禁言
 	ChatMsgSysGroupNotice            = 1111 // 编辑群公告
 	ChatMsgSysGroupTransfer          = 1113 // 变更群主
+	ChatMsgSysRetainDaysSet          = 1201 // 设置私聊消息保留天数
 )
 
 var ChatMsgTypeMapping = map[int]string{
@@ -87,6 +95,23 @@ var ChatMsgTypeMapping = map[int]string{
 	ChatMsgSysGroupCancelMuted:       "[群解除禁言消息]",
 	ChatMsgSysGroupMemberMuted:       "[群成员禁言消息]",
 	ChatMsgSysGroupMemberCancelMuted: "[群成员解除禁言消息]",
+	ChatMsgSysRetainDaysSet:          "[当前聊天已禁用自动删除消息]|[当前聊天已设置为%d天后删除]",
+}
+
+// ChatMsgSysRetainDaysSetPreview 根据 retain_days 生成消息保留设置摘要
+func ChatMsgSysRetainDaysSetPreview(retainDays int) string {
+	template, ok := ChatMsgTypeMapping[ChatMsgSysRetainDaysSet]
+	if !ok {
+		return ""
+	}
+	parts := strings.SplitN(template, "|", 2)
+	if retainDays <= 0 {
+		return parts[0]
+	}
+	if len(parts) < 2 {
+		return parts[0]
+	}
+	return fmt.Sprintf(parts[1], retainDays)
 }
 
 type TalkLastMessage struct {

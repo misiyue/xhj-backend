@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,7 +12,7 @@ import (
 
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
-	"gorm.io/gorm"
+	"github.com/gzydong/go-chat/internal/service/message"
 	"gorm.io/gorm/clause"
 )
 
@@ -26,6 +25,7 @@ type ITalkSessionService interface {
 	Top(ctx context.Context, opt *TalkSessionTopOpt) (int, error)
 	Disturb(ctx context.Context, opt *TalkSessionDisturbOpt) (int, error)
 	SessionDetail(ctx context.Context, uid int, talkMode int, receiverId int) (*model.TalkSession, error)
+	SetRetainDays(ctx context.Context, opt *TalkSessionSetRetainDaysOpt) (int, error)
 	BatchAddList(ctx context.Context, uid int, values map[string]int)
 }
 
@@ -34,6 +34,7 @@ type TalkSessionService struct {
 	TalkSessionRepo *repo.TalkSession
 	GroupMemberRepo *repo.GroupMember
 	GroupRepo       *repo.Group
+	Message         message.IService
 }
 
 func (s *TalkSessionService) List(ctx context.Context, uid int) ([]*model.TalkSessionDisplay, error) {
@@ -44,7 +45,7 @@ func (s *TalkSessionService) List(ctx context.Context, uid int) ([]*model.TalkSe
 		Table("talk_session").
 		Select([]string{
 			"talk_session.id", "talk_session.session_id", "talk_session.talk_mode", "talk_session.receiver_id", "talk_session.updated_at",
-			"talk_session.is_disturb", "talk_session.is_top", "talk_session.is_robot", "talk_session.is_delete",
+			"talk_session.is_disturb", "talk_session.is_top", "talk_session.is_robot", "talk_session.is_delete", "talk_session.retain_days",
 			"`users`.avatar", "`users`.nickname",
 			"`group`.name as group_name", "`group`.avatar as group_avatar",
 		}).
@@ -164,11 +165,11 @@ type TalkSessionCreateOpt struct {
 func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateOpt) (*model.TalkSession, error) {
 
 	result, err := s.TalkSessionRepo.FindByWhere(ctx, "talk_mode = ? and user_id = ? and receiver_id = ?", opt.TalkType, opt.UserId, opt.ReceiverId)
-	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+	if err != nil {
 		return nil, err
 	}
 
-	if errors.Is(err, gorm.ErrRecordNotFound) {
+	if result == nil || result.Id == 0 {
 		result = &model.TalkSession{
 			TalkMode:   opt.TalkType,
 			UserId:     opt.UserId,
@@ -187,7 +188,7 @@ func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateO
 		if opt.TalkType == entity.ChatPrivateMode {
 			// 检查是否已有反向会话
 			reverseSession, err := s.TalkSessionRepo.FindByWhere(ctx, "talk_mode = ? and user_id = ? and receiver_id = ?", opt.TalkType, opt.ReceiverId, opt.UserId)
-			if err == nil && reverseSession.Id > 0 {
+			if err == nil && reverseSession != nil && reverseSession.Id > 0 {
 				// 如果反向会话已存在，使用较小的 ID 作为 session_id
 				result.SessionId = lo.Min([]int{reverseSession.Id, result.Id + 1}) // result.Id + 1 是新记录预计的ID
 			}
@@ -206,7 +207,7 @@ func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateO
 		// 对于私聊，自动创建反向会话并与这个会话关联
 		if opt.TalkType == entity.ChatPrivateMode {
 			reverseResult, err := s.TalkSessionRepo.FindByWhere(ctx, "talk_mode = ? and user_id = ? and receiver_id = ?", opt.TalkType, opt.ReceiverId, opt.UserId)
-			if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
+			if err == nil && (reverseResult == nil || reverseResult.Id == 0) {
 				// 反向会话不存在，需要创建
 				reverseSession := &model.TalkSession{
 					TalkMode:   opt.TalkType,
@@ -219,21 +220,25 @@ func (s *TalkSessionService) Create(ctx context.Context, opt *TalkSessionCreateO
 					IsRobot:    model.No,
 				}
 				s.Source.Db().WithContext(ctx).Create(reverseSession)
-			} else if err == nil && reverseResult.SessionId == 0 {
+			} else if err == nil && reverseResult != nil && reverseResult.SessionId == 0 {
 				// 反向会话存在但没有 session_id，更新它
 				s.Source.Db().WithContext(ctx).Model(reverseResult).Update("session_id", result.SessionId)
 			}
 		}
 	} else {
-		result.IsTop = model.No
-		result.IsDelete = model.No
-		result.IsDisturb = model.No
-
+		// 已有会话：仅恢复未删除状态，保留 is_top / is_disturb 等用户设置
+		updates := map[string]any{
+			"is_delete":  model.No,
+			"updated_at": time.Now(),
+		}
 		if opt.IsBoot {
+			updates["is_robot"] = model.Yes
 			result.IsRobot = model.Yes
 		}
-
-		s.Source.Db().WithContext(ctx).Save(result)
+		if _, err := s.TalkSessionRepo.UpdateByWhere(ctx, updates, "id = ?", result.Id); err != nil {
+			return nil, err
+		}
+		result.IsDelete = model.No
 	}
 
 	return result, nil
@@ -341,6 +346,62 @@ func (s *TalkSessionService) Disturb(ctx context.Context, opt *TalkSessionDistur
 // SessionDetail 会话详情
 func (s *TalkSessionService) SessionDetail(ctx context.Context, uid int, talkMode int, receiverId int) (*model.TalkSession, error) {
 	return s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and talk_mode = ? and receiver_id = ?", uid, talkMode, receiverId)
+}
+
+type TalkSessionSetRetainDaysOpt struct {
+	UserId        int
+	LinkSessionId int // talk_session.session_id（私聊成对关联 ID）
+	RetainDays    int
+}
+
+// SetRetainDays 设置私聊消息保留天数：校验己方与对方 talk_session 后，按 session_id 同步更新
+func (s *TalkSessionService) SetRetainDays(ctx context.Context, opt *TalkSessionSetRetainDaysOpt) (int, error) {
+	if opt == nil || opt.UserId <= 0 || opt.LinkSessionId <= 0 {
+		return 0, entity.ErrPermissionDenied
+	}
+	if opt.RetainDays < 0 || opt.RetainDays > 3650 {
+		return 0, entity.ErrPermissionDenied
+	}
+
+	rows, err := s.TalkSessionRepo.FindPrivatePairByLinkSessionId(ctx, opt.LinkSessionId)
+	if err != nil {
+		return 0, err
+	}
+	if len(rows) < 2 {
+		return 0, entity.ErrDataNotFound
+	}
+
+	var mine, peer *model.TalkSession
+	for _, row := range rows {
+		if row.UserId == opt.UserId {
+			mine = row
+			continue
+		}
+		if peer == nil {
+			peer = row
+		}
+	}
+	if mine == nil {
+		return 0, entity.ErrPermissionDenied
+	}
+	if peer == nil {
+		return 0, entity.ErrDataNotFound
+	}
+	if mine.ReceiverId != peer.UserId || peer.ReceiverId != mine.UserId {
+		return 0, entity.ErrPermissionDenied
+	}
+
+	if err := s.TalkSessionRepo.UpdateRetainDaysByLinkSessionId(ctx, opt.LinkSessionId, opt.RetainDays); err != nil {
+		return 0, err
+	}
+
+	if s.Message != nil {
+		if err := s.Message.CreatePrivateRetainDaysSetMessage(ctx, opt.UserId, mine.ReceiverId, opt.RetainDays); err != nil {
+			return 0, err
+		}
+	}
+
+	return opt.RetainDays, nil
 }
 
 // BatchAddList 批量添加会话列表

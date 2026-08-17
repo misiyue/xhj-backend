@@ -1,10 +1,12 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/external/push"
 	"github.com/gzydong/go-chat/internal/apis/handler"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
@@ -15,9 +17,14 @@ import (
 
 // NewRouter 初始化配置路由
 func NewRouter(conf *config.Config, handler *handler.Handler, session *cache.JwtTokenStorage) *gin.Engine {
+	if conf.Push != nil && conf.Push.Valid() {
+		push.Init(conf.Push.AppID, conf.Push.Key, conf.Push.URL)
+	}
+
 	router := gin.New()
 
 	router.Use(middleware.Cors(conf.Cors))
+	router.Use(middleware.InjectClientIP())
 
 	// 添加安全头中间件
 	router.Use(middleware.SecurityHeadersMiddleware(conf.Security.SecurityHeaders))
@@ -51,7 +58,9 @@ func NewRouter(conf *config.Config, handler *handler.Handler, session *cache.Jwt
 	}
 
 	router.Use(gin.RecoveryWithWriter(gin.DefaultWriter, func(c *gin.Context, err any) {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, map[string]any{"code": 500, "msg": "系统错误，请重试!!!"})
+		message := formatPanicMessage(err)
+		logger.Errorf("请求处理异常 method=%s path=%s error=%v", c.Request.Method, c.Request.URL.Path, err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, map[string]any{"code": 500, "msg": message})
 	}))
 
 	router.GET("/", func(c *gin.Context) {
@@ -65,7 +74,7 @@ func NewRouter(conf *config.Config, handler *handler.Handler, session *cache.Jwt
 	// Prometheus metrics 端点
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
-	RegisterWebRoute(conf.Jwt.Secret, router, handler.Api, session)
+	RegisterWebRoute(conf, router, handler.Api, session)
 	RegisterAdminRoute(conf.Jwt.Secret, router, handler.Admin, session)
 	RegisterOpenRoute(router, handler.Open)
 
@@ -79,6 +88,13 @@ func NewRouter(conf *config.Config, handler *handler.Handler, session *cache.Jwt
 	})
 
 	return router
+}
+
+func formatPanicMessage(err any) string {
+	if err == nil {
+		return "系统错误：未知异常"
+	}
+	return fmt.Sprintf("系统错误：%v", err)
 }
 
 func HandlerFunc(resp *Interceptor, fn func(ctx *gin.Context) (any, error)) gin.HandlerFunc {

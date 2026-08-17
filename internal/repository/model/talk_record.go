@@ -24,6 +24,7 @@ type TalkMessageRecord struct {
 	Nickname  string    `json:"nickname"`   // 发送者昵称
 	Avatar    string    `json:"avatar"`     // 发送者头像
 	IsRevoked int       `json:"is_revoked"` // 消息是否已撤销
+	IsRead    int       `json:"is_read"`    // 是否已读：0-否，1-是（私聊）
 	SendTime  time.Time `json:"send_time"`  // 发送时间
 	Extra     string    `json:"extra"`      // 额外参数
 	Quote     string    `json:"quote"`      // 消息引用

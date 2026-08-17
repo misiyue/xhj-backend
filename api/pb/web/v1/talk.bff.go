@@ -26,6 +26,8 @@ type ITalkHandler interface {
 	SessionList(ctx context.Context, in *TalkSessionListRequest) (*TalkSessionListResponse, error)
 	// 会话未读数清除接口
 	SessionClearUnreadNum(ctx context.Context, in *TalkSessionClearUnreadNumRequest) (*TalkSessionClearUnreadNumResponse, error)
+	// 设置私聊消息保留天数
+	SessionSetRetainDays(ctx context.Context, in *TalkSessionSetRetainDaysRequest) (*TalkSessionSetRetainDaysResponse, error)
 }
 
 // RegisterTalkHandler 注册服务路由处理器
@@ -102,6 +104,15 @@ func RegisterTalkHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.SessionClearUnreadNum(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/talk/session-set-retain-days", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in TalkSessionSetRetainDaysRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.SessionSetRetainDays(ctx.Request.Context(), &in)
 	}))
 
 }

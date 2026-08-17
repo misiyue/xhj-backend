@@ -33,9 +33,11 @@ type V1 struct {
 	ArticleTag   *article.Tag
 	Message      *talk.Publish
 	Invite       *v1.Invite
+	Notice       *v1.Notice
 	KYC          *v1.KYC
 	Wallet       *v1.Wallet
 	GroupRobot   *v1.GroupRobot
+	Marzban      *v1.Marzban
 }
 
 type Handler struct {

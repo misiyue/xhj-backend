@@ -56,9 +56,12 @@ func (h *Handler) onConsumeMerchantMessage(ctx context.Context, data []byte) {
 		TalkMode:   entity.ChatMerchantMode,
 		FromId:     m.FromId,
 		ReceiverId: m.ReceiverId,
-		SessionId:  m.SessionId,
+		SessionId:  sub.InboxSessionId,
 		OrderId:    sub.OrderId,
 		Body:       body,
+	}
+	if payload.SessionId == 0 {
+		payload.SessionId = m.SessionId
 	}
 
 	msg := Message(entity.PushEventImMessageMerchantC2c, payload)

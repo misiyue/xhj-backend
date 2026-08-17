@@ -5,6 +5,7 @@ const (
 	SubEventImMessageMerchant      = "sub.im.message.merchant"       // 商户订单 C2C 对话消息通知
 	SubEventImMessageKeyboard      = "sub.im.message.keyboard"       // 键盘输入事件通知
 	SubEventImMessageRevoke        = "sub.im.message.revoke"         // 聊天消息撤销通知
+	SubEventImMessageRead          = "sub.im.message.read"         // 私聊消息已读通知
 	SubEventImSessionUnreadCleared = "sub.im.session.unread.cleared" // 会话未读清零通知
 	SubEventImMessageMention       = "sub.im.message.mention"        // @提及消息通知
 	SubEventContactStatus          = "sub.im.contact.status"         // 用户在线状态通知
@@ -17,6 +18,7 @@ const (
 	SubEventImCallReject           = "sub.im.call.reject"            // 拒绝通话通知
 	SubEventImCallHangup           = "sub.im.call.hangup"            // 挂断通话通知
 	SubEventImCallCancel           = "sub.im.call.cancel"            // 取消通话通知
+	SubEventSysNotice              = "sub.im.sys.notice"             // 系统通知
 )
 
 type SubEventImCallPayload struct {
@@ -40,9 +42,10 @@ type SubEventImMessagePayload struct {
 
 // SubEventImMessageMerchantPayload 商户 C2C 消息订阅 payload
 type SubEventImMessageMerchantPayload struct {
-	InboxUserId int    `json:"inbox_user_id"` // 该条推送应对哪一方用户投递
-	OrderId     int    `json:"order_id"`      // merchant_order.id
-	Message     string `json:"message"`       // model.MerchantMessage JSON
+	InboxUserId    int    `json:"inbox_user_id"`              // 该条推送应对哪一方用户投递
+	InboxSessionId int    `json:"inbox_session_id,omitempty"` // 接收方会话栏 merchant_session.id
+	OrderId        int    `json:"order_id"`                   // merchant_order.id
+	Message        string `json:"message"`                    // model.MerchantMessage JSON
 }
 
 // SubEventImMessageMentionPayload @提及消息订阅事件payload
@@ -98,9 +101,26 @@ type SubEventTalkRevokePayload struct {
 	Remark   string `json:"remark"`
 }
 
+type SubEventImMessageReadPayload struct {
+	TalkMode   int      `json:"talk_mode"`   // 1 私聊 2 群聊
+	FromId     int      `json:"from_id"`     // 本次阅读者 user_id
+	ReceiverId int      `json:"receiver_id"` // 私聊：对方 user_id；群聊：群 ID
+	MsgIds     []string `json:"msg_ids"`     // 已读消息 ID 列表
+}
+
 type SubEventImSessionUnreadClearedPayload struct {
 	UserId     int `json:"user_id"`
 	TalkMode   int `json:"talk_mode"`
 	ReceiverId int `json:"receiver_id"`
 	UnreadNum  int `json:"unread_num"`
+}
+
+// SubEventSysNoticePayload 系统通知订阅 payload（queue -> comet）
+type SubEventSysNoticePayload struct {
+	UserId    int    `json:"user_id"`
+	Id        int    `json:"id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Url       string `json:"url"`
+	CreatedAt string `json:"created_at"`
 }

@@ -9,14 +9,15 @@ import (
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/pkg/utils"
 	"github.com/gzydong/go-chat/internal/repository/model"
 )
 
-func merchantPaytypeToProto(p *model.MerchantPaytype) *web.UserMerchantPaytypeItem {
+func merchantPaytypeToProto(p *model.MerchantPaytype) *web.MerchantPaytypeItem {
 	if p == nil {
 		return nil
 	}
-	return &web.UserMerchantPaytypeItem{
+	return &web.MerchantPaytypeItem{
 		Id:        int32(p.Id),
 		UserId:    int32(p.UserId),
 		TypeId:    int32(p.TypeId),
@@ -24,17 +25,22 @@ func merchantPaytypeToProto(p *model.MerchantPaytype) *web.UserMerchantPaytypeIt
 		Nickname:  p.Nickname,
 		OpenBank:  p.OpenBank,
 		IsDelete:  int32(p.IsDelete),
+		Phone:     p.Phone,
 		CreatedAt: timeutil.FormatDatetime(p.CreatedAt),
 		UpdatedAt: timeutil.FormatDatetime(p.UpdatedAt),
 	}
 }
 
 // MerchantPaytypeCreate 创建收款方式
-func (u *User) MerchantPaytypeCreate(ctx context.Context, in *web.UserMerchantPaytypeCreateRequest) (*web.UserMerchantPaytypeCreateResponse, error) {
+func (u *User) MerchantPaytypeCreate(ctx context.Context, in *web.MerchantPaytypeCreateRequest) (*web.MerchantPaytypeCreateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	if _, err := u.requireEffectiveMerchant(ctx, uid, "无法管理收款方式"); err != nil {
 		return nil, err
+	}
+	phone := strings.TrimSpace(in.GetPhone())
+	if phone != "" && !utils.IsMobile(phone) {
+		return nil, errorx.New(400, "手机号格式不正确")
 	}
 	row := &model.MerchantPaytype{
 		UserId:   uid,
@@ -42,16 +48,17 @@ func (u *User) MerchantPaytypeCreate(ctx context.Context, in *web.UserMerchantPa
 		Account:  strings.TrimSpace(in.GetAccount()),
 		Nickname: strings.TrimSpace(in.GetNickname()),
 		OpenBank: strings.TrimSpace(in.GetOpenBank()),
+		Phone:    phone,
 		IsDelete: 0,
 	}
 	if err := u.MerchantPaytypeRepo.Create(ctx, row); err != nil {
 		return nil, err
 	}
-	return &web.UserMerchantPaytypeCreateResponse{Id: int32(row.Id)}, nil
+	return &web.MerchantPaytypeCreateResponse{Id: int32(row.Id)}, nil
 }
 
 // MerchantPaytypeUpdate 编辑收款方式
-func (u *User) MerchantPaytypeUpdate(ctx context.Context, in *web.UserMerchantPaytypeUpdateRequest) (*web.UserMerchantPaytypeUpdateResponse, error) {
+func (u *User) MerchantPaytypeUpdate(ctx context.Context, in *web.MerchantPaytypeUpdateRequest) (*web.MerchantPaytypeUpdateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	if _, err := u.requireEffectiveMerchant(ctx, uid, "无法管理收款方式"); err != nil {
@@ -76,11 +83,11 @@ func (u *User) MerchantPaytypeUpdate(ctx context.Context, in *web.UserMerchantPa
 	if err := u.MerchantPaytypeRepo.UpdateByID(ctx, row.Id, updates); err != nil {
 		return nil, err
 	}
-	return &web.UserMerchantPaytypeUpdateResponse{}, nil
+	return &web.MerchantPaytypeUpdateResponse{}, nil
 }
 
 // MerchantPaytypeList 本人全部收款方式（含已作废），不分页
-func (u *User) MerchantPaytypeList(ctx context.Context, _ *web.UserMerchantPaytypeListRequest) (*web.UserMerchantPaytypeListResponse, error) {
+func (u *User) MerchantPaytypeList(ctx context.Context, _ *web.MerchantPaytypeListRequest) (*web.MerchantPaytypeListResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	if _, err := u.requireEffectiveMerchant(ctx, uid, "无法管理收款方式"); err != nil {
@@ -90,15 +97,15 @@ func (u *User) MerchantPaytypeList(ctx context.Context, _ *web.UserMerchantPayty
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*web.UserMerchantPaytypeItem, 0, len(rows))
+	items := make([]*web.MerchantPaytypeItem, 0, len(rows))
 	for i := range rows {
 		items = append(items, merchantPaytypeToProto(&rows[i]))
 	}
-	return &web.UserMerchantPaytypeListResponse{Items: items}, nil
+	return &web.MerchantPaytypeListResponse{Items: items}, nil
 }
 
 // MerchantPaytypeInvalidate 作废收款方式
-func (u *User) MerchantPaytypeInvalidate(ctx context.Context, in *web.UserMerchantPaytypeInvalidateRequest) (*web.UserMerchantPaytypeInvalidateResponse, error) {
+func (u *User) MerchantPaytypeInvalidate(ctx context.Context, in *web.MerchantPaytypeInvalidateRequest) (*web.MerchantPaytypeInvalidateResponse, error) {
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := int(session.UserId)
 	if _, err := u.requireEffectiveMerchant(ctx, uid, "无法管理收款方式"); err != nil {
@@ -117,5 +124,5 @@ func (u *User) MerchantPaytypeInvalidate(ctx context.Context, in *web.UserMercha
 	if err := u.MerchantPaytypeRepo.UpdateByID(ctx, row.Id, map[string]any{"is_delete": 1}); err != nil {
 		return nil, err
 	}
-	return &web.UserMerchantPaytypeInvalidateResponse{}, nil
+	return &web.MerchantPaytypeInvalidateResponse{}, nil
 }

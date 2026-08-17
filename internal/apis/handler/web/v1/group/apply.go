@@ -3,18 +3,21 @@ package group
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/sliceutil"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
 	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
+	"github.com/gzydong/go-chat/internal/service/message"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -31,6 +34,9 @@ type Apply struct {
 	GroupMemberService service.IGroupMemberService
 	GroupService       service.IGroupService
 	PushMessage        *logic.PushMessage
+	UsersRepo          *repo.Users
+	UserClient         *cache.UserClient
+	NoticeTemplateRepo *repo.NoticeTemplate
 }
 
 // Create 创建群组申请接口
@@ -79,12 +85,23 @@ func (a Apply) Create(ctx context.Context, in *web.GroupApplyCreateRequest) (*we
 		return nil, err
 	}
 
-	find, err := a.GroupMemberRepo.FindByWhere(ctx, "group_id = ? and leader = ?", in.GroupId, model.GroupMemberLeaderOwner)
-	if err == nil && find != nil {
-		a.GroupApplyStorage.Incr(ctx, find.UserId)
+	leaders, leaderErr := a.GroupMemberRepo.FindAll(ctx, func(db *gorm.DB) {
+		db.Select("user_id")
+		db.Where("group_id = ?", in.GroupId)
+		db.Where("leader in ?", []int{
+			model.GroupMemberLeaderOwner,
+			model.GroupMemberLeaderAdmin,
+		})
+		db.Where("is_quit = ?", model.No)
+	})
+	if leaderErr == nil {
+		for _, leader := range leaders {
+			a.GroupApplyStorage.Incr(ctx, leader.UserId)
+			a.tryOneSignalGroupApply(ctx, leader.UserId, uid, int(in.GroupId))
+		}
 	}
 
-	_ = a.PushMessage.Push(ctx, entity.ImChannelChat, &entity.SubscribeMessage{
+	_ = a.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventGroupApply,
 		Payload: jsonutil.Encode(entity.SubEventGroupApplyPayload{
 			GroupId: int(in.GroupId),
@@ -94,6 +111,41 @@ func (a Apply) Create(ctx context.Context, in *web.GroupApplyCreateRequest) (*we
 	})
 
 	return &web.GroupApplyCreateResponse{}, err
+}
+
+func (a Apply) tryOneSignalGroupApply(ctx context.Context, receiverID, senderID, groupID int) {
+	if receiverID <= 0 || senderID <= 0 {
+		return
+	}
+	senderName := "用户"
+	if a.UsersRepo != nil {
+		sender, err := a.UsersRepo.FindByIdWithCache(ctx, senderID)
+		if err != nil {
+			logger.Errorf("group_apply sender load err: sender_id=%d %s", senderID, err.Error())
+		} else if sender != nil && strings.TrimSpace(sender.Nickname) != "" {
+			senderName = strings.TrimSpace(sender.Nickname)
+		}
+	}
+	groupName := "群聊"
+	if a.GroupRepo != nil {
+		group, err := a.GroupRepo.FindById(ctx, groupID)
+		if err != nil {
+			logger.Errorf("group_apply group load err: group_id=%d %s", groupID, err.Error())
+		} else if group != nil && strings.TrimSpace(group.Name) != "" {
+			groupName = strings.TrimSpace(group.Name)
+		}
+	}
+	message.TryOneSignalTemplatePush(
+		ctx,
+		a.UsersRepo,
+		a.NoticeTemplateRepo,
+		nil,
+		receiverID,
+		0,
+		0,
+		model.NoticeTemplateFlagGroupApply,
+		map[string]string{"sender": senderName, "group": groupName},
+	)
 }
 
 // Delete 删除群组申请接口

@@ -2098,7 +2098,7 @@ components:
             properties:
                 mobile:
                     type: string
-                    description: 登录账号：可以是用户名 / 邮箱 / 手机号
+                    description: 登录账号（字段名仍为 mobile）：仅与 users.username 一致
                 password:
                     type: string
                     description: 登录密码

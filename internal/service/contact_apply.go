@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gzydong/go-chat/internal/logic"
-
+	"github.com/gzydong/go-chat/internal/pkg/logger"
+	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
+	"github.com/gzydong/go-chat/internal/service/message"
 	"gorm.io/gorm"
 
 	"github.com/gzydong/go-chat/internal/entity"
@@ -29,8 +32,11 @@ type IContactApplyService interface {
 
 type ContactApplyService struct {
 	*repo.Source
-	TalkSessionRepo *repo.TalkSession
-	PushMessage     *logic.PushMessage
+	TalkSessionRepo    *repo.TalkSession
+	PushMessage        *logic.PushMessage
+	UsersRepo          *repo.Users
+	UserClient         *cache.UserClient
+	NoticeTemplateRepo *repo.NoticeTemplate
 }
 
 type ContactApplyCreateOpt struct {
@@ -62,7 +68,34 @@ func (s *ContactApplyService) Create(ctx context.Context, opt *ContactApplyCreat
 	})
 
 	s.Source.Redis().Incr(ctx, fmt.Sprintf("im:contact:apply:%d", opt.FriendId))
+	s.tryOneSignalContactApply(ctx, opt.FriendId, opt.UserId)
 	return nil
+}
+
+func (s *ContactApplyService) tryOneSignalContactApply(ctx context.Context, receiverID, senderID int) {
+	if receiverID <= 0 || senderID <= 0 {
+		return
+	}
+	senderName := "用户"
+	if s.UsersRepo != nil {
+		sender, err := s.UsersRepo.FindByIdWithCache(ctx, senderID)
+		if err != nil {
+			logger.Errorf("contact_apply sender load err: sender_id=%d %s", senderID, err.Error())
+		} else if sender != nil && strings.TrimSpace(sender.Nickname) != "" {
+			senderName = strings.TrimSpace(sender.Nickname)
+		}
+	}
+	message.TryOneSignalTemplatePush(
+		ctx,
+		s.UsersRepo,
+		s.NoticeTemplateRepo,
+		nil,
+		receiverID,
+		0,
+		0,
+		model.NoticeTemplateFlagContactApply,
+		map[string]string{"sender": senderName},
+	)
 }
 
 type ContactApplyAcceptOpt struct {

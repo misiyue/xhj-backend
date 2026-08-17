@@ -58,6 +58,7 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		&model.WalletUser{},
 		&model.AppVersion{},
 		&model.AppExplore{},
+		&model.AppModule{},
 	)
 	if err != nil {
 		panic(fmt.Errorf("database error :%v", err))

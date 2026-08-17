@@ -24,62 +24,74 @@ type IUserHandler interface {
 	MobileUpdate(ctx context.Context, in *UserMobileUpdateRequest) (*UserMobileUpdateResponse, error)
 	// 更新用户邮箱接口
 	EmailUpdate(ctx context.Context, in *UserEmailUpdateRequest) (*UserEmailUpdateResponse, error)
+	// 更新登录用户名（username）
+	UsernameUpdate(ctx context.Context, in *UserUsernameUpdateRequest) (*UserUsernameUpdateResponse, error)
+	// 更新通知订阅状态
+	SubscribeUpdate(ctx context.Context, in *UserSubscribeUpdateRequest) (*UserSubscribeUpdateResponse, error)
+	// 当前用户各类未读数汇总
+	UnreadSummary(ctx context.Context, in *UserUnreadSummaryRequest) (*UserUnreadSummaryResponse, error)
 	// 商户入驻申请
-	MerchantApply(ctx context.Context, in *UserMerchantApplyRequest) (*UserMerchantApplyResponse, error)
+	MerchantApply(ctx context.Context, in *MerchantApplyRequest) (*MerchantApplyResponse, error)
 	// 查询本人最近一次商户申请状态
-	MerchantStatus(ctx context.Context, in *UserMerchantStatusRequest) (*UserMerchantStatusResponse, error)
+	MerchantStatus(ctx context.Context, in *MerchantStatusRequest) (*MerchantStatusResponse, error)
 	// 获取本人商户资料（供查看/编辑表单回填，字段与 merchant 表一致）
-	MerchantProfile(ctx context.Context, in *UserMerchantProfileRequest) (*UserMerchantStatusResponse, error)
+	MerchantProfile(ctx context.Context, in *MerchantProfileRequest) (*MerchantStatusResponse, error)
+	// 商户注销申请（status 置为 -1 申请注销）
+	MerchantCancelApply(ctx context.Context, in *MerchantCancelApplyRequest) (*MerchantCancelApplyResponse, error)
 	// 发布商户挂售任务
-	MerchantTaskCreate(ctx context.Context, in *UserMerchantTaskCreateRequest) (*UserMerchantTaskCreateResponse, error)
+	MerchantTaskCreate(ctx context.Context, in *MerchantTaskCreateRequest) (*MerchantTaskCreateResponse, error)
 	// 本人商户任务列表
-	MerchantTaskMyList(ctx context.Context, in *UserMerchantTaskMyListRequest) (*UserMerchantTaskListResponse, error)
+	MerchantTaskMyList(ctx context.Context, in *MerchantTaskMyListRequest) (*MerchantTaskListResponse, error)
 	// 全平台：已上架且待交易的任务列表
-	MerchantTaskMarketList(ctx context.Context, in *UserMerchantTaskMarketListRequest) (*UserMerchantTaskListResponse, error)
+	MerchantTaskMarketList(ctx context.Context, in *MerchantTaskMarketListRequest) (*MerchantTaskListResponse, error)
 	// 任务详情（按 id）
-	MerchantTaskDetail(ctx context.Context, in *UserMerchantTaskDetailRequest) (*UserMerchantTaskItem, error)
+	MerchantTaskDetail(ctx context.Context, in *MerchantTaskDetailRequest) (*MerchantTaskItem, error)
+	// 买家：按挂单 task_id 查看对应商户公开信息
+	MerchantInfoByTask(ctx context.Context, in *MerchantInfoByTaskRequest) (*MerchantInfoForBuyerResponse, error)
 	// 修改自己的任务（仅待交易且未删除）
-	MerchantTaskUpdate(ctx context.Context, in *UserMerchantTaskUpdateRequest) (*UserMerchantTaskUpdateResponse, error)
+	MerchantTaskUpdate(ctx context.Context, in *MerchantTaskUpdateRequest) (*MerchantTaskUpdateResponse, error)
 	// 上架自己的任务
-	MerchantTaskUp(ctx context.Context, in *UserMerchantTaskIdRequest) (*UserMerchantTaskActionResponse, error)
+	MerchantTaskUp(ctx context.Context, in *MerchantTaskIdRequest) (*MerchantTaskActionResponse, error)
 	// 下架自己的任务
-	MerchantTaskDown(ctx context.Context, in *UserMerchantTaskIdRequest) (*UserMerchantTaskActionResponse, error)
+	MerchantTaskDown(ctx context.Context, in *MerchantTaskIdRequest) (*MerchantTaskActionResponse, error)
 	// 结束自己的任务（软删除，不再展示）
-	MerchantTaskFinish(ctx context.Context, in *UserMerchantTaskIdRequest) (*UserMerchantTaskActionResponse, error)
+	MerchantTaskFinish(ctx context.Context, in *MerchantTaskIdRequest) (*MerchantTaskActionResponse, error)
 	// 商户收款方式：创建
-	MerchantPaytypeCreate(ctx context.Context, in *UserMerchantPaytypeCreateRequest) (*UserMerchantPaytypeCreateResponse, error)
+	MerchantPaytypeCreate(ctx context.Context, in *MerchantPaytypeCreateRequest) (*MerchantPaytypeCreateResponse, error)
 	// 商户收款方式：编辑
-	MerchantPaytypeUpdate(ctx context.Context, in *UserMerchantPaytypeUpdateRequest) (*UserMerchantPaytypeUpdateResponse, error)
+	MerchantPaytypeUpdate(ctx context.Context, in *MerchantPaytypeUpdateRequest) (*MerchantPaytypeUpdateResponse, error)
 	// 商户收款方式：列表（本人全部，含已作废，不分页）
-	MerchantPaytypeList(ctx context.Context, in *UserMerchantPaytypeListRequest) (*UserMerchantPaytypeListResponse, error)
+	MerchantPaytypeList(ctx context.Context, in *MerchantPaytypeListRequest) (*MerchantPaytypeListResponse, error)
 	// 商户收款方式：作废
-	MerchantPaytypeInvalidate(ctx context.Context, in *UserMerchantPaytypeInvalidateRequest) (*UserMerchantPaytypeInvalidateResponse, error)
+	MerchantPaytypeInvalidate(ctx context.Context, in *MerchantPaytypeInvalidateRequest) (*MerchantPaytypeInvalidateResponse, error)
 	// 商户订单：创建（整单购买，挂单变为交易中）
-	MerchantOrderCreate(ctx context.Context, in *UserMerchantOrderCreateRequest) (*UserMerchantOrderCreateResponse, error)
+	MerchantOrderCreate(ctx context.Context, in *MerchantOrderCreateRequest) (*MerchantOrderCreateResponse, error)
 
-	MerchantOrderDetail(ctx context.Context, in *UserMerchantOrderDetailRequest) (*UserMerchantOrderItem, error)
+	MerchantOrderDetail(ctx context.Context, in *MerchantOrderDetailRequest) (*MerchantOrderItem, error)
 
-	MerchantOrderCancel(ctx context.Context, in *UserMerchantOrderCancelRequest) (*UserMerchantOrderActionResponse, error)
+	MerchantOrderCancel(ctx context.Context, in *MerchantOrderCancelRequest) (*MerchantOrderActionResponse, error)
 
-	MerchantOrderList(ctx context.Context, in *UserMerchantOrderListRequest) (*UserMerchantOrderListResponse, error)
+	MerchantOrderList(ctx context.Context, in *MerchantOrderListRequest) (*MerchantOrderListResponse, error)
 
-	MerchantOrderConfirmPay(ctx context.Context, in *UserMerchantOrderConfirmPayRequest) (*UserMerchantOrderActionResponse, error)
+	MerchantOrderConfirmPay(ctx context.Context, in *MerchantOrderConfirmPayRequest) (*MerchantOrderActionResponse, error)
 
-	MerchantOrderUrge(ctx context.Context, in *UserMerchantOrderIdRequest) (*UserMerchantOrderActionResponse, error)
+	MerchantOrderUrge(ctx context.Context, in *MerchantOrderIdRequest) (*MerchantOrderActionResponse, error)
 
-	MerchantOrderAppealSeller(ctx context.Context, in *UserMerchantOrderAppealRequest) (*UserMerchantOrderActionResponse, error)
+	MerchantOrderAppealSeller(ctx context.Context, in *MerchantOrderAppealRequest) (*MerchantOrderActionResponse, error)
 
-	MerchantOrderAppealBuyer(ctx context.Context, in *UserMerchantOrderAppealRequest) (*UserMerchantOrderActionResponse, error)
+	MerchantOrderAppealBuyer(ctx context.Context, in *MerchantOrderAppealRequest) (*MerchantOrderActionResponse, error)
+	// 汇美支付：获取支付链接（买家）
+	MerchantOrderPay(ctx context.Context, in *MerchantOrderPayRequest) (*MerchantOrderPayResponse, error)
 	// 商户订单 C2C 对话：发消息（首条自动建 merchant_session，WebSocket event: im.message.c2c）
-	MerchantChatSend(ctx context.Context, in *UserMerchantChatSendRequest) (*UserMerchantChatSendResponse, error)
+	MerchantChatSend(ctx context.Context, in *MerchantChatSendRequest) (*MerchantChatSendResponse, error)
 
-	MerchantChatUnread(ctx context.Context, in *UserMerchantChatUnreadRequest) (*UserMerchantChatUnreadResponse, error)
+	MerchantChatUnread(ctx context.Context, in *MerchantChatUnreadRequest) (*MerchantChatUnreadResponse, error)
 
-	MerchantChatSessionList(ctx context.Context, in *UserMerchantChatSessionListRequest) (*UserMerchantChatSessionListResponse, error)
+	MerchantChatSessionList(ctx context.Context, in *MerchantChatSessionListRequest) (*MerchantChatSessionListResponse, error)
 
-	MerchantChatMessageList(ctx context.Context, in *UserMerchantChatMessageListRequest) (*UserMerchantChatMessageListResponse, error)
+	MerchantChatMessageList(ctx context.Context, in *MerchantChatMessageListRequest) (*MerchantChatMessageListResponse, error)
 	// 清除某商户会话未读（与 talk_mode=3、Redis im:unread 键一致；入参 receiver_id 为 session_id）
-	MerchantChatClearUnread(ctx context.Context, in *UserMerchantChatClearUnreadRequest) (*UserMerchantChatClearUnreadResponse, error)
+	MerchantChatClearUnread(ctx context.Context, in *MerchantChatClearUnreadRequest) (*MerchantChatClearUnreadResponse, error)
 }
 
 // RegisterUserHandler 注册服务路由处理器
@@ -149,8 +161,35 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.EmailUpdate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantApplyRequest
+	r.POST("/api/v1/user/username-update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserUsernameUpdateRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.UsernameUpdate(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/user/subscribe-update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserSubscribeUpdateRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.SubscribeUpdate(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/user/unread-summary", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserUnreadSummaryRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.UnreadSummary(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantApplyRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -158,8 +197,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantApply(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-status", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantStatusRequest
+	r.POST("/api/v1/merchant/status", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantStatusRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -167,8 +206,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantStatus(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-profile", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantProfileRequest
+	r.POST("/api/v1/merchant/profile", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantProfileRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -176,8 +215,17 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantProfile(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskCreateRequest
+	r.POST("/api/v1/merchant/cancel-apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantCancelApplyRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.MerchantCancelApply(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/merchant/task/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskCreateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -185,8 +233,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskCreate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/my-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskMyListRequest
+	r.POST("/api/v1/merchant/task/my-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskMyListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -194,8 +242,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskMyList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/market-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskMarketListRequest
+	r.POST("/api/v1/merchant/task/market-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskMarketListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -203,8 +251,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskMarketList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskDetailRequest
+	r.POST("/api/v1/merchant/task/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskDetailRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -212,8 +260,17 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskDetail(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskUpdateRequest
+	r.POST("/api/v1/merchant/task/merchant-info", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantInfoByTaskRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.MerchantInfoByTask(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/merchant/task/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskUpdateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -221,8 +278,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskUpdate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/up", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskIdRequest
+	r.POST("/api/v1/merchant/task/up", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -230,8 +287,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskUp(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/down", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskIdRequest
+	r.POST("/api/v1/merchant/task/down", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -239,8 +296,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskDown(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-task/finish", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantTaskIdRequest
+	r.POST("/api/v1/merchant/task/finish", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantTaskIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -248,8 +305,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantTaskFinish(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantPaytypeCreateRequest
+	r.POST("/api/v1/merchant/paytype/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantPaytypeCreateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -257,8 +314,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeCreate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantPaytypeUpdateRequest
+	r.POST("/api/v1/merchant/paytype/update", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantPaytypeUpdateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -266,8 +323,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeUpdate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantPaytypeListRequest
+	r.POST("/api/v1/merchant/paytype/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantPaytypeListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -275,8 +332,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-paytype/invalidate", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantPaytypeInvalidateRequest
+	r.POST("/api/v1/merchant/paytype/invalidate", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantPaytypeInvalidateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -284,8 +341,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantPaytypeInvalidate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderCreateRequest
+	r.POST("/api/v1/merchant/order/create", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderCreateRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -293,8 +350,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderCreate(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderDetailRequest
+	r.POST("/api/v1/merchant/order/detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderDetailRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -302,8 +359,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderDetail(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/cancel", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderCancelRequest
+	r.POST("/api/v1/merchant/order/cancel", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderCancelRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -311,8 +368,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderCancel(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderListRequest
+	r.POST("/api/v1/merchant/order/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -320,8 +377,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/confirm-pay", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderConfirmPayRequest
+	r.POST("/api/v1/merchant/order/confirm-pay", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderConfirmPayRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -329,8 +386,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderConfirmPay(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/urge", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderIdRequest
+	r.POST("/api/v1/merchant/order/urge", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderIdRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -338,8 +395,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderUrge(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/appeal-seller", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderAppealRequest
+	r.POST("/api/v1/merchant/order/appeal-seller", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderAppealRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -347,8 +404,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderAppealSeller(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-order/appeal-buyer", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantOrderAppealRequest
+	r.POST("/api/v1/merchant/order/appeal-buyer", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderAppealRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -356,8 +413,17 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantOrderAppealBuyer(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/send", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantChatSendRequest
+	r.POST("/api/v1/merchant/order/pay", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantOrderPayRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.MerchantOrderPay(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/merchant/chat/send", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantChatSendRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -365,8 +431,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatSend(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantChatUnreadRequest
+	r.POST("/api/v1/merchant/chat/unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantChatUnreadRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -374,8 +440,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatUnread(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/session-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantChatSessionListRequest
+	r.POST("/api/v1/merchant/chat/session-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantChatSessionListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -383,8 +449,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatSessionList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/message-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantChatMessageListRequest
+	r.POST("/api/v1/merchant/chat/message-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantChatMessageListRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}
@@ -392,8 +458,8 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		return handler.MerchantChatMessageList(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/user/merchant-chat/clear-unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in UserMerchantChatClearUnreadRequest
+	r.POST("/api/v1/merchant/chat/clear-unread", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in MerchantChatClearUnreadRequest
 		if err := interceptor.ShouldProto(ctx, &in); err != nil {
 			return nil, err
 		}

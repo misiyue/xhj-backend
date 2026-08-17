@@ -12,6 +12,7 @@ type TalkSession struct {
 	IsDisturb  int       `gorm:"column:is_disturb;" json:"is_disturb"`                                                       // 消息免打扰[1:否;2:是;]
 	IsDelete   int       `gorm:"column:is_delete;" json:"is_delete"`                                                         // 是否删除[1:否;2:是;]
 	IsRobot    int       `gorm:"column:is_robot;" json:"is_robot"`                                                           // 是否机器人[1:否;2:是;]
+	RetainDays int       `gorm:"column:retain_days;type:tinyint(4);default:0" json:"retain_days"`                           // 消息保留天数，0 表示不限制
 	CreatedAt  time.Time `gorm:"column:created_at;" json:"created_at"`                                                       // 创建时间
 	UpdatedAt  time.Time `gorm:"column:updated_at;" json:"updated_at"`                                                       // 更新时间
 }
@@ -22,12 +23,14 @@ func (TalkSession) TableName() string {
 
 type TalkSessionDisplay struct {
 	Id          int       `json:"id"`
+	SessionId   int       `gorm:"column:session_id" json:"session_id"`
 	TalkMode    int       `json:"talk_mode"`
 	ReceiverId  int       `json:"receiver_id"`
 	IsDelete    int       `json:"is_delete"`
 	IsTop       int       `json:"is_top"`
 	IsRobot     int       `json:"is_robot"`
 	IsDisturb   int       `json:"is_disturb"`
+	RetainDays  int       `gorm:"column:retain_days" json:"retain_days"`
 	Avatar      string    `json:"avatar"`
 	Nickname    string    `json:"nickname"`
 	GroupName   string    `json:"group_name"`

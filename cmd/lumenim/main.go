@@ -1,0 +1,160 @@
+package main
+
+import (
+	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/external/hdpay"
+	"github.com/gzydong/go-chat/external/push"
+	"github.com/gzydong/go-chat/external/wallet"
+	"github.com/gzydong/go-chat/internal/apis"
+	"github.com/gzydong/go-chat/internal/mission"
+	"github.com/gzydong/go-chat/internal/pkg/core"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
+	"github.com/gzydong/go-chat/internal/pkg/longnet"
+	_ "github.com/gzydong/go-chat/internal/pkg/server"
+	"github.com/urfave/cli/v2"
+)
+
+// Version 服务版本号（默认）
+// 构建时传入版本号
+// go build -o lumenim -ldflags "-X main.Version=${IMAGE_TAG}" ./cmd/lumenim
+var Version = "1.0.0"
+
+func main() {
+	app := core.NewApp(Version)
+	app.Register(NewHttpCommand)
+	app.Register(NewCometCommand)
+	app.Register(NewCrontabCommand)
+	app.Register(NewQueueCommand)
+	app.Register(NewTempCommand)
+	app.Register(NewMigrateCommand)
+	app.Run()
+}
+
+// initWallet initializes the external wallet client from config.
+func initWallet(c *config.Config) {
+	if c.Wallet != nil && c.Wallet.BaseURL != "" && c.Wallet.Key != "" {
+		wallet.Init(c.Wallet.BaseURL, c.Wallet.Key)
+	}
+}
+
+func initHdPay(c *config.Config) {
+	if c.Hdpay == nil {
+		return
+	}
+	m := c.Hdpay
+	if m.OrderURL != "" && m.AppID != "" && m.AppSecret != "" {
+		hdpay.Init(m.OrderURL, m.AppID, m.AppSecret)
+	}
+}
+
+func initPush(c *config.Config) {
+	if c.Push != nil && c.Push.Valid() {
+		push.Init(c.Push.AppID, c.Push.Key, c.Push.URL)
+	}
+}
+
+func logToConsole(c *config.Config) bool {
+	return c.App.Env == "dev" || c.App.Debug
+}
+
+func NewHttpCommand() core.Command {
+	return core.Command{
+		Name:  "http",
+		Usage: "HttpAddr Command - HttpAddr API 接口服务",
+		Action: func(ctx *cli.Context, c *config.Config) error {
+			logger.Init(c.Log.LogFilePath("app.log"), logger.LevelInfo, "http", logToConsole(c))
+			initWallet(c)
+			initHdPay(c)
+			initPush(c)
+			return apis.NewServer(ctx, NewHttpInjector(c))
+		},
+	}
+}
+
+func NewCometCommand() core.Command {
+	return core.Command{
+		Name:  "comet",
+		Usage: "Comet Command - WebsocketAddr、TCP 服务",
+		Action: func(ctx *cli.Context, c *config.Config) error {
+			logger.Init(c.Log.LogFilePath("app.log"), logger.LevelInfo, "comet", logToConsole(c))
+			injector := NewCometInjector(c)
+			return injector.Server.Start(ctx.Context)
+		},
+	}
+}
+
+func NewCrontabCommand() core.Command {
+	return core.Command{
+		Name:  "crontab",
+		Usage: "Crontab Command - 定时任务",
+		Action: func(ctx *cli.Context, c *config.Config) error {
+			logger.Init(c.Log.LogFilePath("app.log"), logger.LevelInfo, "crontab", logToConsole(c))
+			initWallet(c)
+			return mission.Cron(ctx, NewCronInjector(c))
+		},
+	}
+}
+
+func NewQueueCommand() core.Command {
+	return core.Command{
+		Name:  "queue",
+		Usage: "Queue Command - 队列任务",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "group",
+				Usage: "分组",
+				Value: "default",
+			},
+		},
+		Action: func(ctx *cli.Context, c *config.Config) error {
+			logger.Init(c.Log.LogFilePath("queue.log"), logger.LevelInfo, "queue", logToConsole(c))
+			initPush(c)
+			return mission.Queue(ctx, NewQueueInjector(c))
+		},
+	}
+}
+
+func NewMigrateCommand() core.Command {
+	return core.Command{
+		Name:  "migrate",
+		Usage: "Migrate Command - 数据库初始化",
+		Action: func(ctx *cli.Context, c *config.Config) error {
+			logger.Init(c.Log.LogFilePath("app.log"), logger.LevelInfo, "migrate", logToConsole(c))
+			return mission.Migrate(ctx, NewMigrateInjector(c))
+		},
+	}
+}
+
+func NewTempCommand() core.Command {
+	return core.Command{
+		Name:  "temp",
+		Usage: "Temp Command - 临时命令",
+		Subcommands: []core.Command{
+			{
+				Name:  "socket",
+				Usage: "Test Command",
+				Action: func(ctx *cli.Context, c *config.Config) error {
+					serv := longnet.New(longnet.Options{
+						WSSConfig: &longnet.WSSConfig{
+							Addr: ":9501",
+							Path: "/wss",
+						},
+					})
+
+					serv.SetHandler(longnet.NewHandler(
+						longnet.WithOpenHandler(func(smg longnet.ISessionManager, c longnet.ISession) {
+
+						}),
+						longnet.WithCloseHandler(func(cid int64, uid int64) {
+
+						}),
+						longnet.WithMessageHandler(func(smg longnet.ISessionManager, c longnet.ISession, data []byte) {
+							_ = c.Write(data)
+						})))
+
+					return serv.Start(ctx.Context)
+				},
+			},
+		},
+	}
+}

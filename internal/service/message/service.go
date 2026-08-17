@@ -30,6 +30,8 @@ type IPrivateMessage interface {
 	CreatePrivateMessage(ctx context.Context, option CreatePrivateMessageOption) error
 	// CreateToUserPrivateMessage 给指定用户信箱添加消息
 	CreateToUserPrivateMessage(ctx context.Context, data *model.TalkUserMessage) error
+	// CreatePrivateRetainDaysSetMessage 设置 retain_days 后通知双方
+	CreatePrivateRetainDaysSetMessage(ctx context.Context, fromId, receiverId, retainDays int) error
 }
 
 // IGroupMessage 群消息
@@ -71,6 +73,8 @@ type IMessage interface {
 	CreateMixedMessage(ctx context.Context, option CreateMixedMessage) error
 	// CreateRTCCallMessage 音视频通话消息
 	CreateRTCCallMessage(ctx context.Context, option CreateRTCCallMessage) error
+	// SendRTCCallInvite 发起音视频通话邀请（仅 OneSignal VoIP 推送，不落库、不推 WebSocket）
+	SendRTCCallInvite(ctx context.Context, option SendRTCCallInvite) error
 	// CreateRedEnvelopeMessage 红包消息
 	CreateRedEnvelopeMessage(ctx context.Context, option CreateRedEnvelopeMessage) error
 	// CreateTransferMessage 转账消息
@@ -97,6 +101,8 @@ type Service struct {
 	MentionStorage      *cache.MentionStorage
 	RobotRepo           *repo.Robot
 	PushMessage         *logic.PushMessage
+	UserClient          *cache.UserClient
+	NoticeTemplateRepo  *repo.NoticeTemplate
 }
 
 // CreateMessage 是所有消息入库的统一入口：
@@ -498,6 +504,17 @@ func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCall
 	})
 }
 
+func (s *Service) SendRTCCallInvite(ctx context.Context, option SendRTCCallInvite) error {
+	if option.TalkMode != entity.ChatPrivateMode {
+		return errors.New("rtc_invite 仅支持私聊")
+	}
+	if option.FromId <= 0 || option.ReceiverId <= 0 {
+		return errors.New("无效的发送者或接收者")
+	}
+	TryOneSignalRTCInvitePush(ctx, s.UsersRepo, s.TalkSessionRepo, option.FromId, option.ReceiverId)
+	return nil
+}
+
 func (s *Service) CreateRedEnvelopeMessage(ctx context.Context, option CreateRedEnvelopeMessage) error {
 	return s.CreateMessage(ctx, CreateMessageOption{
 		MsgId:      option.MsgId,
@@ -553,6 +570,6 @@ func (s *Service) CreateLoginMessage(ctx context.Context, option CreateLoginMess
 }
 
 func (s *Service) getTextMessage(msgType int, extra string) string {
-	return text(msgType, extra)
+	return PreviewText(msgType, extra)
 }
 

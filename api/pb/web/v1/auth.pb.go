@@ -26,7 +26,7 @@ const (
 // 登录接口请求参数
 type AuthLoginRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// 登录账号（手机号/用户名/邮箱）
+	// 登录账号（前端字段名仍为 mobile；服务端仅按 users.username 精确匹配）
 	Mobile string `protobuf:"bytes,1,opt,name=mobile,proto3" json:"mobile,omitempty"`
 	// 登录密码
 	Password string `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
@@ -295,7 +295,9 @@ type AuthRegisterRequest struct {
 	// 邀请码（可选）
 	InviteCode string `protobuf:"bytes,6,opt,name=invite_code,json=inviteCode,proto3" json:"invite_code,omitempty"`
 	// 邮箱验证码（邮箱注册时需要）
-	EmailCode     string `protobuf:"bytes,8,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
+	EmailCode string `protobuf:"bytes,8,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
+	// 设备码（配置开启 register_device_limit 时必填；最长 128）
+	DeviceCode    string `protobuf:"bytes,9,opt,name=device_code,json=deviceCode,proto3" json:"device_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -382,6 +384,13 @@ func (x *AuthRegisterRequest) GetInviteCode() string {
 func (x *AuthRegisterRequest) GetEmailCode() string {
 	if x != nil {
 		return x.EmailCode
+	}
+	return ""
+}
+
+func (x *AuthRegisterRequest) GetDeviceCode() string {
+	if x != nil {
+		return x.DeviceCode
 	}
 	return ""
 }
@@ -1244,6 +1253,89 @@ func (x *AuthEmailLoginResponse) GetExpiresIn() int32 {
 	return 0
 }
 
+// 注销账号请求参数
+type AuthCancelRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 邮箱验证码（发往当前账号绑定邮箱，渠道与 send-email 一致）
+	EmailCode     string `protobuf:"bytes,1,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthCancelRequest) Reset() {
+	*x = AuthCancelRequest{}
+	mi := &file_web_v1_auth_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthCancelRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthCancelRequest) ProtoMessage() {}
+
+func (x *AuthCancelRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_auth_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthCancelRequest.ProtoReflect.Descriptor instead.
+func (*AuthCancelRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_auth_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *AuthCancelRequest) GetEmailCode() string {
+	if x != nil {
+		return x.EmailCode
+	}
+	return ""
+}
+
+// 注销账号响应参数
+type AuthCancelResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuthCancelResponse) Reset() {
+	*x = AuthCancelResponse{}
+	mi := &file_web_v1_auth_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuthCancelResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuthCancelResponse) ProtoMessage() {}
+
+func (x *AuthCancelResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_auth_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuthCancelResponse.ProtoReflect.Descriptor instead.
+func (*AuthCancelResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_auth_proto_rawDescGZIP(), []int{22}
+}
+
 var File_web_v1_auth_proto protoreflect.FileDescriptor
 
 const file_web_v1_auth_proto_rawDesc = "" +
@@ -1265,7 +1357,7 @@ const file_web_v1_auth_proto_rawDesc = "" +
 	"\faccess_token\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\vaccessToken\x12#\n" +
 	"\n" +
 	"expires_in\x18\x03 \x01(\x05B\x04\xe2A\x01\x02R\texpiresIn\x12\x1f\n" +
-	"\bis_trans\x18\x04 \x01(\x05B\x04\xe2A\x01\x02R\aisTrans\"\xa0\x02\n" +
+	"\bis_trans\x18\x04 \x01(\x05B\x04\xe2A\x01\x02R\aisTrans\"\xcb\x02\n" +
 	"\x13AuthRegisterRequest\x12%\n" +
 	"\bnickname\x18\x01 \x01(\tB\t\xbaH\x06r\x04\x10\x02\x18\x14R\bnickname\x12\x16\n" +
 	"\x06mobile\x18\x02 \x01(\tR\x06mobile\x12\x14\n" +
@@ -1276,7 +1368,9 @@ const file_web_v1_auth_proto_rawDesc = "" +
 	"\vinvite_code\x18\x06 \x01(\tR\n" +
 	"inviteCode\x12\x1d\n" +
 	"\n" +
-	"email_code\x18\b \x01(\tR\temailCode\"~\n" +
+	"email_code\x18\b \x01(\tR\temailCode\x12)\n" +
+	"\vdevice_code\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\x80\x01R\n" +
+	"deviceCode\"~\n" +
 	"\x14AuthRegisterResponse\x12\x18\n" +
 	"\x04type\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x04type\x12'\n" +
 	"\faccess_token\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\vaccessToken\x12#\n" +
@@ -1334,7 +1428,11 @@ const file_web_v1_auth_proto_rawDesc = "" +
 	"\x04type\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x04type\x12'\n" +
 	"\faccess_token\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\vaccessToken\x12#\n" +
 	"\n" +
-	"expires_in\x18\x03 \x01(\x05B\x04\xe2A\x01\x02R\texpiresIn2\xe0\a\n" +
+	"expires_in\x18\x03 \x01(\x05B\x04\xe2A\x01\x02R\texpiresIn\"@\n" +
+	"\x11AuthCancelRequest\x12+\n" +
+	"\n" +
+	"email_code\x18\x01 \x01(\tB\f\xe2A\x01\x02\xbaH\x05r\x03\x98\x01\x06R\temailCode\"\x14\n" +
+	"\x12AuthCancelResponse2\xbb\b\n" +
 	"\x04Auth\x12U\n" +
 	"\x05Login\x12\x15.web.AuthLoginRequest\x1a\x16.web.AuthLoginResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/v1/auth/login\x12]\n" +
 	"\aCaptcha\x12\x17.web.AuthCaptchaRequest\x1a\x18.web.AuthCaptchaResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/auth/captcha\x12a\n" +
@@ -1347,7 +1445,8 @@ const file_web_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"EmailLogin\x12\x1a.web.AuthEmailLoginRequest\x1a\x1b.web.AuthEmailLoginResponse\"#\x82\xd3\xe4\x93\x02\x1d:\x01*\"\x18/api/v1/auth/email-login\x12r\n" +
 	"\fRefreshToken\x12\x1c.web.AuthRefreshTokenRequest\x1a\x1d.web.AuthRefreshTokenResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/auth/refresh-token\x12Y\n" +
-	"\x06Logout\x12\x16.web.AuthLogoutRequest\x1a\x17.web.AuthLogoutResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/logoutB\fZ\n" +
+	"\x06Logout\x12\x16.web.AuthLogoutRequest\x1a\x17.web.AuthLogoutResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/logout\x12Y\n" +
+	"\x06Cancel\x12\x16.web.AuthCancelRequest\x1a\x17.web.AuthCancelResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v1/auth/cancelB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -1362,7 +1461,7 @@ func file_web_v1_auth_proto_rawDescGZIP() []byte {
 	return file_web_v1_auth_proto_rawDescData
 }
 
-var file_web_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_web_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_web_v1_auth_proto_goTypes = []any{
 	(*AuthLoginRequest)(nil),         // 0: web.AuthLoginRequest
 	(*AuthCaptchaRequest)(nil),       // 1: web.AuthCaptchaRequest
@@ -1385,6 +1484,8 @@ var file_web_v1_auth_proto_goTypes = []any{
 	(*AuthOAuthBindResponse)(nil),    // 18: web.AuthOAuthBindResponse
 	(*AuthEmailLoginRequest)(nil),    // 19: web.AuthEmailLoginRequest
 	(*AuthEmailLoginResponse)(nil),   // 20: web.AuthEmailLoginResponse
+	(*AuthCancelRequest)(nil),        // 21: web.AuthCancelRequest
+	(*AuthCancelResponse)(nil),       // 22: web.AuthCancelResponse
 }
 var file_web_v1_auth_proto_depIdxs = []int32{
 	16, // 0: web.AuthOauthLoginResponse.authorize:type_name -> web.Authorize
@@ -1399,18 +1500,20 @@ var file_web_v1_auth_proto_depIdxs = []int32{
 	19, // 9: web.Auth.EmailLogin:input_type -> web.AuthEmailLoginRequest
 	8,  // 10: web.Auth.RefreshToken:input_type -> web.AuthRefreshTokenRequest
 	6,  // 11: web.Auth.Logout:input_type -> web.AuthLogoutRequest
-	3,  // 12: web.Auth.Login:output_type -> web.AuthLoginResponse
-	2,  // 13: web.Auth.Captcha:output_type -> web.AuthCaptchaResponse
-	5,  // 14: web.Auth.Register:output_type -> web.AuthRegisterResponse
-	11, // 15: web.Auth.Forget:output_type -> web.AuthForgetResponse
-	13, // 16: web.Auth.Oauth:output_type -> web.AuthOauthResponse
-	18, // 17: web.Auth.OauthBind:output_type -> web.AuthOAuthBindResponse
-	15, // 18: web.Auth.OauthLogin:output_type -> web.AuthOauthLoginResponse
-	20, // 19: web.Auth.EmailLogin:output_type -> web.AuthEmailLoginResponse
-	9,  // 20: web.Auth.RefreshToken:output_type -> web.AuthRefreshTokenResponse
-	7,  // 21: web.Auth.Logout:output_type -> web.AuthLogoutResponse
-	12, // [12:22] is the sub-list for method output_type
-	2,  // [2:12] is the sub-list for method input_type
+	21, // 12: web.Auth.Cancel:input_type -> web.AuthCancelRequest
+	3,  // 13: web.Auth.Login:output_type -> web.AuthLoginResponse
+	2,  // 14: web.Auth.Captcha:output_type -> web.AuthCaptchaResponse
+	5,  // 15: web.Auth.Register:output_type -> web.AuthRegisterResponse
+	11, // 16: web.Auth.Forget:output_type -> web.AuthForgetResponse
+	13, // 17: web.Auth.Oauth:output_type -> web.AuthOauthResponse
+	18, // 18: web.Auth.OauthBind:output_type -> web.AuthOAuthBindResponse
+	15, // 19: web.Auth.OauthLogin:output_type -> web.AuthOauthLoginResponse
+	20, // 20: web.Auth.EmailLogin:output_type -> web.AuthEmailLoginResponse
+	9,  // 21: web.Auth.RefreshToken:output_type -> web.AuthRefreshTokenResponse
+	7,  // 22: web.Auth.Logout:output_type -> web.AuthLogoutResponse
+	22, // 23: web.Auth.Cancel:output_type -> web.AuthCancelResponse
+	13, // [13:24] is the sub-list for method output_type
+	2,  // [2:13] is the sub-list for method input_type
 	2,  // [2:2] is the sub-list for extension type_name
 	2,  // [2:2] is the sub-list for extension extendee
 	0,  // [0:2] is the sub-list for field type_name
@@ -1427,7 +1530,7 @@ func file_web_v1_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_auth_proto_rawDesc), len(file_web_v1_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

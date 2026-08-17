@@ -10,7 +10,11 @@ app:
   require_invite_code: false
   # 是否关闭「登录」图形验证码校验（默认 false，即需要验证码）。旧客户端未改时可临时设为 true
   disable_login_captcha: false
-    # 不知道怎么生成的可以看这个网站 http://www.usey.cn/rsa?bits=2048
+  # 24小时内同一 IP 最大成功注册次数（Redis），0 不限制
+  register_ip_limit: 0
+  # 同一设备码累计最大成功注册次数（Redis，无过期），0 不限制
+  register_device_limit: 0
+  # 不知道怎么生成的可以看这个网站 http://www.usey.cn/rsa?bits=2048
   public_key: |
     -----BEGIN PUBLIC KEY-----
     MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1JqqxPLNWEy371X+kOXq
@@ -189,6 +193,25 @@ wallet:
   base_url: "https://example.com/api"
   key: "mh**************************"
 
+# Marzban 面板配置
+marzban:
+  base_url: "https://marzban.example.com"
+  admin_username: "admin"
+  admin_password: "请填写Marzban管理员密码"
+  # 本系统用户ID为 123 时，对应的 Marzban 用户名为 xhj_123
+  user_prefix: "xhj_"
+  # 协议必须已在 Marzban 的 Xray 配置中启用
+  default_protocols:
+    - vless
+  # Reality 常用 Flow；如果面板中对应用户的 Flow 应为 none，可删除 flow 这一行
+  default_proxies:
+    vless:
+      flow: "xtls-rprx-vision"
+  # 必须填写 Marzban Core Settings 中入站的完整 tag，区分大小写
+  default_inbounds:
+    vless:
+      - "VLESS TCP REALITY TEST"
+
 # 安全配置
 security:
   # IP限流配置
@@ -225,4 +248,25 @@ security:
   request_size:
     enabled: true
     max_body_size: 67108864  # 最大请求体大小（字节），默认64MB
+
+# 宏达支付（商户订单在线支付）
+hdpay:
+  order_url: "http://47.83.15.198:10081/sdk/orders"
+  app_id: "GL"
+  app_secret: "JC8WHcGHPZ4tQpAznQpnprQ6wDHsmpf6zYtHCw4szmJpMXD8rmcpNn54cZmPFidc"
+  notify_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/hdpay-notify"
+
+# 汇美支付
+hmpay:
+  order_url: "http://pay.huimei888.top:8080/interface/chargebank.aspx"
+  parter: "20556"
+  req_type: "json"
+  key: "your-hmpay-key"
+  callback_url: "https://node1.xhj.git2.biz/api/v1/merchant/order/hmpay-notify"
+
+# OneSignal 推送
+push:
+  app_id: "your-onesignal-app-id"
+  key: "os_v2_app_xxx"
+  url: "https://api.onesignal.com/notifications?c=push"
 

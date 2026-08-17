@@ -88,13 +88,21 @@ service Auth {
       body: "*"
     };
   }
+
+  // 注销账号（需登录；校验当前绑定邮箱的验证码）
+  rpc Cancel(AuthCancelRequest) returns (AuthCancelResponse){
+    option (google.api.http) = {
+      post: "/api/v1/auth/cancel"
+      body: "*"
+    };
+  }
 }
 
 
 
 // 登录接口请求参数
 message AuthLoginRequest{
-  // 登录账号（手机号/用户名/邮箱）
+  // 登录账号（前端字段名仍为 mobile；服务端按 users.username 或 users.email 精确匹配）
   string mobile = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
   // 登录密码
   string password = 2 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
@@ -147,6 +155,8 @@ message AuthRegisterRequest{
   string invite_code = 6;
   // 邮箱验证码（邮箱注册时需要）
   string email_code = 8;
+  // 设备码（配置开启 register_device_limit 时必填；最长 128）
+  string device_code = 9 [(buf.validate.field).string.max_len = 128];
 }
 
 // 注册接口响应参数
@@ -253,3 +263,12 @@ message AuthEmailLoginResponse{
   // 过期时间
   int32 expires_in = 3 [(google.api.field_behavior) = REQUIRED];
 }
+
+// 注销账号请求参数
+message AuthCancelRequest{
+  // 邮箱验证码（发往当前账号绑定邮箱，渠道与 send-email 一致）
+  string email_code = 1 [(buf.validate.field).string.len = 6, (google.api.field_behavior) = REQUIRED];
+}
+
+// 注销账号响应参数
+message AuthCancelResponse{}

@@ -20,7 +20,7 @@ var _ IUserService = (*UserService)(nil)
 
 type IUserService interface {
 	Register(ctx context.Context, opt *UserRegisterOpt) (*model.Users, error)
-	Login(ctx context.Context, mobile string, password string) (*model.Users, error)
+	Login(ctx context.Context, account string, password string) (*model.Users, error)
 	Forget(ctx context.Context, opt *UserForgetOpt) (bool, error)
 	UpdatePassword(ctx context.Context, uid int, oldPassword string, password string) error
 	OauthBind(ctx context.Context, mobile string, oauthUser *model.OAuthUser) (int, error)
@@ -97,16 +97,18 @@ type UserRegisterOpt struct {
 	Username string // 可选：显式指定登录用户名
 	// InviteUserId 邀请人用户 ID（来自有效邀请码的生成者）；0 表示无
 	InviteUserId int
+	// DeviceCode 客户端设备码（可选；开启设备注册限制时由接口层校验）
+	DeviceCode string
 }
 
-// Register 注册用户
+// Register 注册用户（仅校验邮箱/手机号是否重复，不校验 username 唯一性）
 func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*model.Users, error) {
 	// 检查手机号是否已存在
 	if opt.Mobile != "" && s.UsersRepo.IsMobileExist(ctx, opt.Mobile) {
 		return nil, errors.New("手机号已被注册")
 	}
 
-	// 检查邮箱是否已存在
+	// 检查邮箱是否已存在（不检查 username）
 	if opt.Email != "" {
 		if user, _ := s.UsersRepo.FindByEmail(ctx, opt.Email); user != nil && user.Id > 0 {
 			return nil, errors.New("邮箱已被注册")
@@ -132,6 +134,7 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 	if opt.InviteUserId > 0 {
 		user.InviteUserId = opt.InviteUserId
 	}
+	user.DeviceCode = opt.DeviceCode
 
 	// 设置手机号（如果提供）
 	if opt.Mobile != "" {
@@ -172,11 +175,9 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 }
 
 // Login 登录处理
-// 支持使用手机号、邮箱或昵称进行登录
-func (s *UserService) Login(ctx context.Context, mobile string, password string) (*model.Users, error) {
-	// 使用 SearchByKeyword 来支持多种查询方式（mobile、email、nickname）
-	// 这样可以处理注册时只有 email 但登录时使用 email 作为用户名的情况
-	user, err := s.UsersRepo.SearchByKeyword(ctx, mobile)
+// account 为前端登录框内容（接口字段名仍为 mobile）：按 users.username 或 users.email 精确匹配
+func (s *UserService) Login(ctx context.Context, account string, password string) (*model.Users, error) {
+	user, err := s.UsersRepo.FindByUsernameOrEmail(ctx, account)
 	if err != nil {
 		if utils.IsSqlNoRows(err) {
 			return nil, entity.ErrAccountOrPassword
@@ -190,6 +191,10 @@ func (s *UserService) Login(ctx context.Context, mobile string, password string)
 	}
 
 	if !encrypt.VerifyPassword(user.Password, password, user.Salt) {
+		return nil, entity.ErrAccountOrPassword
+	}
+
+	if user.IsCancelled() {
 		return nil, entity.ErrAccountOrPassword
 	}
 

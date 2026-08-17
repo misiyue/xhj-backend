@@ -39,8 +39,8 @@ func GetClient() *Client {
 
 // --- Response structures ---
 
-// BaseResponse is the common response wrapper from the wallet API.
-type BaseResponse struct {
+// apiResponse 钱包接口通用响应包装，data 形态因接口而异
+type apiResponse struct {
 	Code int             `json:"code"`
 	Msg  string          `json:"msg"`
 	Data json.RawMessage `json:"data,omitempty"`
@@ -56,8 +56,17 @@ type RegisterData struct {
 
 // ParseRegisterUserID 将 RegisterData.User_id 转为平台用的整型钱包用户 ID。
 func ParseRegisterUserID(v any) (int, error) {
+	return parseFlexInt(v, "user_id")
+}
+
+// ParseBillID 将 FreezeAccountData.bill_id 转为整型（第三方可能返回数字或字符串）。
+func ParseBillID(v any) (int, error) {
+	return parseFlexInt(v, "bill_id")
+}
+
+func parseFlexInt(v any, field string) (int, error) {
 	if v == nil {
-		return 0, fmt.Errorf("wallet user_id is empty")
+		return 0, fmt.Errorf("wallet %s is empty", field)
 	}
 	switch x := v.(type) {
 	case float64:
@@ -70,19 +79,13 @@ func ParseRegisterUserID(v any) (int, error) {
 		return int(x), nil
 	case int64:
 		return int(x), nil
-	case uint, uint32, uint64:
-		return int(fmt.Sprintf("%v", x)[0]), nil // wrong - can't use that
-	default:
-	}
-	// handle uint via fmt or strconv - simpler: second switch
-	switch x := v.(type) {
 	case uint:
 		return int(x), nil
 	case uint32:
 		return int(x), nil
 	case uint64:
 		if x > uint64(^uint(0)>>1) {
-			return 0, fmt.Errorf("wallet user_id overflow")
+			return 0, fmt.Errorf("wallet %s overflow", field)
 		}
 		return int(x), nil
 	case json.Number:
@@ -91,15 +94,15 @@ func ParseRegisterUserID(v any) (int, error) {
 	case string:
 		s := strings.TrimSpace(x)
 		if s == "" {
-			return 0, fmt.Errorf("wallet user_id is empty string")
+			return 0, fmt.Errorf("wallet %s is empty string", field)
 		}
 		i, err := strconv.Atoi(s)
 		if err != nil {
-			return 0, fmt.Errorf("wallet user_id string: %w", err)
+			return 0, fmt.Errorf("wallet %s string: %w", field, err)
 		}
 		return i, nil
 	default:
-		return 0, fmt.Errorf("wallet user_id: unsupported type %T", v)
+		return 0, fmt.Errorf("wallet %s: unsupported type %T", field, v)
 	}
 }
 
@@ -180,36 +183,41 @@ type KYCStatusData struct {
 	Remark    string `json:"remark"`
 }
 
-// FileUploadData is returned by UploadFile.
-type FileUploadData struct {
-	ImageID string `json:"image_id"`
+// FreezeAccountData is returned in data by the freezeAccount API.
+type FreezeAccountData struct {
+	// bill_id 可能是数字或字符串（如 "78"）
+	BillID any `json:"bill_id"`
 }
 
 // --- API methods ---
 
-// post sends a POST request with form-encoded body and decodes the JSON response.
-func (c *Client) post(path string, params url.Values) (*BaseResponse, error) {
+func (c *Client) doPost(path string, params url.Values) ([]byte, error) {
 	reqURL := c.BaseURL + path
 	resp, err := c.HTTPClient.Post(reqURL, "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("wallet api request failed: %w", err)
 	}
 	defer resp.Body.Close()
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("wallet api read body failed: %w", err)
 	}
+	return body, nil
+}
 
-	var baseResp BaseResponse
+// post sends a POST request with form-encoded body and decodes the JSON response.
+func (c *Client) post(path string, params url.Values) (*apiResponse, error) {
+	body, err := c.doPost(path, params)
+	if err != nil {
+		return nil, err
+	}
+	var baseResp apiResponse
 	if err := json.Unmarshal(body, &baseResp); err != nil {
 		return nil, fmt.Errorf("wallet api decode response failed: %w", err)
 	}
-
 	if baseResp.Code != 1 {
 		return &baseResp, fmt.Errorf("wallet api error: %s", baseResp.Msg)
 	}
-
 	return &baseResp, nil
 }
 
@@ -375,8 +383,8 @@ func (c *Client) GetKYCStatus(uid string, uUID int) (*KYCStatusData, error) {
 	return &data, nil
 }
 
-// FreezeAccount freezes user assets.
-func (c *Client) FreezeAccount(uid string, uUID int, amount float64, currencyID int) error {
+// FreezeAccount freezes user assets. On success returns data.bill_id (0 if absent or unparsable).
+func (c *Client) FreezeAccount(uid string, uUID int, amount float64, currencyID int) (billID int, err error) {
 	params := url.Values{}
 	params.Set("uid", uid)
 	params.Set("u_uid", fmt.Sprintf("%d", uUID))
@@ -384,6 +392,16 @@ func (c *Client) FreezeAccount(uid string, uUID int, amount float64, currencyID 
 	params.Set("currency_id", fmt.Sprintf("%d", currencyID))
 	params.Set("key", c.Key)
 
-	_, err := c.post("/order/freezeAccount", params)
-	return err
+	resp, err := c.post("/order/freezeAccount", params)
+	if err != nil {
+		return 0, err
+	}
+	if len(resp.Data) == 0 {
+		return 0, nil
+	}
+	var data FreezeAccountData
+	if err := json.Unmarshal(resp.Data, &data); err != nil {
+		return 0, fmt.Errorf("wallet api decode freeze account data failed: %w", err)
+	}
+	return ParseBillID(data.BillID)
 }

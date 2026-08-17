@@ -37,6 +37,20 @@ func (r *MerchantMessage) ListBySessionDesc(ctx context.Context, sessionID int, 
 	return rows, total, nil
 }
 
+// ListBySessionBeforeCursor 按共享 session_id 拉取历史消息（id 倒序；cursor>0 时 id < cursor）
+func (r *MerchantMessage) ListBySessionBeforeCursor(ctx context.Context, sessionID int, cursor int64, limit int) ([]model.MerchantMessage, error) {
+	q := r.db.WithContext(ctx).Where("session_id = ? AND is_deleted = ?", sessionID, model.No)
+	if cursor > 0 {
+		q = q.Where("id < ?", cursor)
+	}
+	var rows []model.MerchantMessage
+	err := q.Order("id DESC").Limit(limit).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 func (r *MerchantMessage) FindLatestBySession(ctx context.Context, sessionID int) (*model.MerchantMessage, error) {
 	var row model.MerchantMessage
 	err := r.db.WithContext(ctx).Where("session_id = ? AND is_deleted = ?", sessionID, model.No).

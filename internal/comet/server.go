@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/longnet"
 	"github.com/gzydong/go-chat/internal/pkg/sysinfo"
@@ -75,7 +76,26 @@ func (s *Server) Start(ctx context.Context) error {
 	serv.SetCustomProcess(s.Heartbeat)
 	serv.SetCustomProcess(s.Subscribe)
 
+	patchCometDeps(s)
+
 	return serv.Start(ctx)
+}
+
+func patchCometDeps(s *Server) {
+	if s == nil || s.Subscribe == nil || s.Subscribe.Handler == nil {
+		return
+	}
+	h := s.Subscribe.Handler
+	if h.PushMessage == nil && s.Handler != nil && s.Handler.PushMessage != nil {
+		h.PushMessage = s.Handler.PushMessage
+	}
+	if h.PushMessage == nil && s.Redis != nil {
+		h.PushMessage = &logic.PushMessage{Redis: s.Redis}
+	}
+	if h.Source == nil && s.Redis != nil {
+		// Source 通常由 wire 注入；此处仅作兜底日志
+		logger.Warnf("comet consume handler Source is nil, private read db update may fail")
+	}
 }
 
 // onTcpAuthorize 授权认证

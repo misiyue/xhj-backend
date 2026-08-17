@@ -47,12 +47,9 @@ func TestRegisterThirdParty(t *testing.T) {
 			t.Errorf("third_uid = %q, want %q", r.FormValue("third_uid"), "9527")
 		}
 
-		resp := BaseResponse{
-			Code: 1,
-			Msg:  "注册成功",
-		}
 		data := RegisterData{UserID: 12345, UUID: "test-uuid", Phone: "13800138000"}
-		resp.Data, _ = json.Marshal(data)
+		raw, _ := json.Marshal(data)
+		resp := apiResponse{Code: 1, Msg: "注册成功", Data: raw}
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -91,12 +88,9 @@ func TestSendFunds(t *testing.T) {
 			t.Errorf("recvuid = %q, want %q", r.FormValue("recvuid"), "23456")
 		}
 
-		resp := BaseResponse{
-			Code: 1,
-			Msg:  "转账成功",
-		}
 		data := TransferData{SendUID: 12345, RecvUID: 23456, Amount: 25.5, Currency: "USDT"}
-		resp.Data, _ = json.Marshal(data)
+		raw, _ := json.Marshal(data)
+		resp := apiResponse{Code: 1, Msg: "转账成功", Data: raw}
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -125,12 +119,9 @@ func TestGetUserFunds(t *testing.T) {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
-		resp := BaseResponse{
-			Code: 1,
-			Msg:  "success",
-		}
 		data := BalanceData{UID: 12345, FundsType: "tronusdt", CurrencyID: 1, Balance: 100.5}
-		resp.Data, _ = json.Marshal(data)
+		raw, _ := json.Marshal(data)
+		resp := apiResponse{Code: 1, Msg: "success", Data: raw}
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -156,10 +147,6 @@ func TestGetBillList(t *testing.T) {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
-		resp := BaseResponse{
-			Code: 1,
-			Msg:  "success",
-		}
 		data := BillListData{
 			Data: []*BillItem{
 				{ID: 32370, UID: 12345, CurrencyID: 1, Account: 11, BillType: "站内转账-转出", CurrencyName: "USDT"},
@@ -168,7 +155,8 @@ func TestGetBillList(t *testing.T) {
 			PageSize: "20",
 			Count:    1,
 		}
-		resp.Data, _ = json.Marshal(data)
+		raw, _ := json.Marshal(data)
+		resp := apiResponse{Code: 1, Msg: "success", Data: raw}
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -196,17 +184,14 @@ func TestGetBillList(t *testing.T) {
 
 func TestGetPayInfo(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := BaseResponse{
-			Code: 1,
-			Msg:  "ok",
-		}
 		data := PayInfoData{
 			Address:     "TGXtDYHZdtXFXUAz1GRTtvhSZiRQM8UmUV",
 			Chain:       "tron",
 			Symbol:      "USDT-TRC",
 			TimeLeftSec: 10800,
 		}
-		resp.Data, _ = json.Marshal(data)
+		raw, _ := json.Marshal(data)
+		resp := apiResponse{Code: 1, Msg: "ok", Data: raw}
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -231,10 +216,7 @@ func TestGetPayInfo(t *testing.T) {
 
 func TestAPIError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := BaseResponse{
-			Code: 0,
-			Msg:  "密钥验证失败",
-		}
+		resp := apiResponse{Code: 0, Msg: "密钥验证失败"}
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -257,11 +239,8 @@ func TestFreezeAccount(t *testing.T) {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
-		resp := BaseResponse{
-			Code: 1,
-			Msg:  "success",
-		}
-		json.NewEncoder(w).Encode(resp)
+		raw, _ := json.Marshal(FreezeAccountData{BillID: 1001})
+		json.NewEncoder(w).Encode(apiResponse{Code: 1, Msg: "success", Data: raw})
 	}))
 	defer server.Close()
 
@@ -271,22 +250,39 @@ func TestFreezeAccount(t *testing.T) {
 		HTTPClient: server.Client(),
 	}
 
-	err := c.FreezeAccount("9527", 12345, 50, 1)
+	billID, err := c.FreezeAccount("9527", 12345, 50, 1)
 	if err != nil {
 		t.Fatalf("FreezeAccount() error = %v", err)
+	}
+	if billID != 1001 {
+		t.Fatalf("FreezeAccount() billID = %d, want 1001", billID)
+	}
+}
+
+func TestFreezeAccountBillIDString(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":1,"msg":"success","data":{"bill_id":"78"}}`))
+	}))
+	defer server.Close()
+
+	c := &Client{BaseURL: server.URL, Key: "k", HTTPClient: server.Client()}
+	billID, err := c.FreezeAccount("9527", 12345, 50, 1)
+	if err != nil {
+		t.Fatalf("FreezeAccount() error = %v", err)
+	}
+	if billID != 78 {
+		t.Fatalf("FreezeAccount() billID = %d, want 78", billID)
 	}
 }
 
 func TestGetAccountAssets(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := BaseResponse{
-			Code: 1,
-			Msg:  "success",
-		}
 		data := map[string]*AccountAsset{
 			"1": {ID: 1, Name: "USDT", Digit: 6, Account: "100.500000"},
 		}
-		resp.Data, _ = json.Marshal(data)
+		raw, _ := json.Marshal(data)
+		resp := apiResponse{Code: 1, Msg: "success", Data: raw}
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()

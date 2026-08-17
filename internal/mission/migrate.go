@@ -54,6 +54,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.TalkUserMessage{},
 		&model.TalkGroupMessage{},
 		&model.TalkGroupMessageDel{},
+		&model.TalkGroupMsgReader{},
 		
 		// 表情包相关
 		&model.Emoticon{},
@@ -87,6 +88,27 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.Sequence{},
 		&model.AppVersion{},
 		&model.AppExplore{},
+		&model.AppModule{},
+		&model.AppNews{},
+		&model.AppNewsCategory{},
+		&model.AppNewsView{},
+
+		// 商户 C2C
+		&model.Merchant{},
+		&model.MerchantTask{},
+		&model.MerchantPaytype{},
+		&model.MerchantOrder{},
+		&model.MerchantOrderErrLog{},
+		&model.MerchantHdOrder{},
+		&model.MerchantHmOrder{},
+		&model.MerchantSession{},
+		&model.MerchantMessage{},
+		&model.MerchantPayment{},
+
+		// 系统通知
+		&model.NoticeLetter{},
+		&model.NoticeTemplate{},
+		&model.NoticeArticle{},
 	)
 	
 	if err != nil {

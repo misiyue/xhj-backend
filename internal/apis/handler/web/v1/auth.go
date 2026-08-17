@@ -2,6 +2,8 @@ package v1
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -32,6 +34,7 @@ var _ web.IAuthHandler = (*Auth)(nil)
 type Auth struct {
 	Config              *config.Config
 	Redis               *redis.Client
+	RegisterLimiter     *cache.RegisterLimiter
 	JwtTokenStorage     *cache.JwtTokenStorage
 	RedisLock           *cache.RedisLock
 	RobotRepo           *repo.Robot
@@ -41,7 +44,6 @@ type Auth struct {
 	EmailService        service.IEmailService
 	UserService         service.IUserService
 	ArticleClassService service.IArticleClassService
-	InviteCodeService   service.IInviteCodeService
 	Rsa                 rsautil.IRsa
 	OauthService        service.IOAuthService
 	AesUtil             aesutil.IAesUtil
@@ -51,7 +53,7 @@ type Auth struct {
 // Login 登录
 //
 //	@Summary		登录
-//	@Description	使用手机号和密码进行身份验证
+//	@Description	使用账号（请求字段 mobile，按 users.username 或 users.email 精确匹配）与密码进行身份验证
 //	@Tags			认证
 //	@Accept			json
 //	@Produce		json
@@ -74,7 +76,12 @@ func (a *Auth) Login(ctx context.Context, in *web.AuthLoginRequest) (*web.AuthLo
 		return nil, err
 	}
 
-	user, err := a.UserService.Login(ctx, in.Mobile, string(password))
+	account := strings.TrimSpace(in.GetMobile())
+	if account == "" {
+		return nil, errorx.New(400, "请填写登录账号")
+	}
+
+	user, err := a.UserService.Login(ctx, account, string(password))
 	if err != nil {
 		return nil, err
 	}
@@ -171,17 +178,17 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		return nil, errorx.New(400, "邀请码不能为空")
 	}
 	if in.InviteCode != "" {
-		ok, inviterId, err := a.InviteCodeService.ResolveInviter(ctx, in.InviteCode)
+		code := strings.TrimSpace(strings.ToLower(in.InviteCode))
+		inviter, err := a.UsersRepo.FindByInviteCode(ctx, code)
 		if err != nil {
 			return nil, err
 		}
-		if !ok {
+		if inviter == nil || inviter.IsUnavailable() {
 			if a.Config.App.RequireInviteCode {
-				return nil, errorx.New(400, "邀请码无效或已过期")
+				return nil, errorx.New(400, "邀请码无效")
 			}
-			// 非必填场景：无效邀请码忽略，不记录邀请人
 		} else {
-			inviteUserId = inviterId
+			inviteUserId = inviter.Id
 		}
 	}
 
@@ -215,6 +222,46 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		return nil, err
 	}
 
+	appCfg := a.Config.App
+	ipLimit, devLimit := 0, 0
+	if appCfg != nil {
+		ipLimit = appCfg.RegisterIPLimit
+		devLimit = appCfg.RegisterDeviceLimit
+	}
+	deviceCode := strings.TrimSpace(in.GetDeviceCode())
+	if devLimit > 0 && deviceCode == "" {
+		return nil, errorx.New(400, "请提供设备码")
+	}
+
+	clientIP := middleware.ClientIPFromContext(ctx)
+
+	var releaseIP, releaseDev func(context.Context)
+
+	if a.RegisterLimiter != nil && ipLimit > 0 {
+		var relErr error
+		releaseIP, relErr = a.RegisterLimiter.TryAcquireIP(ctx, clientIP, ipLimit)
+		if relErr != nil {
+			if errors.Is(relErr, cache.ErrRegisterIPExceeded) {
+				return nil, errorx.New(429, "账号注册次数已达上限")
+			}
+			return nil, relErr
+		}
+	}
+
+	if a.RegisterLimiter != nil && devLimit > 0 {
+		var relErr error
+		releaseDev, relErr = a.RegisterLimiter.TryAcquireDevice(ctx, deviceCode, devLimit)
+		if relErr != nil {
+			if releaseIP != nil {
+				releaseIP(ctx)
+			}
+			if errors.Is(relErr, cache.ErrRegisterDeviceExceeded) {
+				return nil, errorx.New(429, "账号注册次数已达上限")
+			}
+			return nil, relErr
+		}
+	}
+
 	user, err := a.UserService.Register(ctx, &service.UserRegisterOpt{
 		Nickname:     in.Nickname,
 		Mobile:       in.Mobile,
@@ -222,21 +269,18 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		Password:     string(password),
 		Platform:     in.Platform,
 		InviteUserId: inviteUserId,
+		DeviceCode:   deviceCode,
 		// Username 没有前端字段时，内部会自动用 mobile/email/nickname 生成
 	})
 
 	if err != nil {
-		return nil, err
-	}
-
-	// 使用邀请码（如果提供了）
-	if in.InviteCode != "" {
-		if err := a.InviteCodeService.UseInviteCode(ctx, in.InviteCode, user.Id); err != nil {
-			logger.ErrorWithFields("使用邀请码失败", err, map[string]interface{}{
-				"invite_code": in.InviteCode,
-				"user_id":     user.Id,
-			})
+		if releaseIP != nil {
+			releaseIP(ctx)
 		}
+		if releaseDev != nil {
+			releaseDev(ctx)
+		}
+		return nil, err
 	}
 
 	// 删除短信验证码（如果使用了）
@@ -395,6 +439,17 @@ func (a *Auth) OauthLogin(ctx context.Context, in *web.AuthOauthLoginRequest) (*
 
 	// 有会员信息直接返回登录信息
 	if oAuthInfo.UserId > 0 {
+		user, err := a.UsersRepo.FindById(ctx, int(oAuthInfo.UserId))
+		if err != nil || user == nil || user.Id == 0 {
+			return nil, entity.ErrUserNotExist
+		}
+		if user.IsCancelled() {
+			return nil, entity.ErrAccountOrPassword
+		}
+		if user.IsDisabled() {
+			return nil, entity.ErrAccountDisabled
+		}
+
 		authorize, err := a.authorize(int(oAuthInfo.UserId))
 		if err != nil {
 			return nil, err
@@ -475,6 +530,13 @@ func (a *Auth) EmailLogin(ctx context.Context, in *web.AuthEmailLoginRequest) (*
 	user, err := a.UsersRepo.FindByEmail(ctx, in.Email)
 	if err != nil {
 		return nil, errorx.New(400, "该邮箱尚未注册")
+	}
+
+	if user.IsCancelled() {
+		return nil, entity.ErrAccountOrPassword
+	}
+	if user.IsDisabled() {
+		return nil, entity.ErrAccountDisabled
 	}
 
 	// 记录登录事件
@@ -592,4 +654,78 @@ func (a *Auth) Logout(ctx context.Context, _ *web.AuthLogoutRequest) (*web.AuthL
 		}
 	}
 	return &web.AuthLogoutResponse{Success: true, Message: "ok"}, nil
+}
+
+// Cancel 注销账号：校验邮箱验证码后给 username/email 追加日期后缀，status=3，并使当前 token 失效
+//
+//	@Summary		注销账号
+//	@Description	确认注销后无法再用原账号登录；username、email 追加 _YYYYMMDD 后缀，状态改为已注销
+//	@Tags			认证
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.AuthCancelRequest	true	"注销请求"
+//	@Success		200		{object}	web.AuthCancelResponse
+//	@Router			/api/v1/auth/cancel [post]
+//	@Security		Bearer
+func (a *Auth) Cancel(ctx context.Context, in *web.AuthCancelRequest) (*web.AuthCancelResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if uid == 0 {
+		return nil, errorx.New(401, "未授权")
+	}
+
+	user, err := a.UsersRepo.FindById(ctx, uid)
+	if err != nil || user == nil || user.Id == 0 {
+		return nil, entity.ErrUserNotExist
+	}
+	if user.IsCancelled() {
+		return nil, entity.ErrAccountCancelled
+	}
+	if user.IsDisabled() {
+		return nil, entity.ErrAccountDisabled
+	}
+
+	// 注册未满 7 天不允许注销
+	if time.Since(user.CreatedAt) < 7*24*time.Hour {
+		return nil, errorx.New(400, "为防范恶意批量注册、保障账号安全，账号注册未满7天暂不支持注销操作。请于注册满7天后再次尝试。")
+	}
+
+	email := strings.TrimSpace(user.Email)
+	if email == "" {
+		return nil, errorx.New(400, "当前账号未绑定邮箱，无法注销")
+	}
+
+	if !a.EmailService.Verify(ctx, entity.EmailVerifyChannel, email, in.GetEmailCode()) {
+		return nil, errorx.New(400, "邮箱验证码错误或已过期")
+	}
+
+	suffix := "_" + time.Now().Format("20060102")
+	updates := map[string]any{
+		"username":   user.Username + suffix,
+		"email":      email + suffix,
+		"status":     model.UsersStatusCancelled,
+		"updated_at": time.Now(),
+	}
+	if _, err := a.UsersRepo.UpdateById(ctx, user.Id, updates); err != nil {
+		return nil, err
+	}
+	_ = a.UsersRepo.ClearTableCache(ctx, user.Id)
+	a.EmailService.Delete(ctx, entity.EmailVerifyChannel, email)
+
+	// 使当前 token 失效（与 Logout 一致）
+	token := middleware.GetAuthTokenFromContext(ctx)
+	if token != "" && a.JwtTokenStorage != nil {
+		claims, err := jwtutil.ParseWithClaims[entity.WebClaims]([]byte(a.Config.Jwt.Secret), token)
+		if err == nil && claims.ExpiresAt != nil {
+			exp := time.Until(claims.ExpiresAt.Time)
+			if exp > 0 {
+				_ = a.JwtTokenStorage.SetBlackList(ctx, token, exp)
+			} else {
+				_ = a.JwtTokenStorage.SetBlackList(ctx, token, 24*time.Hour)
+			}
+		} else {
+			_ = a.JwtTokenStorage.SetBlackList(ctx, token, 24*time.Hour)
+		}
+	}
+
+	return &web.AuthCancelResponse{}, nil
 }

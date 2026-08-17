@@ -179,7 +179,7 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 		}
 	}
 
-	if g.TalkSessionRepo.IsDisturb(uid, groupInfo.Id, 2) {
+	if g.TalkSessionRepo.IsDisturb(ctx, uid, groupInfo.Id, 2) {
 		resp.IsDisturb = 1
 	}
 

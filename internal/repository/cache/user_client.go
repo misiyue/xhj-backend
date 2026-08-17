@@ -86,8 +86,8 @@ func (u *UserClient) IsOnline(ctx context.Context, uid int64) bool {
 
 	delClients := make([]*Client, 0)
 	for _, client := range clients {
-		// 超过5分钟则视为离线
-		if time.Now().Unix()-client.ActiveAt > 60*5 {
+		// 超过1分钟则视为离线
+		if time.Now().Unix()-client.ActiveAt > 60 {
 			delClients = append(delClients, client)
 		}
 	}

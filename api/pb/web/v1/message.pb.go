@@ -580,6 +580,8 @@ type MessageRecord struct {
 	SendTime      string                 `protobuf:"bytes,9,opt,name=send_time,json=sendTime,proto3" json:"send_time,omitempty"`
 	Extra         string                 `protobuf:"bytes,10,opt,name=extra,proto3" json:"extra,omitempty"`
 	Quote         string                 `protobuf:"bytes,12,opt,name=quote,proto3" json:"quote,omitempty"`
+	IsRead        int32                  `protobuf:"varint,13,opt,name=is_read,json=isRead,proto3" json:"is_read,omitempty"`
+	ReaderCount   int32                  `protobuf:"varint,14,opt,name=reader_count,json=readerCount,proto3" json:"reader_count,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -684,6 +686,176 @@ func (x *MessageRecord) GetQuote() string {
 	return ""
 }
 
+func (x *MessageRecord) GetIsRead() int32 {
+	if x != nil {
+		return x.IsRead
+	}
+	return 0
+}
+
+func (x *MessageRecord) GetReaderCount() int32 {
+	if x != nil {
+		return x.ReaderCount
+	}
+	return 0
+}
+
+type MessageReadersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MsgId         string                 `protobuf:"bytes,1,opt,name=msg_id,json=msgId,proto3" json:"msg_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageReadersRequest) Reset() {
+	*x = MessageReadersRequest{}
+	mi := &file_web_v1_message_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageReadersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageReadersRequest) ProtoMessage() {}
+
+func (x *MessageReadersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_message_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageReadersRequest.ProtoReflect.Descriptor instead.
+func (*MessageReadersRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_message_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *MessageReadersRequest) GetMsgId() string {
+	if x != nil {
+		return x.MsgId
+	}
+	return ""
+}
+
+type MessageReaderUser struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int32                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Nickname      string                 `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageReaderUser) Reset() {
+	*x = MessageReaderUser{}
+	mi := &file_web_v1_message_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageReaderUser) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageReaderUser) ProtoMessage() {}
+
+func (x *MessageReaderUser) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_message_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageReaderUser.ProtoReflect.Descriptor instead.
+func (*MessageReaderUser) Descriptor() ([]byte, []int) {
+	return file_web_v1_message_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *MessageReaderUser) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *MessageReaderUser) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
+}
+
+func (x *MessageReaderUser) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
+}
+
+type MessageReadersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reader        []*MessageReaderUser   `protobuf:"bytes,1,rep,name=reader,proto3" json:"reader,omitempty"`
+	Unreader      []*MessageReaderUser   `protobuf:"bytes,2,rep,name=unreader,proto3" json:"unreader,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MessageReadersResponse) Reset() {
+	*x = MessageReadersResponse{}
+	mi := &file_web_v1_message_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MessageReadersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MessageReadersResponse) ProtoMessage() {}
+
+func (x *MessageReadersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_message_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MessageReadersResponse.ProtoReflect.Descriptor instead.
+func (*MessageReadersResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_message_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *MessageReadersResponse) GetReader() []*MessageReaderUser {
+	if x != nil {
+		return x.Reader
+	}
+	return nil
+}
+
+func (x *MessageReadersResponse) GetUnreader() []*MessageReaderUser {
+	if x != nil {
+		return x.Unreader
+	}
+	return nil
+}
+
 var File_web_v1_message_proto protoreflect.FileDescriptor
 
 const file_web_v1_message_proto_rawDesc = "" +
@@ -725,7 +897,7 @@ const file_web_v1_message_proto_rawDesc = "" +
 	"\ttalk_mode\x18\x01 \x01(\x05R\btalkMode\x12\x17\n" +
 	"\amsg_ids\x18\x02 \x03(\tR\x06msgIds\"M\n" +
 	"\x1bMessageRecordsClearResponse\x12.\n" +
-	"\x05items\x18\x01 \x03(\v2\x12.web.MessageRecordB\x04\xe2A\x01\x02R\x05items\"\xce\x02\n" +
+	"\x05items\x18\x01 \x03(\v2\x12.web.MessageRecordB\x04\xe2A\x01\x02R\x05items\"\x8a\x03\n" +
 	"\rMessageRecord\x12\x1b\n" +
 	"\x06msg_id\x18\x01 \x01(\tB\x04\xe2A\x01\x02R\x05msgId\x12 \n" +
 	"\bsequence\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\bsequence\x12\x1f\n" +
@@ -738,13 +910,25 @@ const file_web_v1_message_proto_rawDesc = "" +
 	"\tsend_time\x18\t \x01(\tB\x04\xe2A\x01\x02R\bsendTime\x12\x1a\n" +
 	"\x05extra\x18\n" +
 	" \x01(\tB\x04\xe2A\x01\x02R\x05extra\x12\x1a\n" +
-	"\x05quote\x18\f \x01(\tB\x04\xe2A\x01\x02R\x05quote2\xc3\x04\n" +
+	"\x05quote\x18\f \x01(\tB\x04\xe2A\x01\x02R\x05quote\x12\x17\n" +
+	"\ais_read\x18\r \x01(\x05R\x06isRead\x12!\n" +
+	"\freader_count\x18\x0e \x01(\x05R\vreaderCount\";\n" +
+	"\x15MessageReadersRequest\x12\"\n" +
+	"\x06msg_id\x18\x01 \x01(\tB\v\xe2A\x01\x02\xbaH\x04r\x02\x10\x01R\x05msgId\"`\n" +
+	"\x11MessageReaderUser\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\x05R\x06userId\x12\x1a\n" +
+	"\bnickname\x18\x02 \x01(\tR\bnickname\x12\x16\n" +
+	"\x06avatar\x18\x03 \x01(\tR\x06avatar\"|\n" +
+	"\x16MessageReadersResponse\x12.\n" +
+	"\x06reader\x18\x01 \x03(\v2\x16.web.MessageReaderUserR\x06reader\x122\n" +
+	"\bunreader\x18\x02 \x03(\v2\x16.web.MessageReaderUserR\bunreader2\xb2\x05\n" +
 	"\aMessage\x12b\n" +
 	"\x06Revoke\x12\x19.web.MessageRevokeRequest\x1a\x1a.web.MessageRevokeResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/message/revoke\x12b\n" +
 	"\x06Delete\x12\x19.web.MessageDeleteRequest\x1a\x1a.web.MessageDeleteResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/message/delete\x12f\n" +
 	"\arecords\x12\x1a.web.MessageRecordsRequest\x1a\x1b.web.MessageRecordsResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/message/records\x12\x83\x01\n" +
 	"\x0eHistoryRecords\x12!.web.MessageHistoryRecordsRequest\x1a\".web.MessageHistoryRecordsResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/message/history-records\x12\x81\x01\n" +
-	"\x0eForwardRecords\x12!.web.MessageForwardRecordsRequest\x1a .web.MessageRecordsClearResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/message/forward-recordsB\fZ\n" +
+	"\x0eForwardRecords\x12!.web.MessageForwardRecordsRequest\x1a .web.MessageRecordsClearResponse\"*\x82\xd3\xe4\x93\x02$:\x01*\"\x1f/api/v1/message/forward-records\x12m\n" +
+	"\x0eMessageReaders\x12\x1a.web.MessageReadersRequest\x1a\x1b.web.MessageReadersResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/message/readersB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -759,7 +943,7 @@ func file_web_v1_message_proto_rawDescGZIP() []byte {
 	return file_web_v1_message_proto_rawDescData
 }
 
-var file_web_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_web_v1_message_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_web_v1_message_proto_goTypes = []any{
 	(*MessageRevokeRequest)(nil),          // 0: web.MessageRevokeRequest
 	(*MessageRevokeResponse)(nil),         // 1: web.MessageRevokeResponse
@@ -772,26 +956,33 @@ var file_web_v1_message_proto_goTypes = []any{
 	(*MessageForwardRecordsRequest)(nil),  // 8: web.MessageForwardRecordsRequest
 	(*MessageRecordsClearResponse)(nil),   // 9: web.MessageRecordsClearResponse
 	(*MessageRecord)(nil),                 // 10: web.MessageRecord
+	(*MessageReadersRequest)(nil),         // 11: web.MessageReadersRequest
+	(*MessageReaderUser)(nil),             // 12: web.MessageReaderUser
+	(*MessageReadersResponse)(nil),        // 13: web.MessageReadersResponse
 }
 var file_web_v1_message_proto_depIdxs = []int32{
 	10, // 0: web.MessageRecordsResponse.items:type_name -> web.MessageRecord
 	10, // 1: web.MessageHistoryRecordsResponse.items:type_name -> web.MessageRecord
 	10, // 2: web.MessageRecordsClearResponse.items:type_name -> web.MessageRecord
-	0,  // 3: web.Message.Revoke:input_type -> web.MessageRevokeRequest
-	2,  // 4: web.Message.Delete:input_type -> web.MessageDeleteRequest
-	4,  // 5: web.Message.records:input_type -> web.MessageRecordsRequest
-	6,  // 6: web.Message.HistoryRecords:input_type -> web.MessageHistoryRecordsRequest
-	8,  // 7: web.Message.ForwardRecords:input_type -> web.MessageForwardRecordsRequest
-	1,  // 8: web.Message.Revoke:output_type -> web.MessageRevokeResponse
-	3,  // 9: web.Message.Delete:output_type -> web.MessageDeleteResponse
-	5,  // 10: web.Message.records:output_type -> web.MessageRecordsResponse
-	7,  // 11: web.Message.HistoryRecords:output_type -> web.MessageHistoryRecordsResponse
-	9,  // 12: web.Message.ForwardRecords:output_type -> web.MessageRecordsClearResponse
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	12, // 3: web.MessageReadersResponse.reader:type_name -> web.MessageReaderUser
+	12, // 4: web.MessageReadersResponse.unreader:type_name -> web.MessageReaderUser
+	0,  // 5: web.Message.Revoke:input_type -> web.MessageRevokeRequest
+	2,  // 6: web.Message.Delete:input_type -> web.MessageDeleteRequest
+	4,  // 7: web.Message.records:input_type -> web.MessageRecordsRequest
+	6,  // 8: web.Message.HistoryRecords:input_type -> web.MessageHistoryRecordsRequest
+	8,  // 9: web.Message.ForwardRecords:input_type -> web.MessageForwardRecordsRequest
+	11, // 10: web.Message.MessageReaders:input_type -> web.MessageReadersRequest
+	1,  // 11: web.Message.Revoke:output_type -> web.MessageRevokeResponse
+	3,  // 12: web.Message.Delete:output_type -> web.MessageDeleteResponse
+	5,  // 13: web.Message.records:output_type -> web.MessageRecordsResponse
+	7,  // 14: web.Message.HistoryRecords:output_type -> web.MessageHistoryRecordsResponse
+	9,  // 15: web.Message.ForwardRecords:output_type -> web.MessageRecordsClearResponse
+	13, // 16: web.Message.MessageReaders:output_type -> web.MessageReadersResponse
+	11, // [11:17] is the sub-list for method output_type
+	5,  // [5:11] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_web_v1_message_proto_init() }
@@ -805,7 +996,7 @@ func file_web_v1_message_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_message_proto_rawDesc), len(file_web_v1_message_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

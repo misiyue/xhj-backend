@@ -180,6 +180,13 @@ type CreateRTCCallMessage struct {
 	Duration   int    `json:"duration"`    // 通话时长
 }
 
+// SendRTCCallInvite 音视频通话邀请（仅离线 VoIP 唤醒，不写消息、不推 WebSocket）
+type SendRTCCallInvite struct {
+	TalkMode   int `json:"talk_mode"`
+	FromId     int `json:"from_id"`
+	ReceiverId int `json:"receiver_id"`
+}
+
 type CreateRedEnvelopeMessage struct {
 	MsgId      string  `json:"msg_id"`      // 消息id
 	TalkMode   int     `json:"talk_mode"`   // 发送模式，1-单聊，2-群聊

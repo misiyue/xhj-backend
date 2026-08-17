@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
 	"github.com/redis/go-redis/v9"
 )
@@ -44,6 +45,11 @@ func (m *MessageStorage) Get(ctx context.Context, talkType int, sender int, rece
 	return msg, nil
 }
 
+// Delete 清除会话最后一条消息缓存（私聊双方共用同一 hash field）
+func (m *MessageStorage) Delete(ctx context.Context, talkType int, sender int, receive int) error {
+	return m.redis.HDel(ctx, lastMessageCacheKey, m.name(talkType, sender, receive)).Err()
+}
+
 func (m *MessageStorage) MGet(ctx context.Context, fields []string) ([]*LastCacheMessage, error) {
 
 	res := m.redis.HMGet(ctx, lastMessageCacheKey, fields...)
@@ -66,6 +72,10 @@ func (m *MessageStorage) MGet(ctx context.Context, fields []string) ([]*LastCach
 func (m *MessageStorage) name(talkType int, sender int, receive int) string {
 	if talkType == 2 {
 		sender = 0
+	}
+	// 商户订单 C2C：按用户 + 会话维度，与 UnreadStorage 一致（receive 为 merchant_session.id）
+	if talkType == entity.ChatMerchantMode {
+		return fmt.Sprintf("%d_%d_%d", talkType, sender, receive)
 	}
 
 	if sender > receive {

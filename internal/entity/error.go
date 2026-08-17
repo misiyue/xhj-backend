@@ -15,6 +15,7 @@ var (
 	ErrAccountOrPasswordError    = errorx.New(100007, "账号密码填写错误")
 	ErrSmsCodeError              = errorx.New(100008, "短信验证码填写错误")
 	ErrAccountDisabled           = errorx.New(100009, "账号已被管理员禁用，如有问题请联系管理员！")
+	ErrAccountCancelled          = errorx.New(100014, "账号已注销")
 	ErrAccountBinded             = errorx.New(100010, "该账号已绑定其他第三方账号！")
 	ErrStateInvalid              = errorx.New(100011, "State 状态无效")
 	ErrOauthTypeInvalid          = errorx.New(100012, "不支持的第三方登录类型")

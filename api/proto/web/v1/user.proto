@@ -57,195 +57,241 @@ service User {
     };
   }
 
-  // 商户入驻申请
-  rpc MerchantApply(UserMerchantApplyRequest) returns (UserMerchantApplyResponse) {
+  // 更新登录用户名（username）
+  rpc UsernameUpdate(UserUsernameUpdateRequest) returns (UserUsernameUpdateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-apply"
+      post: "/api/v1/user/username-update"
+      body: "*"
+    };
+  }
+
+  // 更新通知订阅状态
+  rpc SubscribeUpdate(UserSubscribeUpdateRequest) returns (UserSubscribeUpdateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/subscribe-update"
+      body: "*"
+    };
+  }
+
+  // 当前用户各类未读数汇总
+  rpc UnreadSummary(UserUnreadSummaryRequest) returns (UserUnreadSummaryResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/unread-summary"
+      body: "*"
+    };
+  }
+
+  // 商户入驻申请
+  rpc MerchantApply(MerchantApplyRequest) returns (MerchantApplyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/merchant/apply"
       body: "*"
     };
   }
 
   // 查询本人最近一次商户申请状态
-  rpc MerchantStatus(UserMerchantStatusRequest) returns (UserMerchantStatusResponse) {
+  rpc MerchantStatus(MerchantStatusRequest) returns (MerchantStatusResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-status"
+      post: "/api/v1/merchant/status"
       body: "*"
     };
   }
 
   // 获取本人商户资料（供查看/编辑表单回填，字段与 merchant 表一致）
-  rpc MerchantProfile(UserMerchantProfileRequest) returns (UserMerchantStatusResponse) {
+  rpc MerchantProfile(MerchantProfileRequest) returns (MerchantStatusResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-profile"
+      post: "/api/v1/merchant/profile"
+      body: "*"
+    };
+  }
+
+  // 商户注销申请（status 置为 -1 申请注销）
+  rpc MerchantCancelApply(MerchantCancelApplyRequest) returns (MerchantCancelApplyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/merchant/cancel-apply"
       body: "*"
     };
   }
 
   // 发布商户挂售任务
-  rpc MerchantTaskCreate(UserMerchantTaskCreateRequest) returns (UserMerchantTaskCreateResponse) {
+  rpc MerchantTaskCreate(MerchantTaskCreateRequest) returns (MerchantTaskCreateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/create"
+      post: "/api/v1/merchant/task/create"
       body: "*"
     };
   }
   // 本人商户任务列表
-  rpc MerchantTaskMyList(UserMerchantTaskMyListRequest) returns (UserMerchantTaskListResponse) {
+  rpc MerchantTaskMyList(MerchantTaskMyListRequest) returns (MerchantTaskListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/my-list"
+      post: "/api/v1/merchant/task/my-list"
       body: "*"
     };
   }
   // 全平台：已上架且待交易的任务列表
-  rpc MerchantTaskMarketList(UserMerchantTaskMarketListRequest) returns (UserMerchantTaskListResponse) {
+  rpc MerchantTaskMarketList(MerchantTaskMarketListRequest) returns (MerchantTaskListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/market-list"
+      post: "/api/v1/merchant/task/market-list"
       body: "*"
     };
   }
   // 任务详情（按 id）
-  rpc MerchantTaskDetail(UserMerchantTaskDetailRequest) returns (UserMerchantTaskItem) {
+  rpc MerchantTaskDetail(MerchantTaskDetailRequest) returns (MerchantTaskItem) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/detail"
+      post: "/api/v1/merchant/task/detail"
+      body: "*"
+    };
+  }
+  // 买家：按挂单 task_id 查看对应商户公开信息
+  rpc MerchantInfoByTask(MerchantInfoByTaskRequest) returns (MerchantInfoForBuyerResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/merchant/task/merchant-info"
       body: "*"
     };
   }
   // 修改自己的任务（仅待交易且未删除）
-  rpc MerchantTaskUpdate(UserMerchantTaskUpdateRequest) returns (UserMerchantTaskUpdateResponse) {
+  rpc MerchantTaskUpdate(MerchantTaskUpdateRequest) returns (MerchantTaskUpdateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/update"
+      post: "/api/v1/merchant/task/update"
       body: "*"
     };
   }
   // 上架自己的任务
-  rpc MerchantTaskUp(UserMerchantTaskIdRequest) returns (UserMerchantTaskActionResponse) {
+  rpc MerchantTaskUp(MerchantTaskIdRequest) returns (MerchantTaskActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/up"
+      post: "/api/v1/merchant/task/up"
       body: "*"
     };
   }
   // 下架自己的任务
-  rpc MerchantTaskDown(UserMerchantTaskIdRequest) returns (UserMerchantTaskActionResponse) {
+  rpc MerchantTaskDown(MerchantTaskIdRequest) returns (MerchantTaskActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/down"
+      post: "/api/v1/merchant/task/down"
       body: "*"
     };
   }
   // 结束自己的任务（软删除，不再展示）
-  rpc MerchantTaskFinish(UserMerchantTaskIdRequest) returns (UserMerchantTaskActionResponse) {
+  rpc MerchantTaskFinish(MerchantTaskIdRequest) returns (MerchantTaskActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-task/finish"
+      post: "/api/v1/merchant/task/finish"
       body: "*"
     };
   }
 
   // 商户收款方式：创建
-  rpc MerchantPaytypeCreate(UserMerchantPaytypeCreateRequest) returns (UserMerchantPaytypeCreateResponse) {
+  rpc MerchantPaytypeCreate(MerchantPaytypeCreateRequest) returns (MerchantPaytypeCreateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/create"
+      post: "/api/v1/merchant/paytype/create"
       body: "*"
     };
   }
   // 商户收款方式：编辑
-  rpc MerchantPaytypeUpdate(UserMerchantPaytypeUpdateRequest) returns (UserMerchantPaytypeUpdateResponse) {
+  rpc MerchantPaytypeUpdate(MerchantPaytypeUpdateRequest) returns (MerchantPaytypeUpdateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/update"
+      post: "/api/v1/merchant/paytype/update"
       body: "*"
     };
   }
   // 商户收款方式：列表（本人全部，含已作废，不分页）
-  rpc MerchantPaytypeList(UserMerchantPaytypeListRequest) returns (UserMerchantPaytypeListResponse) {
+  rpc MerchantPaytypeList(MerchantPaytypeListRequest) returns (MerchantPaytypeListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/list"
+      post: "/api/v1/merchant/paytype/list"
       body: "*"
     };
   }
   // 商户收款方式：作废
-  rpc MerchantPaytypeInvalidate(UserMerchantPaytypeInvalidateRequest) returns (UserMerchantPaytypeInvalidateResponse) {
+  rpc MerchantPaytypeInvalidate(MerchantPaytypeInvalidateRequest) returns (MerchantPaytypeInvalidateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-paytype/invalidate"
+      post: "/api/v1/merchant/paytype/invalidate"
       body: "*"
     };
   }
 
   // 商户订单：创建（整单购买，挂单变为交易中）
-  rpc MerchantOrderCreate(UserMerchantOrderCreateRequest) returns (UserMerchantOrderCreateResponse) {
+  rpc MerchantOrderCreate(MerchantOrderCreateRequest) returns (MerchantOrderCreateResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/create"
+      post: "/api/v1/merchant/order/create"
       body: "*"
     };
   }
-  rpc MerchantOrderDetail(UserMerchantOrderDetailRequest) returns (UserMerchantOrderItem) {
+  rpc MerchantOrderDetail(MerchantOrderDetailRequest) returns (MerchantOrderItem) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/detail"
+      post: "/api/v1/merchant/order/detail"
       body: "*"
     };
   }
-  rpc MerchantOrderCancel(UserMerchantOrderCancelRequest) returns (UserMerchantOrderActionResponse) {
+  rpc MerchantOrderCancel(MerchantOrderCancelRequest) returns (MerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/cancel"
+      post: "/api/v1/merchant/order/cancel"
       body: "*"
     };
   }
-  rpc MerchantOrderList(UserMerchantOrderListRequest) returns (UserMerchantOrderListResponse) {
+  rpc MerchantOrderList(MerchantOrderListRequest) returns (MerchantOrderListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/list"
+      post: "/api/v1/merchant/order/list"
       body: "*"
     };
   }
-  rpc MerchantOrderConfirmPay(UserMerchantOrderConfirmPayRequest) returns (UserMerchantOrderActionResponse) {
+  rpc MerchantOrderConfirmPay(MerchantOrderConfirmPayRequest) returns (MerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/confirm-pay"
+      post: "/api/v1/merchant/order/confirm-pay"
       body: "*"
     };
   }
-  rpc MerchantOrderUrge(UserMerchantOrderIdRequest) returns (UserMerchantOrderActionResponse) {
+  rpc MerchantOrderUrge(MerchantOrderIdRequest) returns (MerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/urge"
+      post: "/api/v1/merchant/order/urge"
       body: "*"
     };
   }
-  rpc MerchantOrderAppealSeller(UserMerchantOrderAppealRequest) returns (UserMerchantOrderActionResponse) {
+  rpc MerchantOrderAppealSeller(MerchantOrderAppealRequest) returns (MerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/appeal-seller"
+      post: "/api/v1/merchant/order/appeal-seller"
       body: "*"
     };
   }
-  rpc MerchantOrderAppealBuyer(UserMerchantOrderAppealRequest) returns (UserMerchantOrderActionResponse) {
+  rpc MerchantOrderAppealBuyer(MerchantOrderAppealRequest) returns (MerchantOrderActionResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-order/appeal-buyer"
+      post: "/api/v1/merchant/order/appeal-buyer"
+      body: "*"
+    };
+  }
+  // 汇美支付：获取支付链接（买家）
+  rpc MerchantOrderPay(MerchantOrderPayRequest) returns (MerchantOrderPayResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/merchant/order/pay"
       body: "*"
     };
   }
 
   // 商户订单 C2C 对话：发消息（首条自动建 merchant_session，WebSocket event: im.message.c2c）
-  rpc MerchantChatSend(UserMerchantChatSendRequest) returns (UserMerchantChatSendResponse) {
+  rpc MerchantChatSend(MerchantChatSendRequest) returns (MerchantChatSendResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/send"
+      post: "/api/v1/merchant/chat/send"
       body: "*"
     };
   }
-  rpc MerchantChatUnread(UserMerchantChatUnreadRequest) returns (UserMerchantChatUnreadResponse) {
+  rpc MerchantChatUnread(MerchantChatUnreadRequest) returns (MerchantChatUnreadResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/unread"
+      post: "/api/v1/merchant/chat/unread"
       body: "*"
     };
   }
-  rpc MerchantChatSessionList(UserMerchantChatSessionListRequest) returns (UserMerchantChatSessionListResponse) {
+  rpc MerchantChatSessionList(MerchantChatSessionListRequest) returns (MerchantChatSessionListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/session-list"
+      post: "/api/v1/merchant/chat/session-list"
       body: "*"
     };
   }
-  rpc MerchantChatMessageList(UserMerchantChatMessageListRequest) returns (UserMerchantChatMessageListResponse) {
+  rpc MerchantChatMessageList(MerchantChatMessageListRequest) returns (MerchantChatMessageListResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/message-list"
+      post: "/api/v1/merchant/chat/message-list"
       body: "*"
     };
   }
   // 清除某商户会话未读（与 talk_mode=3、Redis im:unread 键一致；入参 receiver_id 为 session_id）
-  rpc MerchantChatClearUnread(UserMerchantChatClearUnreadRequest) returns (UserMerchantChatClearUnreadResponse) {
+  rpc MerchantChatClearUnread(MerchantChatClearUnreadRequest) returns (MerchantChatClearUnreadResponse) {
     option (google.api.http) = {
-      post: "/api/v1/user/merchant-chat/clear-unread"
+      post: "/api/v1/merchant/chat/clear-unread"
       body: "*"
     };
   }
@@ -274,6 +320,13 @@ message UserDetailResponse{
   string user_code = 12 [(google.api.field_behavior) = REQUIRED];
   // 是否已设置交易密码（0/1）
   int32 is_trans = 13 [(google.api.field_behavior) = REQUIRED];
+  string created_at = 14 [(google.api.field_behavior) = REQUIRED];
+  // 是否订阅通知（0-否，1-是）
+  int32 is_subscribe = 15 [(google.api.field_behavior) = REQUIRED];
+  // 上次修改 username 的时间（空表示从未通过本接口修改过）
+  string un_update_at = 16;
+  // 是否可修改 username：0-否，1-是（3 个月可改一次）
+  int32 un_update_enable = 17 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 用户配置信息请求参数
@@ -355,8 +408,29 @@ message UserEmailUpdateRequest{
 // 用户邮箱更新接口响应参数
 message UserEmailUpdateResponse{}
 
+// 更新登录用户名请求参数
+message UserUsernameUpdateRequest{
+  // 新用户名：6-20 位，字母开头，仅字母/数字/下划线/减号
+  string username = 1 [(buf.validate.field).string = {min_len: 6, max_len: 20}, (google.api.field_behavior) = REQUIRED];
+  // 登录密码（RSA 加密；与 email_code 二选一，至少提供一种）
+  string password = 2;
+  // 邮箱验证码（发往当前绑定邮箱；与 password 二选一，至少提供一种）
+  string email_code = 3;
+}
+
+// 更新登录用户名响应参数
+message UserUsernameUpdateResponse{}
+
+// 更新通知订阅状态请求
+message UserSubscribeUpdateRequest {
+  int32 is_subscribe = 1 [(buf.validate.field).int32 = {in: [0, 1]}];
+}
+
+// 更新通知订阅状态响应
+message UserSubscribeUpdateResponse {}
+
 // 商户申请请求
-message UserMerchantApplyRequest {
+message MerchantApplyRequest {
   string nickname = 1 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
   string realname = 2 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
   string nation = 3 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
@@ -364,19 +438,31 @@ message UserMerchantApplyRequest {
   string idcard = 5 [(buf.validate.field).string = {min_len: 1, max_len: 30}];
   string image = 6 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
   string back_image = 7 [(buf.validate.field).string.max_len = 255];
-  // 保证金（元），最低 500
+  // 保证金（元），最低 500；提交时会调用钱包冻结接口
   double surety = 8 [(buf.validate.field).double = {gte: 500}];
+  // 交易密码（必填，与 users.salt + trans 校验）
+  string password = 9 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
 }
 
-message UserMerchantApplyResponse {
+message MerchantApplyResponse {
   int32 id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantStatusRequest {}
+message MerchantStatusRequest {}
 
-message UserMerchantProfileRequest {}
+message MerchantProfileRequest {}
 
-message UserMerchantStatusResponse {
+message MerchantCancelApplyRequest {}
+
+message MerchantCancelApplyResponse {}
+
+message MerchantPayTypeLimit {
+  double min = 1;
+  double max = 2;
+  string pay_type = 3;
+}
+
+message MerchantStatusResponse {
   bool has_application = 1 [(google.api.field_behavior) = REQUIRED];
   int32 id = 2;
   string nickname = 3;
@@ -396,82 +482,104 @@ message UserMerchantStatusResponse {
   int32 is_close = 17;
   string created_at = 18;
   string updated_at = 19;
+  // 已开通支付类型及金额区间，如 {"hd":{"min":200,"max":10000}}，依据 pay_types JSON 中 pay_type 映射
+  map<string, MerchantPayTypeLimit> pay_types = 20;
+  // 注销申请驳回原因
+  string car_reason = 21;
+  // 注销申请时间
+  string cancel_apply_at = 22;
+  // 注销时间
+  string cancel_at = 23;
+}
+
+// 买家查看挂单对应商户的公开信息
+message MerchantInfoByTaskRequest {
+  int32 task_id = 1 [(buf.validate.field).int32.gt = 0];
+}
+
+message MerchantInfoForBuyerResponse {
+  int32 task_id = 1 [(google.api.field_behavior) = REQUIRED];
+  string nickname = 2 [(google.api.field_behavior) = REQUIRED];
+  // 商户 pay_types JSON 解析结果，如 {"hd":{"pay_type":"801","min":200,"max":1000}}
+  map<string, MerchantPayTypeLimit> pay_types = 3;
 }
 
 // ---------- 商户挂售任务 merchant_task ----------
 
-message UserMerchantTaskItem {
+message MerchantTaskItem {
   int32 id = 1 [(google.api.field_behavior) = REQUIRED];
   int32 user_id = 2 [(google.api.field_behavior) = REQUIRED];
   int32 currency_type = 3 [(google.api.field_behavior) = REQUIRED];
   double price = 4 [(google.api.field_behavior) = REQUIRED];
   double sell_count = 5 [(google.api.field_behavior) = REQUIRED];
   string paytype = 6;
-  string nickname = 7;
-  string account = 8;
-  int32 status = 9 [(google.api.field_behavior) = REQUIRED];
-  int32 is_up = 10 [(google.api.field_behavior) = REQUIRED];
-  int32 up_time = 11 [(google.api.field_behavior) = REQUIRED];
-  int32 is_deleted = 12 [(google.api.field_behavior) = REQUIRED];
-  string created_at = 13;
-  string updated_at = 14;
+  int32 status = 7 [(google.api.field_behavior) = REQUIRED];
+  int32 is_up = 8 [(google.api.field_behavior) = REQUIRED];
+  int32 up_time = 9 [(google.api.field_behavior) = REQUIRED];
+  int32 is_deleted = 10 [(google.api.field_behavior) = REQUIRED];
+  string created_at = 11;
+  string updated_at = 12;
+  // 原总出售数量（创建时与 sell_count 一致，出售过程中不变）
+  double sell_total = 13 [(google.api.field_behavior) = REQUIRED];
+  // 挂单商户昵称（merchant.nickname，已审核通过记录）
+  string merchant_nickname = 14;
 }
 
-message UserMerchantTaskCreateRequest {
+message MerchantTaskCreateRequest {
   int32 currency_type = 1 [(buf.validate.field).int32 = {in: [1]}];
   double price = 2 [(buf.validate.field).double = {gt: 0}];
   double sell_count = 3 [(buf.validate.field).double = {gt: 0}];
-  string paytype = 4 [(buf.validate.field).string.max_len = 32];
-  string nickname = 5 [(buf.validate.field).string.max_len = 100];
-  string account = 6 [(buf.validate.field).string.max_len = 100];
+  string paytype = 4 [(buf.validate.field).string.max_len = 1024];
 }
 
-message UserMerchantTaskCreateResponse {
+message MerchantTaskCreateResponse {
   int32 id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantTaskMyListRequest {
+message MerchantTaskMyListRequest {
   int32 page = 1;
   int32 page_size = 2;
+  // 上下架筛选：0-不限（默认），1-已上架，2-已下架
+  int32 is_up = 3 [(buf.validate.field).int32 = {in: [0, 1, 2]}];
+  // 任务状态：0-待交易，1-交易中，2-完成交易；不传则不按 status 筛选
+  optional int32 status = 4 [(buf.validate.field).int32 = {gte: 0, lte: 2}];
 }
 
-message UserMerchantTaskMarketListRequest {
+message MerchantTaskMarketListRequest {
   // 页码，从 1 开始；未传或 0 时服务端按 1 处理
   int32 page = 1 [(buf.validate.field).int32.gte = 0];
   // 每页条数；未传或 0 时默认 20，最大 100
   int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
 }
 
-message UserMerchantTaskListResponse {
-  repeated UserMerchantTaskItem items = 1;
+message MerchantTaskListResponse {
+  repeated MerchantTaskItem items = 1;
   int32 total = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantTaskDetailRequest {
+message MerchantTaskDetailRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
 }
 
-message UserMerchantTaskUpdateRequest {
+message MerchantTaskUpdateRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   int32 currency_type = 2 [(buf.validate.field).int32 = {in: [1]}];
   double price = 3 [(buf.validate.field).double = {gt: 0}];
   double sell_count = 4 [(buf.validate.field).double = {gt: 0}];
-  string paytype = 5 [(buf.validate.field).string.max_len = 32];
-  string nickname = 6 [(buf.validate.field).string.max_len = 100];
-  string account = 7 [(buf.validate.field).string.max_len = 100];
+  string paytype = 5 [(buf.validate.field).string.max_len = 1024];
 }
 
-message UserMerchantTaskUpdateResponse {}
+message MerchantTaskUpdateResponse {}
 
-message UserMerchantTaskIdRequest {
+message MerchantTaskIdRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
 }
 
-message UserMerchantTaskActionResponse {}
+message MerchantTaskActionResponse {}
 
 // ---------- 商户收款方式 merchant_paytype ----------
 
-message UserMerchantPaytypeItem {
+message MerchantPaytypeItem {
   int32 id = 1 [(google.api.field_behavior) = REQUIRED];
   int32 user_id = 2 [(google.api.field_behavior) = REQUIRED];
   int32 type_id = 3 [(google.api.field_behavior) = REQUIRED];
@@ -481,20 +589,23 @@ message UserMerchantPaytypeItem {
   int32 is_delete = 7 [(google.api.field_behavior) = REQUIRED];
   string created_at = 8;
   string updated_at = 9;
+  string phone = 10;
 }
 
-message UserMerchantPaytypeCreateRequest {
+message MerchantPaytypeCreateRequest {
   int32 type_id = 1 [(buf.validate.field).int32 = {gte: 1, lte: 127}];
   string account = 2 [(buf.validate.field).string.max_len = 100];
   string nickname = 3 [(buf.validate.field).string.max_len = 100];
   string open_bank = 4 [(buf.validate.field).string.max_len = 255];
+  // 手机号，选填
+  string phone = 5 [(buf.validate.field).string.max_len = 16];
 }
 
-message UserMerchantPaytypeCreateResponse {
+message MerchantPaytypeCreateResponse {
   int32 id = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantPaytypeUpdateRequest {
+message MerchantPaytypeUpdateRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   int32 type_id = 2 [(buf.validate.field).int32 = {gte: 1, lte: 127}];
   string account = 3 [(buf.validate.field).string.max_len = 100];
@@ -502,23 +613,24 @@ message UserMerchantPaytypeUpdateRequest {
   string open_bank = 5 [(buf.validate.field).string.max_len = 255];
 }
 
-message UserMerchantPaytypeUpdateResponse {}
+message MerchantPaytypeUpdateResponse {}
 
-message UserMerchantPaytypeListRequest {}
+message MerchantPaytypeListRequest {}
 
-message UserMerchantPaytypeListResponse {
-  repeated UserMerchantPaytypeItem items = 1;
+message MerchantPaytypeListResponse {
+  repeated MerchantPaytypeItem items = 1;
 }
 
-message UserMerchantPaytypeInvalidateRequest {
+message MerchantPaytypeInvalidateRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
 }
 
-message UserMerchantPaytypeInvalidateResponse {}
+message MerchantPaytypeInvalidateResponse {}
 
 // ---------- 商户订单 merchant_order ----------
 
-message UserMerchantOrderItem {
+// 订单列表项（列表页展示必要字段）
+message MerchantOrderListItem {
   int32 id = 1;
   string order_id = 2;
   int32 buyer_id = 3;
@@ -526,7 +638,36 @@ message UserMerchantOrderItem {
   double amount = 5;
   int32 task_id = 6;
   double counts = 7;
-  int32 pay_type = 8;
+  string pay_type_info = 8;
+  int32 buy_type = 9;
+  int32 status = 10;
+  int32 is_cancel = 11;
+  int32 is_appeal = 12;
+  string created_at = 13;
+  int32 wronger = 14;
+  string judge = 15;
+  string judge_time = 16;
+  // 卖方商户昵称（merchant.nickname，已审核通过记录）
+  string merchant_nickname = 17;
+  // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+  int32 pay_type_id = 18;
+  // 申诉材料
+  string appeal_materials = 19;
+  // 订单取消原因
+  string cancel_reason = 20;
+  // 下单备注
+  string remark = 21;
+}
+
+message MerchantOrderItem {
+  int32 id = 1;
+  string order_id = 2;
+  int32 buyer_id = 3;
+  int32 saler_id = 4;
+  double amount = 5;
+  int32 task_id = 6;
+  double counts = 7;
+  string pay_type_info = 8;
   int32 buy_type = 9;
   int32 status = 10;
   string pay_img = 11;
@@ -536,69 +677,110 @@ message UserMerchantOrderItem {
   int32 appeal_time = 15;
   string appeal_reason = 16;
   int32 cancel_id = 17;
-  string remark = 18;
+  string cancel_reason = 18;
   int32 pay_time = 19;
   int32 cancel_time = 20;
   int32 wronger = 21;
   string judge = 22;
-  int32 judge_time = 23;
+  string judge_time = 23;
   string created_at = 24;
   string updated_at = 25;
+  // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+  int32 pay_type_id = 26;
+  // 申诉材料
+  string appeal_materials = 27;
+  // 下单备注
+  string remark = 28;
+  // 卖家 users 表昵称
+  string saler_user_nickname = 29;
+  // 卖家 users 表头像
+  string saler_user_avatar = 30;
+  // 卖家 merchant 表昵称（已审核通过）
+  string saler_merchant_nickname = 31;
+  // 买家 users 表昵称
+  string buyer_user_nickname = 32;
+  // 买家 users 表头像
+  string buyer_user_avatar = 33;
+  // 买家 merchant 表昵称（已审核通过，非商户为空）
+  string buyer_merchant_nickname = 34;
 }
 
-message UserMerchantOrderCreateRequest {
+message MerchantOrderCreateRequest {
   int32 task_id = 1 [(buf.validate.field).int32.gt = 0];
   double counts = 2 [(buf.validate.field).double = {gt: 0}];
-  int32 pay_type = 3;
+  // 支付信息 JSON 字符串
+  string pay_type_info = 3 [(buf.validate.field).string.max_len = 255];
   int32 buy_type = 4;
+  // 支付类型：1-支付宝，2-微信，3-银行卡，4-宏达，5-汇美
+  int32 pay_type_id = 5 [(buf.validate.field).int32 = {gte: 1, lte: 5}];
+  // 下单备注，选填
+  string remark = 6 [(buf.validate.field).string.max_len = 255];
 }
 
-message UserMerchantOrderCreateResponse {
+message MerchantOrderCreateResponse {
   int32 id = 1 [(google.api.field_behavior) = REQUIRED];
   string order_id = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantOrderDetailRequest {
+message MerchantOrderDetailRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
 }
 
-message UserMerchantOrderCancelRequest {
+message MerchantOrderCancelRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   int32 cancel_id = 2 [(buf.validate.field).int32.gte = 0];
-  string remark = 3 [(buf.validate.field).string.max_len = 255];
+  string cancel_reason = 3 [(buf.validate.field).string.max_len = 255];
 }
 
-message UserMerchantOrderIdRequest {
+message MerchantOrderIdRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
 }
 
-message UserMerchantOrderConfirmPayRequest {
+message MerchantOrderConfirmPayRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   string pay_img = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
 }
 
-message UserMerchantOrderAppealRequest {
+message MerchantOrderAppealRequest {
   int32 id = 1 [(buf.validate.field).int32.gt = 0];
   string appeal_reason = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  // 申诉材料，直接存储
+  string appeal_materials = 3 [(buf.validate.field).string.max_len = 65535];
 }
 
-message UserMerchantOrderListRequest {
-  // 1-买入（默认），2-卖出
+message MerchantOrderListRequest {
+  // 1-买家订单（默认），2-卖家订单
   int32 direct = 1 [(buf.validate.field).int32 = {in: [0, 1, 2]}];
   int32 page = 2 [(buf.validate.field).int32.gte = 0];
   int32 page_size = 3 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+  // 订单状态筛选，多个用英文逗号分隔：0待支付 1已支付待放币 2已完成 3已取消；空表示不限
+  string status = 4 [(buf.validate.field).string.max_len = 64];
+  // 申诉筛选：1 表示申诉中未裁定（is_appeal=1 且 judge_time=0）；0 或不传表示不限
+  int32 is_appeal = 5 [(buf.validate.field).int32 = {in: [0, 1]}];
 }
 
-message UserMerchantOrderListResponse {
-  repeated UserMerchantOrderItem items = 1;
+message MerchantOrderListResponse {
+  repeated MerchantOrderListItem items = 1;
   int32 total = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantOrderActionResponse {}
+message MerchantOrderActionResponse {}
+
+message MerchantOrderPayRequest {
+  // 商户订单号（merchant_order.order_id）
+  string order_id = 1 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  string return_url = 2 [(buf.validate.field).string.max_len = 512];
+}
+
+message MerchantOrderPayResponse {
+  string pay_url = 1 [(google.api.field_behavior) = REQUIRED];
+  // 当前商户订单号（重新下单时可能与请求 order_id 不同）
+  string order_id = 2 [(google.api.field_behavior) = REQUIRED];
+}
 
 // ---------- 商户订单 C2C 对话 merchant_session / merchant_message ----------
 
-message UserMerchantChatSendRequest {
+message MerchantChatSendRequest {
   int32 order_id = 1 [(buf.validate.field).int32.gt = 0];
   int32 msg_type = 2 [(buf.validate.field).int32.gt = 0];
   string extra = 3 [(buf.validate.field).string.max_len = 8192];
@@ -606,25 +788,25 @@ message UserMerchantChatSendRequest {
   string msg_id = 5;
 }
 
-message UserMerchantChatSendResponse {
+message MerchantChatSendResponse {
   int64 message_db_id = 1 [(google.api.field_behavior) = REQUIRED];
   string msg_id = 2 [(google.api.field_behavior) = REQUIRED];
   int32 session_id = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantChatUnreadRequest {
+message MerchantChatUnreadRequest {
   // 商户订单号（merchant_order.order_id，与创建订单接口返回的 order_id 字符串一致），非自增主键 id
   string order_no = 1 [(buf.validate.field).string.min_len = 1];
 }
 
-message UserMerchantChatUnreadResponse {
+message MerchantChatUnreadResponse {
   // 当前用户在该订单对应商户会话下的未读条数（无会话时为 0）
   int32 total_unread = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantChatSessionListRequest {}
+message MerchantChatSessionListRequest {}
 
-message UserMerchantChatSessionItem {
+message MerchantChatSessionItem {
   int32 session_id = 1 [(google.api.field_behavior) = REQUIRED];
   int32 order_id = 2 [(google.api.field_behavior) = REQUIRED];
   int32 peer_user_id = 3 [(google.api.field_behavior) = REQUIRED];
@@ -634,19 +816,23 @@ message UserMerchantChatSessionItem {
   string updated_at = 7;
   // 当前用户在该商户会话下的未读条数（Redis，与 MerchantChatUnread 汇总口径一致）
   int32 unread_num = 8;
+  // 对方 merchant.nickname（已审核通过）
+  string merchant_nickname = 9;
 }
 
-message UserMerchantChatSessionListResponse {
-  repeated UserMerchantChatSessionItem items = 1;
+message MerchantChatSessionListResponse {
+  repeated MerchantChatSessionItem items = 1;
 }
 
-message UserMerchantChatMessageListRequest {
-  int32 session_id = 1 [(buf.validate.field).int32.gt = 0];
-  int32 page = 2 [(buf.validate.field).int32.gte = 0];
-  int32 page_size = 3 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+message MerchantChatMessageListRequest {
+  // 对手方用户 id（与 /api/v1/message/records 的 receiver_id 一致）
+  int32 receiver_id = 1 [(buf.validate.field).int32.gt = 0];
+  // 游标：首次传 0；翻页传上一页最后一条消息的 id
+  int32 cursor = 2;
+  int32 limit = 3 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
 }
 
-message UserMerchantChatMessageItem {
+message MerchantChatMessageItem {
   int64 id = 1;
   string msg_id = 2;
   string org_msg_id = 3;
@@ -663,13 +849,50 @@ message UserMerchantChatMessageItem {
   string created_at = 14;
 }
 
-message UserMerchantChatMessageListResponse {
-  repeated UserMerchantChatMessageItem items = 1;
-  int32 total = 2 [(google.api.field_behavior) = REQUIRED];
+message MerchantChatMessageListResponse {
+  repeated MerchantChatMessageItem items = 1;
+  // 下一页游标；为 0 表示没有更多历史消息
+  int32 cursor = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-message UserMerchantChatClearUnreadRequest {
+message MerchantChatClearUnreadRequest {
   int32 session_id = 1 [(buf.validate.field).int32.gt = 0];
 }
 
-message UserMerchantChatClearUnreadResponse {}
+message MerchantChatClearUnreadResponse {}
+
+// 当前用户未读数汇总
+message UserUnreadSummaryRequest {}
+
+message UserUnreadSummaryResponse {
+  // 普通会话未读数（私聊 + 群聊）
+  int32 talk_unread = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "talk_unread"
+  ];
+  // 商户会话未读数
+  int32 merchant_unread = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "merchant_unread"
+  ];
+  // 好友申请未读数
+  int32 contact_apply_unread = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "contact_apply_unread"
+  ];
+  // 群申请未读数
+  int32 group_apply_unread = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "group_apply_unread"
+  ];
+  // 系统通知未读数
+  int32 notice_unread = 5 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "notice_unread"
+  ];
+  // 以上未读数总和
+  int32 total_unread = 6 [
+    (google.api.field_behavior) = REQUIRED,
+    json_name = "total_unread"
+  ];
+}

@@ -35,14 +35,16 @@ type TalkDeleteRecordOption struct {
 type ITalkService interface {
 	DeleteRecord(ctx context.Context, opt *TalkDeleteRecordOption) error
 	Revoke(ctx context.Context, opt *TalkRevokeOption) error
+	ClearSessionRead(ctx context.Context, readerId, talkMode, receiverId int) error
 }
 
 type TalkService struct {
 	*repo.Source
-	GroupMemberRepo *repo.GroupMember
-	UserRepo        *repo.Users
-	PushMessage     *logic.PushMessage
-	MessageStorage  *cache.MessageStorage
+	GroupMemberRepo        *repo.GroupMember
+	UserRepo               *repo.Users
+	TalkGroupMsgReaderRepo *repo.TalkGroupMsgReader
+	PushMessage            *logic.PushMessage
+	MessageStorage         *cache.MessageStorage
 }
 
 // DeleteRecord 删除消息记录
@@ -188,4 +190,130 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 	}
 
 	return errors.New("暂不支持撤回消息")
+}
+
+// MarkPrivateMessagesRead 将指定私聊消息标记为已读，返回实际更新的 msg_id 列表。
+func (t *TalkService) MarkPrivateMessagesRead(ctx context.Context, readerId, peerId int, msgIds []string) ([]string, error) {
+	if readerId <= 0 || peerId <= 0 || len(msgIds) == 0 {
+		return nil, nil
+	}
+	if t.Source == nil {
+		return nil, errors.New("talk service source is nil")
+	}
+
+	db := t.Source.Db().WithContext(ctx)
+
+	result := db.Model(&model.TalkUserMessage{}).
+		Where(
+			"msg_id in ? and from_id = ? and receiver_id = ? and is_read = ?",
+			msgIds, peerId, readerId, model.TalkUserMessageIsReadNo,
+		).
+		Update("is_read", model.TalkUserMessageIsReadYes)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, nil
+	}
+
+	var readMsgIds []string
+	if err := db.Model(&model.TalkUserMessage{}).
+		Where(
+			"msg_id in ? and from_id = ? and receiver_id = ? and is_read = ?",
+			msgIds, peerId, readerId, model.TalkUserMessageIsReadYes,
+		).
+		Pluck("msg_id", &readMsgIds).Error; err != nil {
+		return nil, err
+	}
+	return readMsgIds, nil
+}
+
+// ClearSessionRead 清除会话未读：标记已读并推送 im.message.read（仅由 session-clear-unread-num 触发）。
+func (t *TalkService) ClearSessionRead(ctx context.Context, readerId, talkMode, receiverId int) error {
+	if readerId <= 0 || receiverId <= 0 {
+		return nil
+	}
+	switch talkMode {
+	case entity.ChatPrivateMode:
+		return t.clearPrivateSessionRead(ctx, readerId, receiverId)
+	case entity.ChatGroupMode:
+		return t.clearGroupSessionRead(ctx, readerId, receiverId)
+	default:
+		return nil
+	}
+}
+
+func (t *TalkService) clearPrivateSessionRead(ctx context.Context, readerId, peerId int) error {
+	if t.Source == nil {
+		return errors.New("talk service source is nil")
+	}
+	var msgIds []string
+	if err := t.Source.Db().WithContext(ctx).Model(&model.TalkUserMessage{}).
+		Where("from_id = ? and receiver_id = ? and is_read = ?", peerId, readerId, model.TalkUserMessageIsReadNo).
+		Pluck("msg_id", &msgIds).Error; err != nil {
+		return err
+	}
+	if len(msgIds) == 0 {
+		return nil
+	}
+	readMsgIds, err := t.MarkPrivateMessagesRead(ctx, readerId, peerId, msgIds)
+	if err != nil || len(readMsgIds) == 0 {
+		return err
+	}
+	return t.pushMessageReadEvent(ctx, readerId, peerId, entity.ChatPrivateMode, readMsgIds)
+}
+
+func (t *TalkService) clearGroupSessionRead(ctx context.Context, readerId, groupId int) error {
+	if t.Source == nil {
+		return errors.New("talk service source is nil")
+	}
+	if t.TalkGroupMsgReaderRepo == nil {
+		return errors.New("TalkGroupMsgReaderRepo is nil")
+	}
+
+	var candidates []string
+	if err := t.Source.Db().WithContext(ctx).Model(&model.TalkGroupMessage{}).
+		Where("group_id = ? and from_id != ? and is_revoked != ?", groupId, readerId, model.Yes).
+		Pluck("msg_id", &candidates).Error; err != nil {
+		return err
+	}
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	unread, err := t.TalkGroupMsgReaderRepo.FilterUnreadMsgIDs(ctx, readerId, candidates)
+	if err != nil {
+		return err
+	}
+	if len(unread) == 0 {
+		return nil
+	}
+
+	affected, err := t.TalkGroupMsgReaderRepo.BatchInsert(ctx, readerId, unread)
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return nil
+	}
+	return t.pushMessageReadEvent(ctx, readerId, groupId, entity.ChatGroupMode, unread)
+}
+
+func (t *TalkService) pushMessageReadEvent(ctx context.Context, readerId, receiverId, talkMode int, msgIds []string) error {
+	if len(msgIds) == 0 {
+		return nil
+	}
+	if t.PushMessage == nil {
+		logger.Warnf("message read push skipped: PushMessage is nil, reader_id=%d receiver_id=%d", readerId, receiverId)
+		return nil
+	}
+	return t.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
+		Event: entity.SubEventImMessageRead,
+		Payload: jsonutil.Encode(entity.SubEventImMessageReadPayload{
+			TalkMode:   talkMode,
+			FromId:     readerId,
+			ReceiverId: receiverId,
+			MsgIds:     msgIds,
+		}),
+	})
 }

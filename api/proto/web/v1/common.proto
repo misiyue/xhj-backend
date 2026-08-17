@@ -4,7 +4,9 @@ package web;
 option go_package = "web/v1;web";
 import "buf/validate/validate.proto";
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
 import "google/protobuf/struct.proto";
+import "web/v1/paginate.proto";
 
 // 通用服务
 service Common {
@@ -45,6 +47,46 @@ service Common {
   rpc AppDictGet(CommonAppDictGetRequest) returns (CommonAppDictGetResponse) {
     option (google.api.http) = {
       post: "/api/v1/common/app-dict"
+      body: "*"
+    };
+  }
+
+  // 功能模块列表
+  rpc AppModules(CommonAppModulesRequest) returns (CommonAppModulesResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/app-modules"
+      body: "*"
+    };
+  }
+
+  // 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
+  rpc NewsList(CommonNewsListRequest) returns (CommonNewsListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/news-list"
+      body: "*"
+    };
+  }
+
+  // 火箭资讯详情（仅已发布；含 content、source_url）
+  rpc NewsDetail(CommonNewsDetailRequest) returns (CommonNewsDetailResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/news-detail"
+      body: "*"
+    };
+  }
+
+  // 资讯分类列表（仅显示 status=1；按 sort 倒序；不分页）
+  rpc NewsCategoryList(CommonNewsCategoryListRequest) returns (CommonNewsCategoryListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/category-list"
+      body: "*"
+    };
+  }
+
+  // 资讯阅读上报（未登录直接返回；已登录记 pv/uv，同用户同资讯 30s 内去重）
+  rpc NewsView(CommonNewsViewRequest) returns (CommonNewsViewResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/common/news-view"
       body: "*"
     };
   }
@@ -96,7 +138,10 @@ message CommonAppVersionLatestResponse {
   string published_at = 9;
 }
 
-message CommonExploreListRequest {}
+message CommonExploreListRequest {
+  // 位置筛选，多个用英文逗号分隔，如 index,tab；空表示不限
+  string positions = 1;
+}
 
 message CommonExploreListResponse {
   message Item {
@@ -108,6 +153,8 @@ message CommonExploreListResponse {
     string position = 5;
     // 排序权重，越大越靠前（与库 sort 一致）
     int32 sort = 6;
+    // 描述
+    string digest = 7;
   }
   repeated Item items = 1;
 }
@@ -128,3 +175,92 @@ message CommonAppDictItem {
 message CommonAppDictGetResponse {
   repeated CommonAppDictItem items = 1;
 }
+
+message CommonAppModulesRequest {}
+
+message CommonAppModulesResponse {
+  message Item {
+    int32 id = 1;
+    string code = 2;
+    string title = 3;
+    int32 is_open = 4;
+  }
+  repeated Item items = 1;
+}
+
+// 火箭资讯列表请求
+message CommonNewsListRequest {
+  // 页码，从 1 开始；未传或 0 时服务端按 1 处理
+  int32 page = 1 [(buf.validate.field).int32.gte = 0];
+  // 每页条数；未传或 0 时默认 20，最大 100
+  int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+  // 资讯分类 id；0 或不传表示不限
+  int32 category_id = 3 [(buf.validate.field).int32.gte = 0];
+}
+
+message CommonNewsListResponse {
+  message Item {
+    int32 id = 1;
+    string title = 2;
+    int32 category_id = 3;
+    // 1-图文，2-视频
+    int32 type_id = 4;
+    string cover = 5;
+    string upload_time = 6;
+    string publish_time = 7;
+    int32 status = 8;
+    string created_at = 9;
+    int32 pv = 10;
+    int32 uv = 11;
+    string content = 12;
+  }
+  repeated Item items = 1;
+  int32 total = 2 [(google.api.field_behavior) = REQUIRED];
+  Paginate paginate = 3;
+}
+
+// 火箭资讯详情请求
+message CommonNewsDetailRequest {
+  int32 id = 1 [(buf.validate.field).int32.gt = 0, (google.api.field_behavior) = REQUIRED];
+}
+
+message CommonNewsDetailResponse {
+  int32 id = 1;
+  string title = 2;
+  int32 category_id = 3;
+  // 1-图文，2-视频
+  int32 type_id = 4;
+  string content = 5;
+  string cover = 6;
+  string source_url = 7;
+  string upload_time = 8;
+  string publish_time = 9;
+  int32 status = 10;
+  string created_at = 11;
+  int32 pv = 12;
+  int32 uv = 13;
+}
+
+// 资讯分类列表请求
+message CommonNewsCategoryListRequest {
+  // 所属项目，如 news（火箭资讯）
+  string collect = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message CommonNewsCategoryListResponse {
+  message Item {
+    int32 id = 1;
+    string title = 2;
+    string collect = 3;
+    int32 status = 4;
+    int32 sort = 5;
+  }
+  repeated Item items = 1;
+}
+
+// 资讯阅读上报请求
+message CommonNewsViewRequest {
+  int32 news_id = 1 [(buf.validate.field).int32.gt = 0, (google.api.field_behavior) = REQUIRED];
+}
+
+message CommonNewsViewResponse {}

@@ -51,6 +51,28 @@ func (m *Merchant) UpdateById(ctx context.Context, id int, updates map[string]an
 	return m.db.WithContext(ctx).Model(&model.Merchant{}).Where("id = ?", id).Updates(updates).Error
 }
 
+// MapApprovedNicknameByUserIDs 批量取用户最近一条已审核通过商户的 nickname（user_id -> nickname）
+func (m *Merchant) MapApprovedNicknameByUserIDs(ctx context.Context, userIds []int) (map[int]string, error) {
+	out := make(map[int]string)
+	if len(userIds) == 0 {
+		return out, nil
+	}
+	var rows []model.Merchant
+	err := m.db.WithContext(ctx).
+		Where("user_id IN ? AND status = ?", userIds, model.MerchantStatusApproved).
+		Order("id DESC").
+		Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		if _, ok := out[rows[i].UserId]; !ok {
+			out[rows[i].UserId] = rows[i].Nickname
+		}
+	}
+	return out, nil
+}
+
 // FindLatestApprovedByUserId 用户最近一条已审核通过的商户（按 id 倒序）
 func (m *Merchant) FindLatestApprovedByUserId(ctx context.Context, userId int) (*model.Merchant, error) {
 	var row model.Merchant

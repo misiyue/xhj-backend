@@ -22,6 +22,10 @@ type Config struct {
 	OAuth      *OAuth      `json:"oauth" yaml:"oauth"`
 	Trtc       *Trtc       `json:"trtc" yaml:"trtc"`
 	Wallet     *Wallet     `json:"wallet" yaml:"wallet"`
+	Marzban    *Marzban    `json:"marzban" yaml:"marzban"`
+	Hdpay      *Hdpay      `json:"hdpay" yaml:"hdpay"`
+	Hmpay      *Hmpay      `json:"hmpay" yaml:"hmpay"`
+	Push       *Push       `json:"push" yaml:"push"`
 	Security   *Security   `json:"security" yaml:"security"`
 }
 

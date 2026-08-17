@@ -50,6 +50,14 @@ func FormatDatetime(t time.Time) string {
 	return t.Format(time.DateTime)
 }
 
+// FormatUnixSecond 将 Unix 秒时间戳格式化为 yyyy-MM-dd HH:mm:ss；0 或负数返回空字符串
+func FormatUnixSecond(ts int) string {
+	if ts <= 0 {
+		return ""
+	}
+	return time.Unix(int64(ts), 0).In(Location()).Format(time.DateTime)
+}
+
 func IsDateTime(datetime string) bool {
 	_, err := time.Parse(time.DateTime, datetime)
 	return err == nil

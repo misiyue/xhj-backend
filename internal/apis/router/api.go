@@ -3,28 +3,38 @@ package router
 import (
 	"context"
 	"errors"
+	"net/http"
 	"strings"
+	"time"
 
 	"buf.build/go/protovalidate"
-	_ "github.com/gzydong/go-chat/docs" // 注册 swag 文档，/swagger/doc.json 依赖此包 init
 	"github.com/gin-gonic/gin"
 	web2 "github.com/gzydong/go-chat/api/pb/web/v1"
+	"github.com/gzydong/go-chat/config"
+	_ "github.com/gzydong/go-chat/docs" // 注册 swag 文档，/swagger/doc.json 依赖此包 init
 	"github.com/gzydong/go-chat/internal/apis/handler/web"
 	v1 "github.com/gzydong/go-chat/internal/apis/handler/web/v1"
 	"github.com/gzydong/go-chat/internal/apis/handler/web/v1/talk"
 	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/jwtutil"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
+	"github.com/gzydong/go-chat/internal/repository/repo"
+	"github.com/gzydong/go-chat/internal/service"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"gorm.io/gorm"
 )
 
 // RegisterWebRoute 注册 Web 路由
-func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, storage middleware.IStorage) {
+func RegisterWebRoute(conf *config.Config, router *gin.Engine, handler *web.Handler, storage middleware.IStorage) {
+	patchMarzbanDeps(conf, handler)
+
 	// 授权验证中间件
 	authorize := middleware.NewJwtMiddleware[entity.WebClaims](
-		[]byte(secret), storage,
+		[]byte(conf.Jwt.Secret), storage,
 		func(ctx context.Context, claims *jwtutil.JwtClaims[entity.WebClaims]) error {
 			if claims.RegisteredClaims.Issuer != entity.JwtIssuerWeb {
 				return errors.New("授权异常，请登录后操作")
@@ -35,6 +45,10 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 				return errors.New("授权异常，请登录后操作")
 			}
 
+			if user.IsCancelled() {
+				return entity.ErrAccountCancelled
+			}
+
 			if user.IsDisabled() {
 				return entity.ErrAccountDisabled
 			}
@@ -43,6 +57,7 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 		},
 		func(option *middleware.JwtMiddlewareOption) {
 			option.ExclusionPaths = []string{
+				"/api/v1/marzban/user",
 				"/api/v1/auth/login",
 				"/api/v1/auth/register",
 				"/api/v1/auth/forget",
@@ -55,9 +70,16 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 				"/api/v1/common/send-email",
 				"/api/v1/common/send-sms",
 				"/api/v1/common/send-test",
-				"/api/v1/common/app-version",
-				"/api/v1/common/explore-list",
 				"/api/v1/common/app-dict",
+				"/api/v1/common/app-modules",
+				"/api/v1/common/explore-list",
+				"/api/v1/common/news-list",
+				"/api/v1/common/news-detail",
+				"/api/v1/common/news-view",
+				"/api/v1/common/category-list",
+				"/api/v1/notice/article",
+				"/api/v1/merchant/order/hdpay-notify",
+				"/api/v1/merchant/order/hmpay-notify",
 			}
 		},
 	)
@@ -86,6 +108,8 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 	web2.RegisterGroupVoteHandler(api, resp, handler.V1.GroupVote)
 	web2.RegisterGroupNoticeHandler(api, resp, handler.V1.GroupNotice)
 	web2.RegisterMessageHandler(api, resp, handler.V1.TalkMessage)
+	patchTalkMessageDeps(handler.V1)
+	patchCommonDeps(handler.V1, handler.UserRepo)
 
 	// Invite 需要 *repo.Users：子 Handler 若未在 wire_gen 里注入 UsersRepo 会为空指针。
 	// 顶层 web.Handler.UserRepo 与之一致，此处补齐引用，避免 /api/v1/invite/friends 空指针 panic。
@@ -93,13 +117,193 @@ func RegisterWebRoute(secret string, router *gin.Engine, handler *web.Handler, s
 		handler.V1.Invite.UsersRepo = handler.UserRepo
 	}
 
-	web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
+	// Notice 需要 *repo.NoticeLetter：wire_gen 未更新时补齐，避免 /api/v1/notice/* 空指针 500。
+	if handler.V1 != nil && handler.V1.User != nil && handler.V1.User.NoticeLetterRepo != nil {
+		if handler.V1.Notice == nil {
+			handler.V1.Notice = &v1.Notice{NoticeLetterRepo: handler.V1.User.NoticeLetterRepo}
+		} else if handler.V1.Notice.NoticeLetterRepo == nil {
+			handler.V1.Notice.NoticeLetterRepo = handler.V1.User.NoticeLetterRepo
+		}
+	}
 
-	registerCustomApiRouter(resp, api, handler)
+	web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
+	web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
+
+	registerCustomApiRouter(resp, router, api, handler)
 }
 
-func registerCustomApiRouter(resp *Interceptor, api gin.IRoutes, handler *web.Handler) {
-	api.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
+// patchMarzbanDeps 兼容未重新生成 Wire 代码的部署，避免访问 Marzban 路由时空指针。
+func patchMarzbanDeps(conf *config.Config, handler *web.Handler) {
+	if handler == nil || handler.V1 == nil {
+		return
+	}
+	if handler.V1.Marzban == nil {
+		handler.V1.Marzban = &v1.Marzban{}
+	}
+	if handler.V1.Marzban.MarzbanService == nil {
+		handler.V1.Marzban.MarzbanService = &service.MarzbanService{
+			Config:     conf,
+			HTTPClient: &http.Client{Timeout: 10 * time.Second},
+		}
+	}
+}
+
+// patchTalkMessageDeps 补齐 wire_gen 未更新时 talk.Message / TalkService 的已读相关依赖。
+func patchTalkMessageDeps(v1 *web.V1) {
+	if v1 == nil {
+		return
+	}
+
+	var msg *talk.Message
+	if v1.TalkMessage != nil {
+		msg = v1.TalkMessage
+	}
+	if msg != nil {
+		msg.PushMessage = bootstrapPushMessage(v1, msg)
+		if msg.TalkGroupMsgReaderRepo == nil {
+			msg.TalkGroupMsgReaderRepo = bootstrapTalkGroupMsgReaderRepo(msg)
+		}
+	}
+
+	pushMessage := bootstrapPushMessage(v1, msg)
+	groupReaderRepo := bootstrapTalkGroupMsgReaderRepo(msg)
+	if pushMessage == nil {
+		logger.Warnf("PushMessage 未注入，私聊/群聊已读 WebSocket 推送将不可用")
+	}
+	if groupReaderRepo == nil {
+		logger.Warnf("TalkGroupMsgReaderRepo 未注入，群聊已读将不可用")
+	}
+
+	patchTalkServiceReadDeps(v1.TalkMessage, pushMessage, groupReaderRepo)
+	patchTalkServiceReadDeps(v1.Talk, pushMessage, groupReaderRepo)
+}
+
+func patchTalkServiceReadDeps(handler any, pushMessage *logic.PushMessage, groupReaderRepo *repo.TalkGroupMsgReader) {
+	var ts *service.TalkService
+	switch h := handler.(type) {
+	case *talk.Message:
+		if h == nil {
+			return
+		}
+		if h.PushMessage == nil {
+			h.PushMessage = pushMessage
+		}
+		if h.TalkGroupMsgReaderRepo == nil {
+			h.TalkGroupMsgReaderRepo = groupReaderRepo
+		}
+		ts, _ = h.TalkService.(*service.TalkService)
+	case *talk.Session:
+		if h == nil {
+			return
+		}
+		if h.PushMessage == nil {
+			h.PushMessage = pushMessage
+		}
+		ts, _ = h.TalkService.(*service.TalkService)
+	default:
+		return
+	}
+	if ts == nil {
+		return
+	}
+	if ts.PushMessage == nil {
+		ts.PushMessage = pushMessage
+	}
+	if ts.TalkGroupMsgReaderRepo == nil {
+		ts.TalkGroupMsgReaderRepo = groupReaderRepo
+	}
+}
+
+func bootstrapPushMessage(v1 *web.V1, msg *talk.Message) *logic.PushMessage {
+	if msg != nil && msg.PushMessage != nil {
+		return msg.PushMessage
+	}
+	if v1 == nil {
+		return nil
+	}
+	if v1.User != nil && v1.User.PushMessage != nil {
+		return v1.User.PushMessage
+	}
+	if v1.Talk != nil && v1.Talk.PushMessage != nil {
+		return v1.Talk.PushMessage
+	}
+	if v1.GroupApply != nil && v1.GroupApply.PushMessage != nil {
+		return v1.GroupApply.PushMessage
+	}
+	return nil
+}
+
+func bootstrapTalkGroupMsgReaderRepo(msg *talk.Message) *repo.TalkGroupMsgReader {
+	if msg == nil {
+		return nil
+	}
+	var db *gorm.DB
+	switch {
+	case msg.TalkRecordGroupRepo != nil && msg.TalkRecordGroupRepo.Db != nil:
+		db = msg.TalkRecordGroupRepo.Db
+	case msg.TalkRecordFriendRepo != nil && msg.TalkRecordFriendRepo.Db != nil:
+		db = msg.TalkRecordFriendRepo.Db
+	case msg.GroupMemberRepo != nil && msg.GroupMemberRepo.Db != nil:
+		db = msg.GroupMemberRepo.Db
+	case msg.TalkRecordsService != nil:
+		if trs, ok := msg.TalkRecordsService.(*service.TalkRecordService); ok && trs != nil && trs.Source != nil {
+			db = trs.Source.Db()
+		}
+	}
+	if db == nil {
+		return nil
+	}
+	return repo.NewTalkGroupMsgReader(db)
+}
+
+// patchCommonDeps 补齐 wire_gen 未更新时 Common 的 repo 依赖。
+func patchCommonDeps(v1 *web.V1, userRepo *repo.Users) {
+	if v1 == nil || v1.Common == nil {
+		return
+	}
+	db := bootstrapGormDB(userRepo, v1.Common)
+	if db == nil {
+		logger.Warnf("AppModuleRepo 等 Common 依赖无法 bootstrap：未找到 *gorm.DB")
+		return
+	}
+	if v1.Common.AppModuleRepo == nil {
+		v1.Common.AppModuleRepo = repo.NewAppModule(db)
+	}
+}
+
+func bootstrapGormDB(userRepo *repo.Users, c *v1.Common) *gorm.DB {
+	if userRepo != nil && userRepo.Db != nil {
+		return userRepo.Db
+	}
+	if c != nil && c.UsersRepo != nil && c.UsersRepo.Db != nil {
+		return c.UsersRepo.Db
+	}
+	return nil
+}
+
+func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRoutes, handler *web.Handler) {
+	api.POST("/api/v1/marzban/user", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.CreateUser(c)
+	}))
+
+	router.GET("/api/v1/marzban/user/:id", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.GetUser(c)
+	}))
+	// 第三方支付回调：无 JWT，响应纯文本 success / fail
+	router.POST("/api/v1/merchant/order/hdpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHdpayNotify(c)
+	})
+	router.GET("/api/v1/merchant/order/hdpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHdpayNotify(c)
+	})
+	router.POST("/api/v1/merchant/order/hmpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHmpayNotify(c)
+	})
+	router.GET("/api/v1/merchant/order/hmpay-notify", func(c *gin.Context) {
+		handler.V1.User.MerchantOrderHmpayNotify(c)
+	})
+
+	router.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
 		in := &web2.CommonAppVersionLatestRequest{
 			Platform: strings.ToLower(strings.TrimSpace(c.Query("platform"))),
 		}

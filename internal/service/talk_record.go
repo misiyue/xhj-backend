@@ -70,6 +70,7 @@ func (s *TalkRecordService) FindTalkPrivateRecord(ctx context.Context, uid int, 
 		Nickname:   "",
 		Avatar:     "",
 		IsRevoked:  talkRecordFriendInfo.IsRevoked,
+		IsRead:     talkRecordFriendInfo.IsRead,
 		SendTime:   talkRecordFriendInfo.SendTime,
 		Extra:      talkRecordFriendInfo.Extra,
 		Quote:      talkRecordFriendInfo.Quote,
@@ -200,6 +201,9 @@ func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalk
 		"send_time",
 		"from_id",
 	}
+	if opt.TalkType == entity.ChatPrivateMode {
+		fields = append(fields, "is_read")
+	}
 
 	if opt.TalkType == 1 {
 		// 私聊：先查询 TalkSession 获取 SessionId
@@ -251,6 +255,9 @@ func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalk
 	for i := 0; i < len(items); i++ {
 		items[i].TalkMode = opt.TalkType
 		items[i].ReceiverId = opt.ReceiverId
+		if opt.TalkType == entity.ChatGroupMode {
+			items[i].IsRead = 0
+		}
 	}
 
 	return items, nil
@@ -259,7 +266,18 @@ func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalk
 // FindForwardRecords 获取转发消息记录
 func (s *TalkRecordService) FindForwardRecords(ctx context.Context, uid int, msgIds []string, talkType int) ([]*model.TalkMessageRecord, error) {
 	var (
-		fields = []string{
+		privateFields = []string{
+			"id",
+			"msg_id",
+			"msg_type",
+			"is_revoked",
+			"is_read",
+			"extra",
+			"quote",
+			"send_time",
+			"from_id",
+		}
+		groupFields = []string{
 			"id",
 			"msg_id",
 			"msg_type",
@@ -274,16 +292,19 @@ func (s *TalkRecordService) FindForwardRecords(ctx context.Context, uid int, msg
 
 	if talkType == 2 {
 		query := s.Source.Db().Model(&model.TalkGroupMessage{})
-		query.Select(fields)
+		query.Select(groupFields)
 		query.Where("msg_id in ?", msgIds)
 		query.Order("id asc")
 		if err := query.Scan(&items).Error; err != nil {
 			return nil, err
 		}
+		for i := range items {
+			items[i].IsRead = 0
+		}
 	} else {
 		query := s.Source.Db().Model(&model.TalkUserMessage{})
-		query.Select(fields)
-		query.Where("msg_id in ?", msgIds)
+		query.Select(privateFields)
+		query.Where("msg_id in ? and is_deleted = ?", msgIds, model.No)
 		query.Order("id asc")
 		if err := query.Scan(&items).Error; err != nil {
 			return nil, err

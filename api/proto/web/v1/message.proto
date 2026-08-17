@@ -46,6 +46,14 @@ service Message {
       body: "*"
     };
   }
+
+  // 群消息已读/未读成员详情
+  rpc MessageReaders(MessageReadersRequest) returns (MessageReadersResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/message/readers"
+      body: "*"
+    };
+  }
 }
 
 message MessageRevokeRequest{
@@ -115,4 +123,21 @@ message MessageRecord{
   string send_time = 9 [(google.api.field_behavior) = REQUIRED];
   string extra = 10 [(google.api.field_behavior) = REQUIRED];
   string quote = 12 [(google.api.field_behavior) = REQUIRED];
+  int32 is_read = 13;
+  int32 reader_count = 14;
+}
+
+message MessageReadersRequest {
+  string msg_id = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+message MessageReaderUser {
+  int32 user_id = 1;
+  string nickname = 2;
+  string avatar = 3;
+}
+
+message MessageReadersResponse {
+  repeated MessageReaderUser reader = 1;
+  repeated MessageReaderUser unreader = 2;
 }

@@ -9,10 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/filesystem"
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/strutil"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
 	"github.com/gzydong/go-chat/internal/repository/cache"
@@ -25,16 +27,18 @@ import (
 var _ web.IMessageHandler = (*Message)(nil)
 
 type Message struct {
-	TalkService          service.ITalkService
-	AuthService          service.IAuthService
-	RedEnvelopeService   service.IRedEnvelopeService
-	Filesystem           filesystem.IFilesystem
-	GroupMemberRepo      *repo.GroupMember
-	TalkRecordFriendRepo *repo.TalkUserMessage
-	TalkRecordGroupRepo  *repo.TalkGroupMessage
-	TalkRecordsService   service.ITalkRecordService
-	GroupMemberService   service.IGroupMemberService
-	MentionStorage       *cache.MentionStorage
+	TalkService            service.ITalkService
+	AuthService            service.IAuthService
+	RedEnvelopeService     service.IRedEnvelopeService
+	Filesystem             filesystem.IFilesystem
+	GroupMemberRepo        *repo.GroupMember
+	TalkRecordFriendRepo   *repo.TalkUserMessage
+	TalkRecordGroupRepo    *repo.TalkGroupMessage
+	TalkGroupMsgReaderRepo *repo.TalkGroupMsgReader
+	PushMessage            *logic.PushMessage
+	TalkRecordsService     service.ITalkRecordService
+	GroupMemberService     service.IGroupMemberService
+	MentionStorage         *cache.MentionStorage
 }
 
 // Records 获取会话消息记录
@@ -96,8 +100,13 @@ func (m *Message) Records(ctx context.Context, in *web.MessageRecordsRequest) (*
 		cursor = records[length-1].Id
 	}
 
+	var readerMap map[string][]int
+	if in.TalkMode == entity.ChatGroupMode {
+		readerMap = m.loadGroupReaderMap(ctx, records)
+	}
+
 	// 补充红包消息的状态信息
-	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
+	items := m.enrichRedEnvelopeStatus(ctx, uid, int(in.TalkMode), records, readerMap)
 
 	return &web.MessageRecordsResponse{
 		Items:  items,
@@ -169,8 +178,13 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 		cursor = records[length-1].Id
 	}
 
+	var readerMap map[string][]int
+	if in.TalkMode == entity.ChatGroupMode {
+		readerMap = m.loadGroupReaderMap(ctx, records)
+	}
+
 	// 补充红包消息的状态信息
-	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
+	items := m.enrichRedEnvelopeStatus(ctx, uid, int(in.TalkMode), records, readerMap)
 
 	return &web.MessageHistoryRecordsResponse{
 		Items:  items,
@@ -197,16 +211,15 @@ func (m *Message) ForwardRecords(ctx context.Context, in *web.MessageForwardReco
 		return nil, err
 	}
 
-	// 补充红包消息的状态信息
-	items := m.enrichRedEnvelopeStatus(ctx, uid, records)
+	items := m.enrichRedEnvelopeStatus(ctx, uid, int(in.TalkMode), records, nil)
 
 	return &web.MessageRecordsClearResponse{
 		Items: items,
 	}, nil
 }
 
-// enrichRedEnvelopeStatus 补充红包消息的状态信息
-func (m *Message) enrichRedEnvelopeStatus(ctx context.Context, userId int, records []*model.TalkMessageRecord) []*web.MessageRecord {
+// enrichRedEnvelopeStatus 补充红包消息的状态信息；readerMap 为群聊已读用户（msg_id -> user_ids）
+func (m *Message) enrichRedEnvelopeStatus(ctx context.Context, userId int, talkMode int, records []*model.TalkMessageRecord, readerMap map[string][]int) []*web.MessageRecord {
 	return lo.Map(records, func(item *model.TalkMessageRecord, _ int) *web.MessageRecord {
 		extra := item.Extra
 		if item.IsRevoked == model.Yes {
@@ -240,19 +253,133 @@ func (m *Message) enrichRedEnvelopeStatus(ctx context.Context, userId int, recor
 			}
 		}
 
+		var readerCount int32
+		if talkMode == entity.ChatPrivateMode {
+			readerCount = int32(item.IsRead)
+		} else if readerMap != nil {
+			readerCount = int32(len(readerMap[item.MsgId]))
+		}
+
 		return &web.MessageRecord{
-			FromId:     int32(item.FromId),
-			MsgId:      item.MsgId,
-			Sequence:   int32(item.Id),
-			MsgType:    int32(item.MsgType),
-			Nickname:   item.Nickname,
-			Avatar:     item.Avatar,
-			IsRevoked:  int32(item.IsRevoked),
-			SendTime:   item.SendTime.Format(time.DateTime),
-			Extra:      extra,
-			Quote:      item.Quote,
+			FromId:      int32(item.FromId),
+			MsgId:       item.MsgId,
+			Sequence:    int32(item.Id),
+			MsgType:     int32(item.MsgType),
+			Nickname:    item.Nickname,
+			Avatar:      item.Avatar,
+			IsRevoked:   int32(item.IsRevoked),
+			IsRead:      int32(item.IsRead),
+			SendTime:    item.SendTime.Format(time.DateTime),
+			Extra:       extra,
+			Quote:       item.Quote,
+			ReaderCount: readerCount,
 		}
 	})
+}
+
+// MessageReaders 查询群消息已读/未读成员详情
+//
+//	@Summary		群消息已读未读成员
+//	@Description	根据 msg_id 查询 talk_group_msg_reader 与群成员，返回已读/未读用户列表
+//	@Tags			消息
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.MessageReadersRequest	true	"请求参数"
+//	@Success		200		{object}	web.MessageReadersResponse
+//	@Router			/api/v1/message/readers [post]
+//	@Security		Bearer
+func (m *Message) MessageReaders(ctx context.Context, in *web.MessageReadersRequest) (*web.MessageReadersResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if in == nil || in.MsgId == "" {
+		return nil, errorx.NewInvalidParams("msg_id 不能为空")
+	}
+	if m.TalkRecordGroupRepo == nil || m.TalkGroupMsgReaderRepo == nil || m.GroupMemberRepo == nil {
+		return nil, errorx.New(500, "服务未就绪")
+	}
+
+	record, err := m.TalkRecordGroupRepo.FindByMsgId(ctx, in.MsgId)
+	if err != nil {
+		return nil, err
+	}
+	if record == nil || record.GroupId <= 0 {
+		return nil, errorx.NewInvalidParams("消息不存在")
+	}
+	if !m.GroupMemberRepo.IsMember(ctx, record.GroupId, uid, false) {
+		return nil, entity.ErrPermissionDenied
+	}
+
+	readerMap, err := m.TalkGroupMsgReaderRepo.MapReaderUserIDsByMsgIDs(ctx, []string{in.MsgId})
+	if err != nil {
+		return nil, err
+	}
+	readerIds := readerMap[in.MsgId]
+
+	readSet := make(map[int]struct{}, len(readerIds))
+	for _, id := range readerIds {
+		readSet[id] = struct{}{}
+	}
+
+	members := m.GroupMemberRepo.GetMembers(ctx, record.GroupId)
+	memberByID := make(map[int]*model.MemberItem, len(members))
+	for _, mem := range members {
+		if mem == nil {
+			continue
+		}
+		memberByID[mem.UserId] = mem
+	}
+
+	reader := make([]*web.MessageReaderUser, 0, len(readerIds))
+	for _, id := range readerIds {
+		if u := m.messageReaderUser(ctx, memberByID, id); u != nil {
+			reader = append(reader, u)
+		}
+	}
+
+	unreader := make([]*web.MessageReaderUser, 0)
+	for _, mem := range members {
+		if mem == nil || mem.UserId == record.FromId {
+			continue
+		}
+		if _, ok := readSet[mem.UserId]; ok {
+			continue
+		}
+		unreader = append(unreader, &web.MessageReaderUser{
+			UserId:   int32(mem.UserId),
+			Nickname: mem.Nickname,
+			Avatar:   mem.Avatar,
+		})
+	}
+
+	return &web.MessageReadersResponse{
+		Reader:   reader,
+		Unreader: unreader,
+	}, nil
+}
+
+func (m *Message) messageReaderUser(ctx context.Context, memberByID map[int]*model.MemberItem, userId int) *web.MessageReaderUser {
+	if mem, ok := memberByID[userId]; ok {
+		return &web.MessageReaderUser{
+			UserId:   int32(mem.UserId),
+			Nickname: mem.Nickname,
+			Avatar:   mem.Avatar,
+		}
+	}
+	if m.TalkRecordGroupRepo == nil || m.TalkRecordGroupRepo.Db == nil {
+		return nil
+	}
+	var user model.Users
+	if err := m.TalkRecordGroupRepo.Db.WithContext(ctx).
+		Model(&model.Users{}).
+		Select("id", "nickname", "avatar").
+		Where("id = ?", userId).
+		First(&user).Error; err != nil {
+		return nil
+	}
+	return &web.MessageReaderUser{
+		UserId:   int32(user.Id),
+		Nickname: user.Nickname,
+		Avatar:   user.Avatar,
+	}
 }
 
 // Revoke 撤回消息接口（HTTP 入口）
@@ -493,4 +620,27 @@ func (m *Message) GetAllMentions(ctx context.Context) (*AllMentionsResponse, err
 	return &AllMentionsResponse{
 		Groups: groups,
 	}, nil
+}
+
+func (m *Message) loadGroupReaderMap(ctx context.Context, records []*model.TalkMessageRecord) map[string][]int {
+	if len(records) == 0 || m.TalkGroupMsgReaderRepo == nil {
+		return nil
+	}
+
+	msgIds := make([]string, 0, len(records))
+	for _, rec := range records {
+		if rec != nil && rec.MsgId != "" {
+			msgIds = append(msgIds, rec.MsgId)
+		}
+	}
+	if len(msgIds) == 0 {
+		return nil
+	}
+
+	readerMap, err := m.TalkGroupMsgReaderRepo.MapReaderUserIDsByMsgIDs(ctx, msgIds)
+	if err != nil {
+		logger.Errorf("map group reader user ids err: %s", err.Error())
+		return nil
+	}
+	return readerMap
 }

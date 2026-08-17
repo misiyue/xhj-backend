@@ -3,24 +3,31 @@ package web;
 
 option go_package = "web/v1;web";
 
-import "buf/validate/validate.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 
 // 邀请码服务
 service Invite {
-  // 生成邀请码
-  rpc GenerateInviteCode(InviteGenerateRequest) returns (InviteGenerateResponse) {
+  // 获取我的邀请码（users.invite_code，为空则自动生成）
+  rpc GetMyInviteCode(InviteCodeGetRequest) returns (InviteCodeGetResponse) {
     option (google.api.http) = {
-      post: "/api/v1/invite/generate"
+      post: "/api/v1/invite/code"
       body: "*"
     };
   }
 
-  // 获取我的邀请码列表
-  rpc GetMyInviteCodes(InviteListRequest) returns (InviteListResponse) {
+  // 获取我的邀请码列表（仅返回 users.invite_code 第一条，未生成则 items 为空）
+  rpc ListInviteCodes(InviteListRequest) returns (InviteListResponse) {
     option (google.api.http) = {
       post: "/api/v1/invite/list"
+      body: "*"
+    };
+  }
+
+  // 生成邀请码（users.invite_code；已存在则直接返回 code）
+  rpc GenerateInviteCode(InviteGenerateRequest) returns (InviteGenerateResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/invite/generate"
       body: "*"
     };
   }
@@ -29,14 +36,6 @@ service Invite {
   rpc GetInviteStats(InviteStatsRequest) returns (InviteStatsResponse) {
     option (google.api.http) = {
       post: "/api/v1/invite/stats"
-      body: "*"
-    };
-  }
-
-  // 禁用邀请码
-  rpc DisableInviteCode(InviteDisableRequest) returns (InviteDisableResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/invite/disable"
       body: "*"
     };
   }
@@ -50,38 +49,36 @@ service Invite {
   }
 }
 
-// 生成邀请码请求
-message InviteGenerateRequest {
-  // 有效期天数，默认365天
-  int32 expire_days = 1;
-  // 最大使用次数，默认1次
-  int32 max_usage = 2;
-}
+message InviteCodeGetRequest {}
 
-// 生成邀请码响应
-message InviteGenerateResponse {
+message InviteCodeGetResponse {
   string code = 1 [(google.api.field_behavior) = REQUIRED];
-  string expire_at = 2 [(google.api.field_behavior) = REQUIRED];
-  int32 max_usage_count = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
-// 获取邀请码列表请求
 message InviteListRequest {}
 
-// 获取邀请码列表响应
-message InviteListResponse {
-  repeated InviteCodeItem items = 1;
-}
-
-// 邀请码信息
 message InviteCodeItem {
   int32 id = 1;
   string code = 2;
-  int32 status = 3; // 0:可用 1:已使用 2:已禁用
+  int32 status = 3;
   string expire_at = 4;
   int32 max_usage_count = 5;
   int32 usage_count = 6;
   string created_at = 7;
+}
+
+message InviteListResponse {
+  repeated InviteCodeItem items = 1;
+}
+
+message InviteGenerateRequest {
+  // 兼容旧参数，users.invite_code 模式下忽略
+  int32 expire_days = 1;
+  int32 max_usage = 2;
+}
+
+message InviteGenerateResponse {
+  string code = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 获取邀请统计请求
@@ -89,19 +86,8 @@ message InviteStatsRequest {}
 
 // 获取邀请统计响应
 message InviteStatsResponse {
-  int32 total_codes = 1; // 总邀请码数
-  int32 available_codes = 2; // 可用邀请码数
-  int32 used_codes = 3; // 已使用邀请码数
-  int32 total_invitations = 4; // 总邀请人数
+  int32 total_invitations = 1; // 总邀请人数
 }
-
-// 禁用邀请码请求
-message InviteDisableRequest {
-  string code = 1 [(buf.validate.field).string.min_len = 1, (google.api.field_behavior) = REQUIRED];
-}
-
-// 禁用邀请码响应
-message InviteDisableResponse {}
 
 // 邀请好友列表请求
 message InviteFriendListRequest {

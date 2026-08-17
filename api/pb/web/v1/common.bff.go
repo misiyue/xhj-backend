@@ -23,6 +23,16 @@ type ICommonHandler interface {
 	ExploreList(ctx context.Context, in *CommonExploreListRequest) (*CommonExploreListResponse, error)
 	// 字典配置：按 key 批量获取（仅 status=启用），按 type 将 value 解析为 JSON 相应类型
 	AppDictGet(ctx context.Context, in *CommonAppDictGetRequest) (*CommonAppDictGetResponse, error)
+	// 功能模块列表
+	AppModules(ctx context.Context, in *CommonAppModulesRequest) (*CommonAppModulesResponse, error)
+	// 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
+	NewsList(ctx context.Context, in *CommonNewsListRequest) (*CommonNewsListResponse, error)
+	// 火箭资讯详情（仅已发布；含 content、source_url）
+	NewsDetail(ctx context.Context, in *CommonNewsDetailRequest) (*CommonNewsDetailResponse, error)
+	// 资讯分类列表（仅显示 status=1；按 sort 倒序；不分页）
+	NewsCategoryList(ctx context.Context, in *CommonNewsCategoryListRequest) (*CommonNewsCategoryListResponse, error)
+	// 资讯阅读上报（未登录直接返回；已登录记 pv/uv，同用户同资讯 30s 内去重）
+	NewsView(ctx context.Context, in *CommonNewsViewRequest) (*CommonNewsViewResponse, error)
 }
 
 // RegisterCommonHandler 注册服务路由处理器
@@ -81,6 +91,51 @@ func RegisterCommonHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.AppDictGet(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/app-modules", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonAppModulesRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.AppModules(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/news-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsList(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/news-detail", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsDetailRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsDetail(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/category-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsCategoryListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsCategoryList(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/common/news-view", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in CommonNewsViewRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.NewsView(ctx.Request.Context(), &in)
 	}))
 
 }

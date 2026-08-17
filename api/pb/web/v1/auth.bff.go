@@ -14,7 +14,7 @@ type IAuthHandler interface {
 
 	// 登录接口
 	Login(ctx context.Context, in *AuthLoginRequest) (*AuthLoginResponse, error)
-	// 图形验证码（登录前获取）
+	// 图形验证码（登录页先请求本接口获取 voucher &#43; 图片 base64）
 	Captcha(ctx context.Context, in *AuthCaptchaRequest) (*AuthCaptchaResponse, error)
 	// 注册接口
 	Register(ctx context.Context, in *AuthRegisterRequest) (*AuthRegisterResponse, error)
@@ -32,6 +32,8 @@ type IAuthHandler interface {
 	RefreshToken(ctx context.Context, in *AuthRefreshTokenRequest) (*AuthRefreshTokenResponse, error)
 	// 退出登录接口
 	Logout(ctx context.Context, in *AuthLogoutRequest) (*AuthLogoutResponse, error)
+	// 注销账号（需登录；校验当前绑定邮箱的验证码）
+	Cancel(ctx context.Context, in *AuthCancelRequest) (*AuthCancelResponse, error)
 }
 
 // RegisterAuthHandler 注册服务路由处理器
@@ -135,6 +137,15 @@ func RegisterAuthHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.Logout(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/auth/cancel", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in AuthCancelRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.Cancel(ctx.Request.Context(), &in)
 	}))
 
 }

@@ -9,8 +9,10 @@ import (
 	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
 	"github.com/gzydong/go-chat/internal/repository/cache"
+	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
 )
@@ -252,9 +254,39 @@ func (s *Session) SessionDetail(ctx context.Context, in *web.TalkSessionDetailRe
 	}
 
 	return &web.TalkSessionDetailResponse{
-		IsTop:     int32(detail.IsTop),
-		IsDisturb: int32(detail.IsDisturb),
+		IsTop:      int32(detail.IsTop),
+		IsDisturb:  int32(detail.IsDisturb),
+		RetainDays: int32(detail.RetainDays),
+		SessionId:  int32(linkSessionID(detail.Id, detail.SessionId)),
 	}, nil
+}
+
+func linkSessionID(id, sessionID int) int {
+	if sessionID > 0 {
+		return sessionID
+	}
+	return id
+}
+
+func linkSessionId(detail *model.TalkSession) int {
+	if detail == nil {
+		return 0
+	}
+	return linkSessionID(detail.Id, detail.SessionId)
+}
+
+// SessionSetRetainDays 设置私聊消息保留天数（按 session_id 同步己方与对方）
+func (s *Session) SessionSetRetainDays(ctx context.Context, in *web.TalkSessionSetRetainDaysRequest) (*web.TalkSessionSetRetainDaysResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	retainDays, err := s.TalkSessionService.SetRetainDays(ctx, &service.TalkSessionSetRetainDaysOpt{
+		UserId:        uid,
+		LinkSessionId: int(in.GetSessionId()),
+		RetainDays:    int(in.GetRetainDays()),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &web.TalkSessionSetRetainDaysResponse{RetainDays: int32(retainDays)}, nil
 }
 
 // SessionList 会话列表接口
@@ -315,6 +347,8 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 			UpdatedAt:     timeutil.FormatDatetime(item.UpdatedAt),
 			UnreadNum:     int32(s.UnreadStorage.Get(ctx, uid, item.TalkMode, item.ReceiverId)),
 			AtMeUserCount: atMeUserCount,
+			SessionId:     int32(linkSessionID(item.Id, item.SessionId)),
+			RetainDays:    int32(item.RetainDays),
 		}
 
 		if item.TalkMode == entity.ChatPrivateMode {
@@ -352,6 +386,12 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 func (s *Session) SessionClearUnreadNum(ctx context.Context, in *web.TalkSessionClearUnreadNumRequest) (*web.TalkSessionClearUnreadNumResponse, error) {
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
 	s.UnreadStorage.Reset(ctx, uid, int(in.TalkMode), int(in.ReceiverId))
+
+	if s.TalkService != nil {
+		if err := s.TalkService.ClearSessionRead(ctx, uid, int(in.TalkMode), int(in.ReceiverId)); err != nil {
+			logger.Errorf("clear session read err: user_id=%d talk_mode=%d receiver_id=%d %s", uid, in.TalkMode, in.ReceiverId, err.Error())
+		}
+	}
 
 	if s.PushMessage != nil {
 		_ = s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{

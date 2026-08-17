@@ -73,6 +73,13 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 		return err
 	}
 
+	memberIds := s.GroupMemberRepo.GetMemberIds(ctx, item.GroupId)
+	for _, uid := range memberIds {
+		if uid != item.FromId {
+			s.tryOneSignalUserChat(ctx, uid, entity.ChatGroupMode, item.GroupId)
+		}
+	}
+
 	// 通过 PushMessage 将消息投递到 ImTopicChat 主题，
 	// comet / 长连接服务会订阅该主题，并把消息推送给在线客户端
 	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
@@ -85,9 +92,6 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 	if err != nil {
 		logger.Errorf("CreateGroupMessage publish message error:%s", err.Error())
 	}
-
-	// 取出当前群的所有成员，用于维护未读数 & @ 提醒
-	memberIds := s.GroupMemberRepo.GetMemberIds(ctx, item.GroupId)
 
 	pipe := s.Source.Redis().Pipeline()
 	for _, uid := range memberIds {

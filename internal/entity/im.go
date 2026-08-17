@@ -85,6 +85,14 @@ type ImMessageRevokePayload struct {
 	Remark     string `json:"remark"`
 }
 
+// ImMessageReadPayload im.message.read - 消息已读（私聊/群聊）
+type ImMessageReadPayload struct {
+	TalkMode   int      `json:"talk_mode"`
+	FromId     int      `json:"from_id"`     // 本次阅读者 user_id
+	ReceiverId int      `json:"receiver_id"` // 私聊：对方 user_id；群聊：群 ID
+	MsgIds     []string `json:"msg_ids"`
+}
+
 // ImSessionUnreadClearedPayload im.session.unread.cleared
 type ImSessionUnreadClearedPayload struct {
 	UserId     int `json:"user_id"`
@@ -113,4 +121,14 @@ type ImMessageMentionPayload struct {
 	MsgIds    []string `json:"msg_ids"`    // 提及消息ID列表（按时间倒序，最新的在前）
 	Count     int      `json:"count"`      // 未读提及消息数量
 	AtAll     bool     `json:"at_all"`     // 是否@所有人
+}
+
+// ImSysNoticePayload im.sys.notice - 系统通知推送
+type ImSysNoticePayload struct {
+	Id        int    `json:"id"`
+	UserId    int    `json:"user_id"`
+	Title     string `json:"title"`
+	Content   string `json:"content"`
+	Url       string `json:"url"`
+	CreatedAt string `json:"created_at"`
 }

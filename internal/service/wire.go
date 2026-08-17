@@ -89,6 +89,9 @@ var ProviderSet = wire.NewSet(
 	wire.Struct(new(MockKYCService), "*"),
 	wire.Bind(new(IKYCService), new(*MockKYCService)),
 
+	wire.Struct(new(MarzbanService), "*"),
+	wire.Bind(new(IMarzbanService), new(*MarzbanService)),
+
 	wire.Struct(new(GroupRobotService), "*"),
 	wire.Bind(new(IGroupRobotService), new(*GroupRobotService)),
 

@@ -12,8 +12,10 @@ import (
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/email"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
+	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
@@ -23,16 +25,21 @@ import (
 var _ web.ICommonHandler = (*Common)(nil)
 
 type Common struct {
-	Config          *config.Config
-	UsersRepo       *repo.Users
-	AppVersionRepo  *repo.AppVersion
-	AppExploreRepo  *repo.AppExplore
-	AppDictRepo     *repo.AppDict
-	SmsService      service.ISmsService
-	EmailService    service.IEmailService
-	UserService     service.IUserService
-	EmailClient     *email.Client
-	TemplateService service.ITemplateService
+	Config              *config.Config
+	UsersRepo           *repo.Users
+	AppVersionRepo      *repo.AppVersion
+	AppExploreRepo      *repo.AppExplore
+	AppModuleRepo       *repo.AppModule
+	AppDictRepo         *repo.AppDict
+	AppNewsRepo         *repo.AppNews
+	AppNewsCategoryRepo *repo.AppNewsCategory
+	AppNewsViewRepo     *repo.AppNewsView
+	AppNewsViewCache    *cache.AppNewsViewStorage
+	SmsService          service.ISmsService
+	EmailService        service.IEmailService
+	UserService         service.IUserService
+	EmailClient         *email.Client
+	TemplateService     service.ITemplateService
 }
 
 // SendSms 发送短信验证码接口
@@ -198,12 +205,12 @@ func (c *Common) AppVersionLatest(ctx context.Context, in *web.CommonAppVersionL
 	}, nil
 }
 
-// ExploreList 探索位列表（仅 is_open=1）
-func (c *Common) ExploreList(ctx context.Context, _ *web.CommonExploreListRequest) (*web.CommonExploreListResponse, error) {
+// ExploreList 探索位列表（仅 is_open=1；支持 positions 逗号筛选）
+func (c *Common) ExploreList(ctx context.Context, in *web.CommonExploreListRequest) (*web.CommonExploreListResponse, error) {
 	if c.AppExploreRepo == nil {
 		return nil, errors.New("AppExploreRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	list, err := c.AppExploreRepo.ListOpen(ctx)
+	list, err := c.AppExploreRepo.ListOpen(ctx, in.GetPositions())
 	if err != nil {
 		return nil, err
 	}
@@ -216,9 +223,178 @@ func (c *Common) ExploreList(ctx context.Context, _ *web.CommonExploreListReques
 			Url:      row.Url,
 			Position: row.Position,
 			Sort:     int32(row.Sort),
+			Digest:   row.Digest,
 		})
 	}
 	return out, nil
+}
+
+// AppModules 功能模块列表
+func (c *Common) AppModules(ctx context.Context, _ *web.CommonAppModulesRequest) (*web.CommonAppModulesResponse, error) {
+	if c.AppModuleRepo == nil {
+		return nil, errors.New("AppModuleRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+	list, err := c.AppModuleRepo.ListAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := &web.CommonAppModulesResponse{Items: make([]*web.CommonAppModulesResponse_Item, 0, len(list))}
+	for _, row := range list {
+		out.Items = append(out.Items, &web.CommonAppModulesResponse_Item{
+			Id:     int32(row.Id),
+			Code:   row.Code,
+			Title:  row.Title,
+			IsOpen: int32(row.IsOpen),
+		})
+	}
+	return out, nil
+}
+
+// NewsList 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
+func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*web.CommonNewsListResponse, error) {
+	if c.AppNewsRepo == nil {
+		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	page := int(in.GetPage())
+	if page <= 0 {
+		page = 1
+	}
+	pageSize := int(in.GetPageSize())
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	total, list, err := c.AppNewsRepo.ListPublished(ctx, page, pageSize, int(in.GetCategoryId()))
+	if err != nil {
+		return nil, err
+	}
+
+	out := &web.CommonNewsListResponse{
+		Items: make([]*web.CommonNewsListResponse_Item, 0, len(list)),
+		Total: int32(total),
+		Paginate: &web.Paginate{
+			Page:  int32(page),
+			Size:  int32(pageSize),
+			Total: int32(total),
+		},
+	}
+	for _, row := range list {
+		item := &web.CommonNewsListResponse_Item{
+			Id:         int32(row.Id),
+			Title:      row.Title,
+			CategoryId: int32(row.CategoryId),
+			Cover:      row.Cover,
+			Status:     int32(row.Status),
+			CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
+			Pv:         int32(row.Pv),
+			Uv:         int32(row.Uv),
+			Content:    row.Content,
+		}
+		if row.TypeId != nil {
+			item.TypeId = int32(*row.TypeId)
+		}
+		if row.UploadTime != nil {
+			item.UploadTime = timeutil.FormatDatetime(*row.UploadTime)
+		}
+		if row.PublishTime != nil {
+			item.PublishTime = timeutil.FormatDatetime(*row.PublishTime)
+		}
+		out.Items = append(out.Items, item)
+	}
+	return out, nil
+}
+
+// NewsDetail 火箭资讯详情（仅已发布；含 content、source_url）
+func (c *Common) NewsDetail(ctx context.Context, in *web.CommonNewsDetailRequest) (*web.CommonNewsDetailResponse, error) {
+	if c.AppNewsRepo == nil {
+		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	row, err := c.AppNewsRepo.FindPublishedById(ctx, int(in.GetId()))
+	if err != nil {
+		return nil, err
+	}
+	if row == nil || row.Id == 0 {
+		return nil, entity.ErrDataNotFound
+	}
+
+	out := &web.CommonNewsDetailResponse{
+		Id:         int32(row.Id),
+		Title:      row.Title,
+		CategoryId: int32(row.CategoryId),
+		Content:    row.Content,
+		Cover:      row.Cover,
+		SourceUrl:  row.SourceURL,
+		Status:     int32(row.Status),
+		CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
+		Pv:         int32(row.Pv),
+		Uv:         int32(row.Uv),
+	}
+	if row.TypeId != nil {
+		out.TypeId = int32(*row.TypeId)
+	}
+	if row.UploadTime != nil {
+		out.UploadTime = timeutil.FormatDatetime(*row.UploadTime)
+	}
+	if row.PublishTime != nil {
+		out.PublishTime = timeutil.FormatDatetime(*row.PublishTime)
+	}
+	return out, nil
+}
+
+// NewsCategoryList 资讯分类列表（status=1，sort 倒序，不分页）
+func (c *Common) NewsCategoryList(ctx context.Context, in *web.CommonNewsCategoryListRequest) (*web.CommonNewsCategoryListResponse, error) {
+	if c.AppNewsCategoryRepo == nil {
+		return nil, errors.New("AppNewsCategoryRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	list, err := c.AppNewsCategoryRepo.ListVisibleByCollect(ctx, in.GetCollect())
+	if err != nil {
+		return nil, err
+	}
+
+	out := &web.CommonNewsCategoryListResponse{
+		Items: make([]*web.CommonNewsCategoryListResponse_Item, 0, len(list)),
+	}
+	for _, row := range list {
+		out.Items = append(out.Items, &web.CommonNewsCategoryListResponse_Item{
+			Id:      int32(row.Id),
+			Title:   row.Title,
+			Collect: row.Collect,
+			Status:  int32(row.Status),
+			Sort:    int32(row.Sort),
+		})
+	}
+	return out, nil
+}
+
+// NewsView 资讯阅读上报：未登录直接返回；已登录写 pv/uv，同用户同资讯 Redis 30s 去重
+func (c *Common) NewsView(ctx context.Context, in *web.CommonNewsViewRequest) (*web.CommonNewsViewResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if uid <= 0 {
+		return &web.CommonNewsViewResponse{}, nil
+	}
+	if c.AppNewsViewRepo == nil || c.AppNewsViewCache == nil {
+		return nil, errors.New("AppNewsView 依赖未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	newsId := int(in.GetNewsId())
+	ok, err := c.AppNewsViewCache.Acquire(ctx, newsId, uid)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return &web.CommonNewsViewResponse{}, nil
+	}
+
+	if err := c.AppNewsViewRepo.RecordView(ctx, newsId, uid); err != nil {
+		return nil, err
+	}
+	return &web.CommonNewsViewResponse{}, nil
 }
 
 func dedupeAppDictKeys(keys []string) []string {
