@@ -10,16 +10,18 @@ import (
 )
 
 type V1 struct {
-	Common       *v1.Common
-	Auth         *v1.Auth
-	User         *v1.User
-	Organize     *v1.Organize
-	Talk         *talk.Session
-	TalkMessage  *talk.Message
-	Emoticon     *v1.Emoticon
-	Upload       *v1.Upload
-	STS          *v1.STS
-	Yunxin       *v1.Yunxin
+	Common      *v1.Common
+	Auth        *v1.Auth
+	User        *v1.User
+	Organize    *v1.Organize
+	Talk        *talk.Session
+	TalkMessage *talk.Message
+	Emoticon    *v1.Emoticon
+	Upload      *v1.Upload
+	STS         *v1.STS
+	Yunxin      *v1.Yunxin
+	// Trtc is retained for legacy clients. New calls use Yunxin.
+	Trtc         *v1.Trtc
 	Group        *group.Group
 	GroupNotice  *group.Notice
 	GroupApply   *group.Apply

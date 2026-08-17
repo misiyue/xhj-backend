@@ -191,6 +191,12 @@ yunxin:
   # 私有化部署或测试可覆盖，公有云留空。
   server_api_base_url: ""
 
+# TRTC Config（历史配置保留，新的音视频通话不会读取此配置）
+# 请勿为云信通话填写或启用此处密钥；保留它仅用于旧部署配置的兼容与迁移参考。
+trtc:
+  sdk_app_id: 1400000000
+  secret_key: "your_secret_key_here"
+
 # 钱包平台配置
 wallet:
   base_url: "https://example.com/api"

@@ -24,6 +24,7 @@ var ProviderSet = wire.NewSet(
 	wire.Struct(new(v1.GroupRobot), "*"),
 	wire.Struct(new(v1.Marzban), "*"),
 	v1.NewYunxin,
+	v1.NewTrtc,
 
 	wire.Struct(new(contact.Contact), "*"),
 	wire.Struct(new(contact.Apply), "*"),

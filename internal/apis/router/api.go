@@ -361,6 +361,11 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 	api.GET("/api/v1/yunxin/credentials", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.Yunxin.Credentials(c)
 	}))
+	// Legacy compatibility only. The current Android/iOS call flow uses
+	// /yunxin/credentials and never requests a TRTC UserSig.
+	api.GET("/api/v1/trtc/user-sig", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Trtc.GetSignature(c)
+	}))
 
 	// KYC routes
 	api.POST("/api/v1/kyc/status", HandlerFunc(resp, func(c *gin.Context) (any, error) {

@@ -21,6 +21,7 @@ type Config struct {
 	Nsq        *Nsq        `json:"nsq" yaml:"nsq"`
 	OAuth      *OAuth      `json:"oauth" yaml:"oauth"`
 	Yunxin     *Yunxin     `json:"yunxin" yaml:"yunxin"`
+	Trtc       *Trtc       `json:"trtc" yaml:"trtc"`
 	Wallet     *Wallet     `json:"wallet" yaml:"wallet"`
 	Marzban    *Marzban    `json:"marzban" yaml:"marzban"`
 	Hdpay      *Hdpay      `json:"hdpay" yaml:"hdpay"`
@@ -44,6 +45,12 @@ type Yunxin struct {
 	// ServerAPIBaseURL is primarily useful for private deployments and tests.
 	// Leave empty to use the public Yunxin NIM server API.
 	ServerAPIBaseURL string `json:"server_api_base_url" yaml:"server_api_base_url"`
+}
+
+// Trtc is retained for legacy configuration compatibility. New calls use Yunxin.
+type Trtc struct {
+	SdkAppId  int    `json:"sdk_app_id" yaml:"sdk_app_id"`
+	SecretKey string `json:"secret_key" yaml:"secret_key"`
 }
 
 func New(filename string) *Config {

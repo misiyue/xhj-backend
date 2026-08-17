@@ -302,6 +302,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	}
 	yunxinCredential := repo.NewYunxinCredential(db)
 	yunxin := v1.NewYunxin(c, users, yunxinCredential)
+	trtc := v1.NewTrtc(c)
 	groupNotice := repo.NewGroupNotice(db)
 	contactService := &service.ContactService{
 		Source:      source,
@@ -497,6 +498,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		Upload:       upload,
 		STS:          sts,
 		Yunxin:       yunxin,
+		Trtc:         trtc,
 		Group:        groupGroup,
 		GroupNotice:  notice,
 		GroupApply:   apply,
