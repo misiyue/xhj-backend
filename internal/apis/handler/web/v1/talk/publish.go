@@ -11,6 +11,7 @@ import (
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/service"
+	webv1 "github.com/gzydong/go-chat/internal/apis/handler/web/v1"
 	"github.com/gzydong/go-chat/internal/service/message"
 )
 
@@ -28,6 +29,7 @@ var mapping map[string]func(ctx *gin.Context) error
 type Publish struct {
 	AuthService    service.IAuthService
 	MessageService message.IService
+	Yunxin         *webv1.Yunxin
 }
 
 type BaseMessageRequest struct {
@@ -491,6 +493,11 @@ func (c *Publish) onSendRTCCall(ctx *gin.Context) error {
 	}
 
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
+	if c.Yunxin != nil {
+		if err := c.Yunxin.EnsureUserAccount(ctx.Request.Context(), in.ReceiverId); err != nil {
+			return err
+		}
+	}
 	err := c.MessageService.CreateRTCCallMessage(ctx.Request.Context(), message.CreateRTCCallMessage{
 		MsgId:      in.MsgId,
 		TalkMode:   in.TalkMode,

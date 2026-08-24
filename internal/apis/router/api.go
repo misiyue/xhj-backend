@@ -110,6 +110,7 @@ func RegisterWebRoute(conf *config.Config, router *gin.Engine, handler *web.Hand
 	web2.RegisterMessageHandler(api, resp, handler.V1.TalkMessage)
 	patchTalkMessageDeps(handler.V1)
 	patchCommonDeps(handler.V1, handler.UserRepo)
+	patchPublishDeps(handler.V1)
 
 	// Invite 需要 *repo.Users：子 Handler 若未在 wire_gen 里注入 UsersRepo 会为空指针。
 	// 顶层 web.Handler.UserRepo 与之一致，此处补齐引用，避免 /api/v1/invite/friends 空指针 panic。
@@ -268,6 +269,15 @@ func patchCommonDeps(v1 *web.V1, userRepo *repo.Users) {
 	}
 	if v1.Common.AppModuleRepo == nil {
 		v1.Common.AppModuleRepo = repo.NewAppModule(db)
+	}
+}
+
+func patchPublishDeps(v1 *web.V1) {
+	if v1 == nil || v1.Message == nil || v1.Yunxin == nil {
+		return
+	}
+	if v1.Message.Yunxin == nil {
+		v1.Message.Yunxin = v1.Yunxin
 	}
 }
 

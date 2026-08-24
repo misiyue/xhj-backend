@@ -55,6 +55,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	appNewsCategory := repo.NewAppNewsCategory(db)
 	appNewsView := repo.NewAppNewsView(db)
 	appNewsViewStorage := cache.NewAppNewsViewStorage(client)
+	yunxinTokenStorage := cache.NewYunxinTokenStorage(client)
 	smsStorage := cache.NewSmsStorage(client)
 	smsService := &service.SmsService{
 		Storage: smsStorage,
@@ -300,8 +301,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		Config:     c,
 		Filesystem: iFilesystem,
 	}
-	yunxinCredential := repo.NewYunxinCredential(db)
-	yunxin := v1.NewYunxin(c, users, yunxinCredential)
+	yunxin := v1.NewYunxin(c, users, yunxinTokenStorage)
 	trtc := v1.NewTrtc(c)
 	groupNotice := repo.NewGroupNotice(db)
 	contactService := &service.ContactService{
@@ -457,6 +457,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	publish := &talk.Publish{
 		AuthService:    authService,
 		MessageService: messageService,
+		Yunxin:         yunxin,
 	}
 	invite := &v1.Invite{
 		UsersRepo: users,

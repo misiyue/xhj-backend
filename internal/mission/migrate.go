@@ -84,7 +84,6 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.InviteCode{},
 		&model.OAuthUser{},
 		&model.WalletUser{},
-		&model.YunxinCredential{},
 		&model.RedEnvelope{},
 		&model.Sequence{},
 		&model.AppVersion{},

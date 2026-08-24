@@ -38,7 +38,6 @@ var ProviderSet = wire.NewSet(
 	NewInviteCode,
 	NewGroupRobot,
 	NewWalletUser,
-	NewYunxinCredential,
 	NewAppVersion,
 	NewAppExplore,
 	NewAppModule,

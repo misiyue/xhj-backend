@@ -2,15 +2,11 @@ package v1
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,26 +20,26 @@ import (
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
+	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
-	"gorm.io/gorm"
 )
 
 const yunxinDefaultServerAPIBaseURL = "https://api.netease.im/nimserver"
 
 type Yunxin struct {
-	Config         *config.Config
-	UsersRepo      *repo.Users
-	CredentialRepo *repo.YunxinCredential
-	HTTPClient     *http.Client
+	Config     *config.Config
+	UsersRepo  *repo.Users
+	TokenCache *cache.YunxinTokenStorage
+	HTTPClient *http.Client
 }
 
-func NewYunxin(conf *config.Config, usersRepo *repo.Users, credentialRepo *repo.YunxinCredential) *Yunxin {
+func NewYunxin(conf *config.Config, usersRepo *repo.Users, tokenCache *cache.YunxinTokenStorage) *Yunxin {
 	return &Yunxin{
-		Config:         conf,
-		UsersRepo:      usersRepo,
-		CredentialRepo: credentialRepo,
-		HTTPClient:     &http.Client{Timeout: 10 * time.Second},
+		Config:     conf,
+		UsersRepo:  usersRepo,
+		TokenCache: tokenCache,
+		HTTPClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -55,7 +51,7 @@ type YunxinCredentialsResponse struct {
 
 // Credentials returns only the authenticated user's Yunxin credentials.  The
 // account is provisioned lazily so deploying CallKit never needs a bulk user
-// migration.
+// migration. Token is cached in Redis for 2 hours.
 //
 // @Summary      获取云信通话凭证
 // @Description  懒创建当前用户的云信 IM 账号并返回 CallKit 登录凭证
@@ -77,18 +73,14 @@ func (h *Yunxin) Credentials(ctx *gin.Context) (any, error) {
 		return nil, errorx.New(403, "当前账号不可用于通话")
 	}
 
-	credential, err := h.ensureCredential(ctx.Request.Context(), user)
+	accid, token, err := h.ensureToken(ctx.Request.Context(), user)
 	if err != nil {
 		return nil, err
-	}
-	token, err := decryptYunxinToken(h.Config.App.AesKey, credential.TokenCiphertext)
-	if err != nil {
-		return nil, errorx.New(500, "云信凭证解密失败")
 	}
 
 	return &YunxinCredentialsResponse{
 		AppKey: h.Config.Yunxin.AppKey,
-		Accid:  credential.Accid,
+		Accid:  accid,
 		Token:  token,
 	}, nil
 }
@@ -97,50 +89,59 @@ func (h *Yunxin) validateConfig() error {
 	if h == nil || h.Config == nil || h.Config.App == nil || h.Config.Yunxin == nil || !h.Config.Yunxin.Enabled {
 		return errorx.New(503, "云信通话未启用")
 	}
-	if strings.TrimSpace(h.Config.Yunxin.AppKey) == "" || strings.TrimSpace(h.Config.Yunxin.AppSecret) == "" || strings.TrimSpace(h.Config.App.AesKey) == "" {
+	if strings.TrimSpace(h.Config.Yunxin.AppKey) == "" || strings.TrimSpace(h.Config.Yunxin.AppSecret) == "" {
 		return errorx.New(500, "云信通话配置不完整")
 	}
 	return nil
 }
 
-func (h *Yunxin) ensureCredential(ctx context.Context, user *model.Users) (*model.YunxinCredential, error) {
-	credential, err := h.CredentialRepo.FindByUserId(ctx, user.Id)
-	if err != nil {
-		return nil, errorx.New(500, "读取云信凭证失败")
-	}
-	if credential != nil {
-		// Profile updates are best-effort: a transient provider failure must not
-		// sign an otherwise valid user out of CallKit.
-		_ = h.updateProfile(ctx, credential.Accid, user.Nickname, user.Avatar)
-		return credential, nil
+func (h *Yunxin) ensureToken(ctx context.Context, user *model.Users) (accid, token string, err error) {
+	accid = strconv.Itoa(user.Id)
+
+	if h.TokenCache != nil {
+		token, err = h.TokenCache.Get(ctx, user.Id)
+		if err != nil {
+			return "", "", errorx.New(500, "读取云信凭证缓存失败")
+		}
+		if token != "" {
+			_ = h.updateProfile(ctx, accid, user.Nickname, user.Avatar)
+			return accid, token, nil
+		}
 	}
 
-	accid := strconv.Itoa(user.Id)
-	token, err := newYunxinToken()
+	token, err = newYunxinToken()
 	if err != nil {
-		return nil, errorx.New(500, "生成云信凭证失败")
+		return "", "", errorx.New(500, "生成云信凭证失败")
 	}
 	if err := h.createOrRepairAccount(ctx, accid, token, user.Nickname, user.Avatar); err != nil {
-		return nil, err
+		return "", "", err
 	}
-	ciphertext, err := encryptYunxinToken(h.Config.App.AesKey, token)
-	if err != nil {
-		return nil, errorx.New(500, "加密云信凭证失败")
-	}
-	credential = &model.YunxinCredential{
-		UserId:          user.Id,
-		Accid:           accid,
-		TokenCiphertext: ciphertext,
-	}
-	if err := h.CredentialRepo.Create(ctx, credential); err != nil {
-		// A concurrent first login may have completed the same work. Re-read the
-		// winner instead of issuing a different credential.
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			return h.CredentialRepo.FindByUserId(ctx, user.Id)
+	if h.TokenCache != nil {
+		if err := h.TokenCache.Set(ctx, user.Id, token); err != nil {
+			return "", "", errorx.New(500, "写入云信凭证缓存失败")
 		}
-		return nil, errorx.New(500, "保存云信凭证失败")
 	}
-	return credential, nil
+
+	return accid, token, nil
+}
+
+// EnsureUserAccount 确保用户已在云信开户且 Redis 中有 token；缓存命中则仅 best-effort 同步资料。
+func (h *Yunxin) EnsureUserAccount(ctx context.Context, userID int) error {
+	if h == nil || h.Config == nil || h.Config.Yunxin == nil || !h.Config.Yunxin.Enabled {
+		return nil
+	}
+	if err := h.validateConfig(); err != nil {
+		return err
+	}
+	user, err := h.UsersRepo.FindByIdWithCache(ctx, userID)
+	if err != nil {
+		return errorx.New(500, "读取用户信息失败")
+	}
+	if user == nil || user.IsUnavailable() {
+		return errorx.New(403, "对方账号不可用于通话")
+	}
+	_, _, err = h.ensureToken(ctx, user)
+	return err
 }
 
 func (h *Yunxin) createOrRepairAccount(ctx context.Context, accid, token, nickname, avatar string) error {
@@ -153,9 +154,6 @@ func (h *Yunxin) createOrRepairAccount(ctx context.Context, accid, token, nickna
 	if code == 200 {
 		return nil
 	}
-	// 414 is Yunxin's "account already exists" response. This only occurs
-	// after an interrupted deployment/database recovery; reset its token once
-	// and preserve the local ownership mapping.
 	if code != 414 {
 		return errorx.New(502, "创建云信账号失败")
 	}
@@ -227,42 +225,4 @@ func newYunxinToken() (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(buf), nil
-}
-
-func encryptYunxinToken(keySource, token string) (string, error) {
-	key := sha256.Sum256([]byte(keySource))
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return "", err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return "", err
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
-		return "", err
-	}
-	return base64.RawStdEncoding.EncodeToString(append(nonce, gcm.Seal(nil, nonce, []byte(token), nil)...)), nil
-}
-
-func decryptYunxinToken(keySource, ciphertext string) (string, error) {
-	raw, err := base64.RawStdEncoding.DecodeString(ciphertext)
-	if err != nil {
-		return "", err
-	}
-	key := sha256.Sum256([]byte(keySource))
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return "", err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil || len(raw) < gcm.NonceSize() {
-		return "", errors.New("invalid ciphertext")
-	}
-	plain, err := gcm.Open(nil, raw[:gcm.NonceSize()], raw[gcm.NonceSize():], nil)
-	if err != nil {
-		return "", err
-	}
-	return string(plain), nil
 }
