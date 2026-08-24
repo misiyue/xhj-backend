@@ -455,9 +455,12 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		ArticleTagService: articleTagService,
 	}
 	publish := &talk.Publish{
-		AuthService:    authService,
-		MessageService: messageService,
-		Yunxin:         yunxin,
+		AuthService:     authService,
+		MessageService:  messageService,
+		Yunxin:          yunxin,
+		PushMessage:     pushMessage,
+		UsersRepo:       users,
+		TalkSessionRepo: talkSession,
 	}
 	invite := &v1.Invite{
 		UsersRepo: users,

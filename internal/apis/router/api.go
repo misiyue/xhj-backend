@@ -273,11 +273,30 @@ func patchCommonDeps(v1 *web.V1, userRepo *repo.Users) {
 }
 
 func patchPublishDeps(v1 *web.V1) {
-	if v1 == nil || v1.Message == nil || v1.Yunxin == nil {
+	if v1 == nil || v1.Message == nil {
 		return
 	}
-	if v1.Message.Yunxin == nil {
+	if v1.Yunxin != nil && v1.Message.Yunxin == nil {
 		v1.Message.Yunxin = v1.Yunxin
+	}
+	pushMessage := bootstrapPushMessage(v1, v1.TalkMessage)
+	if pushMessage != nil && v1.Message.PushMessage == nil {
+		v1.Message.PushMessage = pushMessage
+	}
+	if v1.User != nil && v1.User.UsersRepo != nil && v1.Message.UsersRepo == nil {
+		v1.Message.UsersRepo = v1.User.UsersRepo
+	}
+	if v1.Talk != nil && v1.Talk.UsersRepo != nil && v1.Message.UsersRepo == nil {
+		v1.Message.UsersRepo = v1.Talk.UsersRepo
+	}
+	if v1.Message.TalkSessionRepo == nil {
+		var db *gorm.DB
+		if v1.User != nil && v1.User.UsersRepo != nil {
+			db = bootstrapGormDB(v1.User.UsersRepo, v1.Common)
+		}
+		if db != nil {
+			v1.Message.TalkSessionRepo = repo.NewTalkSession(db)
+		}
 	}
 }
 
