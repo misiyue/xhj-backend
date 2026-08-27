@@ -250,7 +250,7 @@ func (c *Common) AppModules(ctx context.Context, in *web.CommonAppModulesRequest
 	return out, nil
 }
 
-// NewsList 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
+// NewsList 火箭资讯列表（仅已发布；支持 category_id 筛选与分页；未登录用户对列表内每条资讯 pv+1，不写 app_news_view）
 func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*web.CommonNewsListResponse, error) {
 	if c.AppNewsRepo == nil {
 		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
@@ -273,6 +273,18 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 		return nil, err
 	}
 
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	anonymous := uid <= 0
+	if anonymous && len(list) > 0 {
+		ids := make([]int, 0, len(list))
+		for _, row := range list {
+			ids = append(ids, row.Id)
+		}
+		if err := c.AppNewsRepo.IncrPvByIds(ctx, ids); err != nil {
+			logger.Errorf("news-list incr pv err: %s", err.Error())
+		}
+	}
+
 	out := &web.CommonNewsListResponse{
 		Items: make([]*web.CommonNewsListResponse_Item, 0, len(list)),
 		Total: int32(total),
@@ -283,6 +295,10 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 		},
 	}
 	for _, row := range list {
+		pv := row.Pv
+		if anonymous {
+			pv++
+		}
 		item := &web.CommonNewsListResponse_Item{
 			Id:         int32(row.Id),
 			Title:      row.Title,
@@ -290,7 +306,7 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 			Cover:      row.Cover,
 			Status:     int32(row.Status),
 			CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
-			Pv:         int32(row.Pv),
+			Pv:         int32(pv),
 			Uv:         int32(row.Uv),
 			Content:    row.Content,
 		}
