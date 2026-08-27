@@ -19,7 +19,7 @@ type ICommonHandler interface {
 	SendEmail(ctx context.Context, in *CommonSendEmailRequest) (*CommonSendEmailResponse, error)
 	//俺们就开始的那
 	Test(ctx context.Context, in *CommonSendTestRequest) (*CommonSendTestResponse, error)
-	// 探索位列表（仅返回 is_open=1）
+	// 探索位列表（支持 positions / end 筛选）
 	ExploreList(ctx context.Context, in *CommonExploreListRequest) (*CommonExploreListResponse, error)
 	// 字典配置：按 key 批量获取（仅 status=启用），按 type 将 value 解析为 JSON 相应类型
 	AppDictGet(ctx context.Context, in *CommonAppDictGetRequest) (*CommonAppDictGetResponse, error)

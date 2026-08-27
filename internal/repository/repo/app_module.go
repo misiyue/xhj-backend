@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"strings"
 
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"gorm.io/gorm"
@@ -15,10 +16,16 @@ func NewAppModule(db *gorm.DB) *AppModule {
 	return &AppModule{db: db}
 }
 
-// ListAll 返回全部功能模块，按 id 升序
-func (r *AppModule) ListAll(ctx context.Context) ([]*model.AppModule, error) {
+// List 返回功能模块列表，按 id 升序；end 非空时筛选 ends 字段（逗号分隔，如 h5,pc,app）
+func (r *AppModule) List(ctx context.Context, end string) ([]*model.AppModule, error) {
+	q := r.db.WithContext(ctx)
+	end = strings.TrimSpace(end)
+	if end != "" {
+		q = q.Where("FIND_IN_SET(?, ends)", end)
+	}
+
 	var list []*model.AppModule
-	err := r.db.WithContext(ctx).Order("id ASC").Find(&list).Error
+	err := q.Order("id ASC").Find(&list).Error
 	if err != nil {
 		return nil, err
 	}

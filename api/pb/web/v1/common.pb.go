@@ -451,7 +451,9 @@ func (x *CommonAppVersionLatestResponse) GetPublishedAt() string {
 type CommonExploreListRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 位置筛选，多个用英文逗号分隔，如 index,tab；空表示不限
-	Positions     string `protobuf:"bytes,1,opt,name=positions,proto3" json:"positions,omitempty"`
+	Positions string `protobuf:"bytes,1,opt,name=positions,proto3" json:"positions,omitempty"`
+	// 开放端筛选：h5 / pc / app；不传则不限
+	End           string `protobuf:"bytes,2,opt,name=end,proto3" json:"end,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -489,6 +491,13 @@ func (*CommonExploreListRequest) Descriptor() ([]byte, []int) {
 func (x *CommonExploreListRequest) GetPositions() string {
 	if x != nil {
 		return x.Positions
+	}
+	return ""
+}
+
+func (x *CommonExploreListRequest) GetEnd() string {
+	if x != nil {
+		return x.End
 	}
 	return ""
 }
@@ -696,7 +705,9 @@ func (x *CommonAppDictGetResponse) GetItems() []*CommonAppDictItem {
 }
 
 type CommonAppModulesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 开放端筛选：h5 / pc / app；不传则返回全部
+	End           string `protobuf:"bytes,1,opt,name=end,proto3" json:"end,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -729,6 +740,13 @@ func (x *CommonAppModulesRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use CommonAppModulesRequest.ProtoReflect.Descriptor instead.
 func (*CommonAppModulesRequest) Descriptor() ([]byte, []int) {
 	return file_web_v1_common_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *CommonAppModulesRequest) GetEnd() string {
+	if x != nil {
+		return x.End
+	}
+	return ""
 }
 
 type CommonAppModulesResponse struct {
@@ -1356,7 +1374,7 @@ type CommonAppModulesResponse_Item struct {
 	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
 	Title         string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
-	IsOpen        int32                  `protobuf:"varint,4,opt,name=is_open,json=isOpen,proto3" json:"is_open,omitempty"`
+	Ends          string                 `protobuf:"bytes,4,opt,name=ends,proto3" json:"ends,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1412,11 +1430,11 @@ func (x *CommonAppModulesResponse_Item) GetTitle() string {
 	return ""
 }
 
-func (x *CommonAppModulesResponse_Item) GetIsOpen() int32 {
+func (x *CommonAppModulesResponse_Item) GetEnds() string {
 	if x != nil {
-		return x.IsOpen
+		return x.Ends
 	}
-	return 0
+	return ""
 }
 
 type CommonNewsListResponse_Item struct {
@@ -1657,9 +1675,10 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x05title\x18\x06 \x01(\tR\x05title\x12?\n" +
 	"\rrelease_notes\x18\a \x01(\v2\x1a.google.protobuf.ListValueR\freleaseNotes\x12?\n" +
 	"\rdownload_urls\x18\b \x01(\v2\x1a.google.protobuf.ListValueR\fdownloadUrls\x12!\n" +
-	"\fpublished_at\x18\t \x01(\tR\vpublishedAt\"8\n" +
+	"\fpublished_at\x18\t \x01(\tR\vpublishedAt\"J\n" +
 	"\x18CommonExploreListRequest\x12\x1c\n" +
-	"\tpositions\x18\x01 \x01(\tR\tpositions\"\xf5\x01\n" +
+	"\tpositions\x18\x01 \x01(\tR\tpositions\x12\x10\n" +
+	"\x03end\x18\x02 \x01(\tR\x03end\"\xf5\x01\n" +
 	"\x19CommonExploreListResponse\x129\n" +
 	"\x05items\x18\x01 \x03(\v2#.web.CommonExploreListResponse.ItemR\x05items\x1a\x9c\x01\n" +
 	"\x04Item\x12\x0e\n" +
@@ -1679,15 +1698,16 @@ const file_web_v1_common_proto_rawDesc = "" +
 	"\x04type\x18\x03 \x01(\tR\x04type\x129\n" +
 	"\fparsed_value\x18\x04 \x01(\v2\x16.google.protobuf.ValueR\vparsedValue\"H\n" +
 	"\x18CommonAppDictGetResponse\x12,\n" +
-	"\x05items\x18\x01 \x03(\v2\x16.web.CommonAppDictItemR\x05items\"\x19\n" +
-	"\x17CommonAppModulesRequest\"\xaf\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x16.web.CommonAppDictItemR\x05items\"+\n" +
+	"\x17CommonAppModulesRequest\x12\x10\n" +
+	"\x03end\x18\x01 \x01(\tR\x03end\"\xaa\x01\n" +
 	"\x18CommonAppModulesResponse\x128\n" +
-	"\x05items\x18\x01 \x03(\v2\".web.CommonAppModulesResponse.ItemR\x05items\x1aY\n" +
+	"\x05items\x18\x01 \x03(\v2\".web.CommonAppModulesResponse.ItemR\x05items\x1aT\n" +
 	"\x04Item\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
 	"\x04code\x18\x02 \x01(\tR\x04code\x12\x14\n" +
-	"\x05title\x18\x03 \x01(\tR\x05title\x12\x17\n" +
-	"\ais_open\x18\x04 \x01(\x05R\x06isOpen\"\x86\x01\n" +
+	"\x05title\x18\x03 \x01(\tR\x05title\x12\x12\n" +
+	"\x04ends\x18\x04 \x01(\tR\x04ends\"\x86\x01\n" +
 	"\x15CommonNewsListRequest\x12\x1b\n" +
 	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\x12(\n" +

@@ -19,3 +19,4 @@ docs/
 cmd/stress-test/stress-test
 cmd/lumenim/lumenim
 cmd/lumenim/lumenim.exe
+protoc-gen-bff.exe

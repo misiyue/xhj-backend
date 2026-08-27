@@ -205,12 +205,12 @@ func (c *Common) AppVersionLatest(ctx context.Context, in *web.CommonAppVersionL
 	}, nil
 }
 
-// ExploreList 探索位列表（仅 is_open=1；支持 positions 逗号筛选）
+// ExploreList 探索位列表（支持 positions / end 筛选）
 func (c *Common) ExploreList(ctx context.Context, in *web.CommonExploreListRequest) (*web.CommonExploreListResponse, error) {
 	if c.AppExploreRepo == nil {
 		return nil, errors.New("AppExploreRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	list, err := c.AppExploreRepo.ListOpen(ctx, in.GetPositions())
+	list, err := c.AppExploreRepo.List(ctx, in.GetPositions(), in.GetEnd())
 	if err != nil {
 		return nil, err
 	}
@@ -229,22 +229,22 @@ func (c *Common) ExploreList(ctx context.Context, in *web.CommonExploreListReque
 	return out, nil
 }
 
-// AppModules 功能模块列表
-func (c *Common) AppModules(ctx context.Context, _ *web.CommonAppModulesRequest) (*web.CommonAppModulesResponse, error) {
+// AppModules 功能模块列表（支持 end 筛选开放端）
+func (c *Common) AppModules(ctx context.Context, in *web.CommonAppModulesRequest) (*web.CommonAppModulesResponse, error) {
 	if c.AppModuleRepo == nil {
 		return nil, errors.New("AppModuleRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	list, err := c.AppModuleRepo.ListAll(ctx)
+	list, err := c.AppModuleRepo.List(ctx, in.GetEnd())
 	if err != nil {
 		return nil, err
 	}
 	out := &web.CommonAppModulesResponse{Items: make([]*web.CommonAppModulesResponse_Item, 0, len(list))}
 	for _, row := range list {
 		out.Items = append(out.Items, &web.CommonAppModulesResponse_Item{
-			Id:     int32(row.Id),
-			Code:   row.Code,
-			Title:  row.Title,
-			IsOpen: int32(row.IsOpen),
+			Id:    int32(row.Id),
+			Code:  row.Code,
+			Title: row.Title,
+			Ends:  row.Ends,
 		})
 	}
 	return out, nil

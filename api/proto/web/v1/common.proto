@@ -35,7 +35,7 @@ service Common {
     };
   }
 
-  // 探索位列表（仅返回 is_open=1）
+  // 探索位列表（支持 positions / end 筛选）
   rpc ExploreList(CommonExploreListRequest) returns (CommonExploreListResponse) {
     option (google.api.http) = {
       post: "/api/v1/common/explore-list"
@@ -51,7 +51,7 @@ service Common {
     };
   }
 
-  // 功能模块列表
+  // 功能模块列表（支持 end 筛选开放端：h5 / pc / app）
   rpc AppModules(CommonAppModulesRequest) returns (CommonAppModulesResponse) {
     option (google.api.http) = {
       post: "/api/v1/common/app-modules"
@@ -141,6 +141,8 @@ message CommonAppVersionLatestResponse {
 message CommonExploreListRequest {
   // 位置筛选，多个用英文逗号分隔，如 index,tab；空表示不限
   string positions = 1;
+  // 开放端筛选：h5 / pc / app；不传则不限
+  string end = 2;
 }
 
 message CommonExploreListResponse {
@@ -176,14 +178,17 @@ message CommonAppDictGetResponse {
   repeated CommonAppDictItem items = 1;
 }
 
-message CommonAppModulesRequest {}
+message CommonAppModulesRequest {
+  // 开放端筛选：h5 / pc / app；不传则返回全部
+  string end = 1;
+}
 
 message CommonAppModulesResponse {
   message Item {
     int32 id = 1;
     string code = 2;
     string title = 3;
-    int32 is_open = 4;
+    string ends = 4;
   }
   repeated Item items = 1;
 }

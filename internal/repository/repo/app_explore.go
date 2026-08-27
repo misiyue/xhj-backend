@@ -16,12 +16,16 @@ func NewAppExplore(db *gorm.DB) *AppExplore {
 	return &AppExplore{db: db}
 }
 
-// ListOpen 返回已开放（is_open = 1）的探索位列表；positions 为逗号分隔的 position 筛选，空则不限
-func (r *AppExplore) ListOpen(ctx context.Context, positions string) ([]*model.AppExplore, error) {
-	q := r.db.WithContext(ctx).Where("is_open = ?", model.AppExploreOpenYes)
+// List 返回探索位列表；positions 为逗号分隔的 position 筛选，end 非空时筛选 ends 字段（如 h5,pc,app）
+func (r *AppExplore) List(ctx context.Context, positions, end string) ([]*model.AppExplore, error) {
+	q := r.db.WithContext(ctx)
 
 	if parts := splitPositions(positions); len(parts) > 0 {
 		q = q.Where("position IN ?", parts)
+	}
+	end = strings.TrimSpace(end)
+	if end != "" {
+		q = q.Where("FIND_IN_SET(?, ends)", end)
 	}
 
 	var list []*model.AppExplore

@@ -2,19 +2,14 @@ package model
 
 import "time"
 
-const (
-	AppModuleOpenYes = 1 // 开放
-	AppModuleOpenNo  = 0 // 不开放
-)
-
 // AppModule 对应表 app_module
 type AppModule struct {
-	Id        int       `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
-	Code      string    `gorm:"column:code" json:"code"`
-	Title     string    `gorm:"column:title" json:"title"`
-	IsOpen    int       `gorm:"column:is_open" json:"is_open"`
-	CreatedAt time.Time `gorm:"column:created_at" json:"created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at" json:"updated_at"`
+	Id        int       `gorm:"column:id;primaryKey;autoIncrement;type:int(11)" json:"id"`
+	Code      string    `gorm:"column:code;type:varchar(32)" json:"code"`
+	Title     string    `gorm:"column:title;type:varchar(32)" json:"title"`
+	Ends      string    `gorm:"column:ends;type:varchar(32)" json:"ends"`
+	CreatedAt time.Time `gorm:"column:created_at;type:datetime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime" json:"updated_at"`
 }
 
 func (AppModule) TableName() string {
