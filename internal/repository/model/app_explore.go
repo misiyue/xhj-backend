@@ -12,8 +12,8 @@ type AppExplore struct {
 	Position  string    `gorm:"column:position;type:varchar(16)" json:"position"`
 	Ends      string    `gorm:"column:ends;type:varchar(32)" json:"ends"`
 	Sort      int       `gorm:"column:sort;type:int(11);default:0" json:"sort"`
-	CreatedAt time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" json:"updated_at"`
+	CreatedAt time.Time `gorm:"column:created_at;type:datetime;not null;autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;not null;autoUpdateTime" json:"updated_at"`
 }
 
 func (AppExplore) TableName() string {

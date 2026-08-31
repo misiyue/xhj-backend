@@ -45,8 +45,8 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		panic(fmt.Errorf("database error :%v", db.Error))
 	}
 
-	// 自动迁移数据库表
-	err = db.AutoMigrate(
+	// 自动迁移数据库表（逐表迁移，便于定位失败表）
+	models := []any{
 		&model.InviteCode{},
 		&model.OAuthUser{},
 		&model.SysMenu{},
@@ -59,9 +59,11 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		&model.AppVersion{},
 		&model.AppExplore{},
 		&model.AppModule{},
-	)
-	if err != nil {
-		panic(fmt.Errorf("database error :%v", err))
+	}
+	for _, m := range models {
+		if err := db.AutoMigrate(m); err != nil {
+			panic(fmt.Errorf("database auto migrate %T error: %w", m, err))
+		}
 	}
 
 	sqlDB, _ := db.DB()
