@@ -61,8 +61,16 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		&model.AppModule{},
 	}
 	for _, m := range models {
+		if m == (&model.AppExplore{}) || m == (&model.AppModule{}) {
+			table := m.(interface{ TableName() string }).TableName()
+			preFixAppTableNullTimestamps(db, table)
+		}
 		if err := db.AutoMigrate(m); err != nil {
 			panic(fmt.Errorf("database auto migrate %T error: %w", m, err))
+		}
+		if m == (&model.AppExplore{}) || m == (&model.AppModule{}) {
+			table := m.(interface{ TableName() string }).TableName()
+			ensureAppDatetimeDefaults(db, table)
 		}
 	}
 
@@ -73,4 +81,29 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 	sqlDB.SetConnMaxLifetime(time.Duration(conf.MySQL.ConnMaxLifetime) * time.Second)
 
 	return db
+}
+
+// preFixAppTableNullTimestamps 迁移前补齐空时间，避免 NOT NULL + DEFAULT 变更失败
+func preFixAppTableNullTimestamps(db *gorm.DB, table string) {
+	if table == "" || !db.Migrator().HasTable(table) {
+		return
+	}
+	_ = db.Exec(fmt.Sprintf("UPDATE `%s` SET `created_at` = NOW() WHERE `created_at` IS NULL", table)).Error
+	_ = db.Exec(fmt.Sprintf("UPDATE `%s` SET `updated_at` = NOW() WHERE `updated_at` IS NULL", table)).Error
+}
+
+// ensureAppDatetimeDefaults 确保 app 表时间列具备数据库级 DEFAULT（GORM 对已存在列不一定补全默认值）
+func ensureAppDatetimeDefaults(db *gorm.DB, table string) {
+	if table == "" || !db.Migrator().HasTable(table) {
+		return
+	}
+	err := db.Exec(fmt.Sprintf(
+		"ALTER TABLE `%s` "+
+			"MODIFY COLUMN `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', "+
+			"MODIFY COLUMN `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'",
+		table,
+	)).Error
+	if err != nil {
+		logger2.Warnf("ensure datetime defaults on %s: %v", table, err)
+	}
 }
