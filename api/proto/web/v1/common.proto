@@ -141,7 +141,7 @@ message CommonAppVersionLatestResponse {
 message CommonExploreListRequest {
   // 位置筛选，多个用英文逗号分隔，如 index,tab；空表示不限
   string positions = 1;
-  // 开放端筛选：h5 / pc / app；不传则不限
+  // 开放端筛选：h5 / pc / app；不传或空时默认 app
   string end = 2;
 }
 

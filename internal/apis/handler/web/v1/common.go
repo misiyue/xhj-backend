@@ -210,7 +210,11 @@ func (c *Common) ExploreList(ctx context.Context, in *web.CommonExploreListReque
 	if c.AppExploreRepo == nil {
 		return nil, errors.New("AppExploreRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	list, err := c.AppExploreRepo.List(ctx, in.GetPositions(), in.GetEnd())
+	end := strings.TrimSpace(in.GetEnd())
+	if end == "" {
+		end = "app"
+	}
+	list, err := c.AppExploreRepo.List(ctx, in.GetPositions(), end)
 	if err != nil {
 		return nil, err
 	}
