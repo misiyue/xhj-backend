@@ -134,7 +134,7 @@ func (n *Notice) GetNoticeArticle(ctx context.Context, req *pb.NoticeArticleGetR
 		return nil, err
 	}
 	if row == nil {
-		return nil, entity.ErrDataNotFound
+		return nil, nil
 	}
 	return &pb.NoticeArticleGetResponse{
 		Id:        int32(row.Id),
