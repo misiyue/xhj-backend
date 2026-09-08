@@ -48,6 +48,8 @@ type IGroupHandler interface {
 	AllowInvite(ctx context.Context, in *GroupAllowInviteRequest) (*GroupAllowInviteResponse, error)
 	// 群公开修改接口
 	Overt(ctx context.Context, in *GroupOvertRequest) (*GroupOvertResponse, error)
+	// 群马甲用户列表
+	Fakers(ctx context.Context, in *GroupFakersRequest) (*GroupFakersResponse, error)
 }
 
 // RegisterGroupHandler 注册服务路由处理器
@@ -223,6 +225,15 @@ func RegisterGroupHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.Overt(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/group/fakers", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in GroupFakersRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.Fakers(ctx.Request.Context(), &in)
 	}))
 
 }

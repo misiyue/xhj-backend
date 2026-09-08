@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 
 	pb "github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/timeutil"
+	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 )
 
@@ -109,12 +112,24 @@ func (n *Notice) ClearUnread(ctx context.Context, _ *pb.NoticeClearUnreadRequest
 	return &pb.NoticeClearUnreadResponse{}, nil
 }
 
-// GetNoticeArticle 获取通知文章（notice_article，仅 status=开启）
+// GetNoticeArticle 获取通知文章（notice_article，仅 status=开启；传 code 时按 code 查，否则按 id 查）
 func (n *Notice) GetNoticeArticle(ctx context.Context, req *pb.NoticeArticleGetRequest) (*pb.NoticeArticleGetResponse, error) {
 	if n == nil || n.NoticeArticleRepo == nil {
 		return nil, errors.New("NoticeArticleRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	row, err := n.NoticeArticleRepo.FindEnabledById(ctx, int(req.GetId()))
+
+	code := strings.TrimSpace(req.GetCode())
+	var (
+		row *model.NoticeArticle
+		err error
+	)
+	if code != "" {
+		row, err = n.NoticeArticleRepo.FindEnabledByCode(ctx, code)
+	} else if req.GetId() > 0 {
+		row, err = n.NoticeArticleRepo.FindEnabledById(ctx, int(req.GetId()))
+	} else {
+		return nil, errorx.New(400, "请提供 id 或 code")
+	}
 	if err != nil {
 		return nil, err
 	}

@@ -326,6 +326,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		UserClient:          userClient,
 		NoticeTemplateRepo:  noticeTemplate,
 	}
+	groupFaker := repo.NewGroupFaker(db)
 	groupGroup := &group.Group{
 		RedisLock:          redisLock,
 		Repo:               source,
@@ -333,6 +334,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		GroupRepo:          repoGroup,
 		GroupMemberRepo:    groupMember,
 		GroupNoticeRepo:    groupNotice,
+		GroupFakerRepo:     groupFaker,
 		TalkSessionRepo:    talkSession,
 		GroupService:       groupService,
 		GroupMemberService: groupMemberService,

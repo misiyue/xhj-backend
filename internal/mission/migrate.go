@@ -109,6 +109,8 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.NoticeLetter{},
 		&model.NoticeTemplate{},
 		&model.NoticeArticle{},
+		&model.UserFaker{},
+		&model.GroupFaker{},
 	)
 
 	if err != nil {
