@@ -2010,15 +2010,17 @@ func (x *GroupDetailResponse_Notice) GetModifyUserName() string {
 }
 
 type GroupMemberListResponse_Item struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserId        int32                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	Nickname      string                 `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
-	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
-	Gender        int32                  `protobuf:"varint,4,opt,name=gender,proto3" json:"gender,omitempty"`
-	Leader        int32                  `protobuf:"varint,5,opt,name=leader,proto3" json:"leader,omitempty"`
-	IsMute        int32                  `protobuf:"varint,6,opt,name=is_mute,json=isMute,proto3" json:"is_mute,omitempty"`
-	Remark        string                 `protobuf:"bytes,7,opt,name=remark,proto3" json:"remark,omitempty"`
-	Motto         string                 `protobuf:"bytes,8,opt,name=motto,proto3" json:"motto,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	UserId   int32                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Nickname string                 `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Avatar   string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	Gender   int32                  `protobuf:"varint,4,opt,name=gender,proto3" json:"gender,omitempty"`
+	Leader   int32                  `protobuf:"varint,5,opt,name=leader,proto3" json:"leader,omitempty"`
+	IsMute   int32                  `protobuf:"varint,6,opt,name=is_mute,json=isMute,proto3" json:"is_mute,omitempty"`
+	Remark   string                 `protobuf:"bytes,7,opt,name=remark,proto3" json:"remark,omitempty"`
+	Motto    string                 `protobuf:"bytes,8,opt,name=motto,proto3" json:"motto,omitempty"`
+	// 是否马甲用户：0 否 1 是
+	IsFaker       int32 `protobuf:"varint,9,opt,name=is_faker,json=isFaker,proto3" json:"is_faker,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2107,6 +2109,13 @@ func (x *GroupMemberListResponse_Item) GetMotto() string {
 		return x.Motto
 	}
 	return ""
+}
+
+func (x *GroupMemberListResponse_Item) GetIsFaker() int32 {
+	if x != nil {
+		return x.IsFaker
+	}
+	return 0
 }
 
 type GetInviteFriendsResponse_Item struct {
@@ -2412,9 +2421,9 @@ const file_web_v1_group_proto_rawDesc = "" +
 	"updated_at\x18\x03 \x01(\tR\tupdatedAt\x12(\n" +
 	"\x10modify_user_name\x18\x05 \x01(\tR\x0emodifyUserName\"<\n" +
 	"\x16GroupMemberListRequest\x12\"\n" +
-	"\bgroup_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\agroupId\"\xd5\x02\n" +
+	"\bgroup_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\agroupId\"\xf0\x02\n" +
 	"\x17GroupMemberListResponse\x12=\n" +
-	"\x05items\x18\x01 \x03(\v2!.web.GroupMemberListResponse.ItemB\x04\xe2A\x01\x02R\x05items\x1a\xfa\x01\n" +
+	"\x05items\x18\x01 \x03(\v2!.web.GroupMemberListResponse.ItemB\x04\xe2A\x01\x02R\x05items\x1a\x95\x02\n" +
 	"\x04Item\x12\x1d\n" +
 	"\auser_id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x06userId\x12 \n" +
 	"\bnickname\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\bnickname\x12\x1c\n" +
@@ -2423,7 +2432,8 @@ const file_web_v1_group_proto_rawDesc = "" +
 	"\x06leader\x18\x05 \x01(\x05B\x04\xe2A\x01\x02R\x06leader\x12\x1d\n" +
 	"\ais_mute\x18\x06 \x01(\x05B\x04\xe2A\x01\x02R\x06isMute\x12\x1c\n" +
 	"\x06remark\x18\a \x01(\tB\x04\xe2A\x01\x02R\x06remark\x12\x1a\n" +
-	"\x05motto\x18\b \x01(\tB\x04\xe2A\x01\x02R\x05motto\"9\n" +
+	"\x05motto\x18\b \x01(\tB\x04\xe2A\x01\x02R\x05motto\x12\x19\n" +
+	"\bis_faker\x18\t \x01(\x05R\aisFaker\"9\n" +
 	"\x13GroupDismissRequest\x12\"\n" +
 	"\bgroup_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\agroupId\"\x16\n" +
 	"\x14GroupDismissResponse\"]\n" +

@@ -214,9 +214,30 @@ func (g Group) MemberList(ctx context.Context, in *web.GroupMemberListRequest) (
 	}
 
 	list := g.GroupMemberRepo.GetMembers(ctx, int(in.GroupId))
+	groupID := int(in.GroupId)
 
-	items := make([]*web.GroupMemberListResponse_Item, 0)
+	var fakerList []*model.UserFaker
+	fakerUserIDs := make(map[int]struct{})
+	if g.GroupFakerRepo != nil {
+		fakerList, err = g.GroupFakerRepo.ListUserFakersByGroupID(ctx, groupID)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range fakerList {
+			if row.UserId > 0 {
+				fakerUserIDs[row.UserId] = struct{}{}
+			}
+		}
+	}
+
+	memberUserIDs := make(map[int]struct{}, len(list))
+	items := make([]*web.GroupMemberListResponse_Item, 0, len(list)+len(fakerList))
 	for _, item := range list {
+		memberUserIDs[item.UserId] = struct{}{}
+		isFaker := int32(0)
+		if _, ok := fakerUserIDs[item.UserId]; ok {
+			isFaker = 1
+		}
 		items = append(items, &web.GroupMemberListResponse_Item{
 			UserId:   int32(item.UserId),
 			Nickname: item.Nickname,
@@ -226,6 +247,22 @@ func (g Group) MemberList(ctx context.Context, in *web.GroupMemberListRequest) (
 			IsMute:   int32(item.IsMute),
 			Remark:   item.UserCard,
 			Motto:    item.Motto,
+			IsFaker:  isFaker,
+		})
+	}
+
+	for _, row := range fakerList {
+		if row.UserId <= 0 {
+			continue
+		}
+		if _, ok := memberUserIDs[row.UserId]; ok {
+			continue
+		}
+		items = append(items, &web.GroupMemberListResponse_Item{
+			UserId:   int32(row.UserId),
+			Nickname: row.Nickname,
+			Avatar:   row.Avatar,
+			IsFaker:  1,
 		})
 	}
 

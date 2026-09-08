@@ -235,6 +235,8 @@ message GroupMemberListResponse{
     int32 is_mute = 6 [(google.api.field_behavior) = REQUIRED];
     string remark = 7 [(google.api.field_behavior) = REQUIRED];
     string motto = 8 [(google.api.field_behavior) = REQUIRED];
+    // 是否马甲用户：0 否 1 是
+    int32 is_faker = 9;
   }
 
   repeated Item items = 1 [(google.api.field_behavior) = REQUIRED];
