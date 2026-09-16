@@ -146,6 +146,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	noticeTemplate := repo.NewNoticeTemplate(db, client)
 	noticeLetter := repo.NewNoticeLetter(db)
 	noticeArticle := repo.NewNoticeArticle(db)
+	userCmd := repo.NewUserCmd(db)
 	sysNotice := &logic.SysNotice{
 		Redis:              client,
 		NoticeLetterRepo:   noticeLetter,
@@ -178,6 +179,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		NoticeTemplateRepo:  noticeTemplate,
 		SysNotice:           sysNotice,
 		NoticeLetterRepo:    noticeLetter,
+		UserCmdRepo:         userCmd,
 		OrganizeRepo:        organize,
 		UserService:         userService,
 		SmsService:          smsService,

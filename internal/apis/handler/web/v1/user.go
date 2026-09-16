@@ -55,6 +55,7 @@ type User struct {
 	ContactApplyService service.IContactApplyService
 	GroupApplyStorage   *cache.GroupApplyStorage
 	NoticeLetterRepo    *repo.NoticeLetter
+	UserCmdRepo         *repo.UserCmd
 	OrganizeRepo        *repo.Organize
 	UserService         service.IUserService
 	SmsService          service.ISmsService

@@ -59,4 +59,5 @@ var ProviderSet = wire.NewSet(
 	NewNoticeTemplate,
 	NewNoticeArticle,
 	NewGroupFaker,
+	NewUserCmd,
 )

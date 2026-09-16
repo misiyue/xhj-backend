@@ -30,6 +30,10 @@ type IUserHandler interface {
 	SubscribeUpdate(ctx context.Context, in *UserSubscribeUpdateRequest) (*UserSubscribeUpdateResponse, error)
 	// 当前用户各类未读数汇总
 	UnreadSummary(ctx context.Context, in *UserUnreadSummaryRequest) (*UserUnreadSummaryResponse, error)
+	// 用户指令列表（分页，按 id 倒序）
+	UserCmdList(ctx context.Context, in *UserCmdListRequest) (*UserCmdListResponse, error)
+	// 用户指令保存（id=0 新增，id>0 编辑）
+	UserCmdSave(ctx context.Context, in *UserCmdSaveRequest) (*UserCmdSaveResponse, error)
 	// 商户入驻申请
 	MerchantApply(ctx context.Context, in *MerchantApplyRequest) (*MerchantApplyResponse, error)
 	// 查询本人最近一次商户申请状态
@@ -186,6 +190,24 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.UnreadSummary(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/user/cmd/list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserCmdListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.UserCmdList(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/user/cmd/save", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserCmdSaveRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.UserCmdSave(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
