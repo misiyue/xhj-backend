@@ -34,6 +34,8 @@ type IUserHandler interface {
 	UserCmdList(ctx context.Context, in *UserCmdListRequest) (*UserCmdListResponse, error)
 	// 用户指令保存（id=0 新增，id>0 编辑）
 	UserCmdSave(ctx context.Context, in *UserCmdSaveRequest) (*UserCmdSaveResponse, error)
+	// 删除用户指令（仅本人）
+	UserCmdDel(ctx context.Context, in *UserCmdDelRequest) (*UserCmdDelResponse, error)
 	// 商户入驻申请
 	MerchantApply(ctx context.Context, in *MerchantApplyRequest) (*MerchantApplyResponse, error)
 	// 查询本人最近一次商户申请状态
@@ -208,6 +210,15 @@ func RegisterUserHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.UserCmdSave(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/user/cmd/del", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in UserCmdDelRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.UserCmdDel(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/merchant/apply", interceptor.Do(func(ctx *gin.Context) (any, error) {

@@ -97,6 +97,14 @@ service User {
     };
   }
 
+  // 删除用户指令（仅本人）
+  rpc UserCmdDel(UserCmdDelRequest) returns (UserCmdDelResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/cmd/del"
+      body: "*"
+    };
+  }
+
   // 商户入驻申请
   rpc MerchantApply(MerchantApplyRequest) returns (MerchantApplyResponse) {
     option (google.api.http) = {
@@ -949,3 +957,9 @@ message UserCmdSaveRequest {
 message UserCmdSaveResponse {
   int32 id = 1 [(google.api.field_behavior) = REQUIRED];
 }
+
+message UserCmdDelRequest {
+  int32 id = 1 [(buf.validate.field).int32.gt = 0];
+}
+
+message UserCmdDelResponse {}

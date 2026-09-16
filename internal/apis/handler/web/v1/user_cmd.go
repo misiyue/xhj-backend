@@ -116,3 +116,25 @@ func (u *User) UserCmdSave(ctx context.Context, in *web.UserCmdSaveRequest) (*we
 	}
 	return &web.UserCmdSaveResponse{Id: int32(row.Id)}, nil
 }
+
+// UserCmdDel 删除本人用户指令
+func (u *User) UserCmdDel(ctx context.Context, in *web.UserCmdDelRequest) (*web.UserCmdDelResponse, error) {
+	if u.UserCmdRepo == nil {
+		return nil, errorx.New(500, "UserCmdRepo 未注入")
+	}
+	session, _ := middleware.FormContext[entity.WebClaims](ctx)
+	uid := int(session.UserId)
+	id := int(in.GetId())
+
+	row, err := u.UserCmdRepo.FindOwned(ctx, id, uid)
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return nil, errorx.New(404, "指令不存在")
+	}
+	if err := u.UserCmdRepo.DeleteOwned(ctx, id, uid); err != nil {
+		return nil, err
+	}
+	return &web.UserCmdDelResponse{}, nil
+}

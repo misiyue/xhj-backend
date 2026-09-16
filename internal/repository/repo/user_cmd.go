@@ -36,6 +36,12 @@ func (r *UserCmd) UpdateByID(ctx context.Context, id int, updates map[string]any
 	return r.db.WithContext(ctx).Model(&model.UserCmd{}).Where("id = ?", id).Updates(updates).Error
 }
 
+func (r *UserCmd) DeleteOwned(ctx context.Context, id, userId int) error {
+	return r.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", id, userId).
+		Delete(&model.UserCmd{}).Error
+}
+
 func (r *UserCmd) ListByUserID(ctx context.Context, userId, page, pageSize int) ([]model.UserCmd, int64, error) {
 	q := r.db.WithContext(ctx).Model(&model.UserCmd{}).Where("user_id = ?", userId)
 	var total int64
