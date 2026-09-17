@@ -8,9 +8,79 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
+
+func TestMarzbanCheckinAddsSixHoursOncePerDay(t *testing.T) {
+	now := time.Now().Unix()
+	oldExpire := now + 3600
+	putCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/admin/token":
+			writeMarzbanJSON(t, w, http.StatusOK, map[string]any{"access_token": "token"})
+		case r.Method == http.MethodGet && r.URL.Path == "/api/user/xhj_42":
+			writeMarzbanJSON(t, w, http.StatusOK, map[string]any{"username": "xhj_42", "status": "active", "expire": oldExpire})
+		case r.Method == http.MethodPut && r.URL.Path == "/api/user/xhj_42":
+			putCalls++
+			var body map[string]int64
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			require.Equal(t, oldExpire+6*3600, body["expire"])
+			writeMarzbanJSON(t, w, http.StatusOK, map[string]any{"username": "xhj_42", "status": "active", "expire": body["expire"]})
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	db, err := gorm.Open(sqlite.Open("file:marzban_checkin_test?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.MarzbanCheckin{}))
+	svc := newTestMarzbanService(server.URL)
+	svc.DB = db
+	user, err := svc.Checkin(context.Background(), 42)
+	require.NoError(t, err)
+	require.Equal(t, oldExpire+6*3600, user.Expire)
+	signed, nextReset, err := svc.CheckinStatus(context.Background(), 42)
+	require.NoError(t, err)
+	require.True(t, signed)
+	require.NotEmpty(t, nextReset)
+	_, err = svc.Checkin(context.Background(), 42)
+	require.ErrorIs(t, err, ErrMarzbanAlreadyCheckedIn)
+	require.Equal(t, 1, putCalls)
+}
+
+func TestMarzbanCheckinFailureDoesNotConsumeReward(t *testing.T) {
+	putCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/admin/token":
+			writeMarzbanJSON(t, w, http.StatusOK, map[string]any{"access_token": "token"})
+		case r.Method == http.MethodGet:
+			writeMarzbanJSON(t, w, http.StatusOK, map[string]any{"username": "xhj_55", "status": "expired", "expire": time.Now().Add(-time.Hour).Unix()})
+		case r.Method == http.MethodPut:
+			putCalls++
+			w.WriteHeader(http.StatusBadGateway)
+		}
+	}))
+	defer server.Close()
+	db, err := gorm.Open(sqlite.Open("file:marzban_checkin_failure_test?mode=memory&cache=shared"), &gorm.Config{})
+	require.NoError(t, err)
+	require.NoError(t, db.AutoMigrate(&model.MarzbanCheckin{}))
+	svc := newTestMarzbanService(server.URL)
+	svc.DB = db
+	_, err = svc.Checkin(context.Background(), 55)
+	require.Error(t, err)
+	signed, _, err := svc.CheckinStatus(context.Background(), 55)
+	require.NoError(t, err)
+	require.False(t, signed)
+	_, err = svc.Checkin(context.Background(), 55)
+	require.Error(t, err)
+	require.Equal(t, 2, putCalls)
+}
 
 func TestMarzbanCreateByID(t *testing.T) {
 	const (

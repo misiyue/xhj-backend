@@ -138,6 +138,10 @@ func patchMarzbanDeps(conf *config.Config, handler *web.Handler) {
 	if handler == nil || handler.V1 == nil {
 		return
 	}
+	var db *gorm.DB
+	if handler.UserRepo != nil {
+		db = handler.UserRepo.Db
+	}
 	if handler.V1.Marzban == nil {
 		handler.V1.Marzban = &v1.Marzban{}
 	}
@@ -145,7 +149,11 @@ func patchMarzbanDeps(conf *config.Config, handler *web.Handler) {
 		handler.V1.Marzban.MarzbanService = &service.MarzbanService{
 			Config:     conf,
 			HTTPClient: &http.Client{Timeout: 10 * time.Second},
+			DB:         db,
 		}
+	}
+	if marzbanService, ok := handler.V1.Marzban.MarzbanService.(*service.MarzbanService); ok && marzbanService.DB == nil {
+		marzbanService.DB = db
 	}
 }
 
@@ -311,6 +319,12 @@ func bootstrapGormDB(userRepo *repo.Users, c *v1.Common) *gorm.DB {
 }
 
 func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRoutes, handler *web.Handler) {
+	api.POST("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.Checkin(c)
+	}))
+	api.GET("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.CheckinStatus(c)
+	}))
 	api.POST("/api/v1/marzban/user", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.Marzban.CreateUser(c)
 	}))

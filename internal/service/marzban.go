@@ -16,21 +16,30 @@ import (
 	"time"
 
 	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/internal/repository/model"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const marzbanTokenTTL = 10 * time.Minute
+const marzbanCheckinReward = 6 * time.Hour
 
 var ErrMarzbanUserNotFound = errors.New("Marzban 用户不存在")
+var ErrMarzbanAlreadyCheckedIn = errors.New("今天已经签到")
+var ErrMarzbanUnlimitedExpire = errors.New("无限期账号无需签到")
 var marzbanUsernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.@-]+$`)
 
 type IMarzbanService interface {
 	CreateByID(ctx context.Context, id int, dataLimit int64, expireDays int) (*MarzbanUserInfo, error)
 	GetByID(ctx context.Context, id int) (*MarzbanUserInfo, error)
+	Checkin(ctx context.Context, id int) (*MarzbanUserInfo, error)
+	CheckinStatus(ctx context.Context, id int) (bool, string, error)
 }
 
 type MarzbanService struct {
 	Config     *config.Config
 	HTTPClient *http.Client
+	DB         *gorm.DB
 
 	tokenMu        sync.Mutex `wire:"-"`
 	accessToken    string     `wire:"-"`
@@ -162,6 +171,83 @@ func (s *MarzbanService) GetByID(ctx context.Context, id int) (*MarzbanUserInfo,
 		return nil, fmt.Errorf("查询 Marzban 用户失败，状态码：%d", status)
 	}
 	return s.toUserInfo(id, user, false), nil
+}
+
+// Checkin extends the Marzban expiry once per Beijing calendar day.
+func (s *MarzbanService) Checkin(ctx context.Context, id int) (*MarzbanUserInfo, error) {
+	if id <= 0 {
+		return nil, errors.New("用户ID无效")
+	}
+	if s.DB == nil {
+		return nil, errors.New("签到数据库未配置")
+	}
+	now := time.Now()
+	day := now.In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
+	var result *MarzbanUserInfo
+	err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		record := model.MarzbanCheckin{UserID: id, CheckinDate: day, CreatedAt: now}
+		created := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&record)
+		if created.Error != nil {
+			return created.Error
+		}
+		if created.RowsAffected == 0 {
+			return ErrMarzbanAlreadyCheckedIn
+		}
+		username, err := s.username(id)
+		if err != nil {
+			return err
+		}
+		user, status, err := s.getUser(ctx, username)
+		if err != nil {
+			return err
+		}
+		if status == http.StatusNotFound {
+			return ErrMarzbanUserNotFound
+		}
+		if status != http.StatusOK {
+			return fmt.Errorf("查询 Marzban 用户失败，状态码：%d", status)
+		}
+		if user.Expire == 0 {
+			return ErrMarzbanUnlimitedExpire
+		}
+		base := user.Expire
+		if base < now.Unix() {
+			base = now.Unix()
+		}
+		expire := base + int64(marzbanCheckinReward/time.Second)
+		var updated marzbanUserResponse
+		status, err = s.request(ctx, http.MethodPut, "/api/user/"+url.PathEscape(username), map[string]any{"expire": expire}, &updated, false)
+		if err != nil {
+			return err
+		}
+		if status != http.StatusOK {
+			return fmt.Errorf("更新 Marzban 到期时间失败，状态码：%d", status)
+		}
+		if updated.Expire != expire {
+			return errors.New("Marzban 返回的到期时间与签到奖励不一致")
+		}
+		if err := tx.Model(&record).Update("expire", expire).Error; err != nil {
+			return err
+		}
+		result = s.toUserInfo(id, &updated, false)
+		return nil
+	})
+	return result, err
+}
+
+func (s *MarzbanService) CheckinStatus(ctx context.Context, id int) (bool, string, error) {
+	if id <= 0 {
+		return false, "", errors.New("用户ID无效")
+	}
+	if s.DB == nil {
+		return false, "", errors.New("签到数据库未配置")
+	}
+	now := time.Now().In(time.FixedZone("Asia/Shanghai", 8*3600))
+	day := now.Format("2006-01-02")
+	var count int64
+	err := s.DB.WithContext(ctx).Model(&model.MarzbanCheckin{}).Where("user_id = ? AND checkin_date = ?", id, day).Count(&count).Error
+	next := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location()).Format(time.RFC3339)
+	return count > 0, next, err
 }
 
 func (s *MarzbanService) getUser(ctx context.Context, username string) (*marzbanUserResponse, int, error) {

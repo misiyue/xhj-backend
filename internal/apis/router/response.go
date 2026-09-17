@@ -71,7 +71,7 @@ func (i *Interceptor) Error(c *gin.Context, err error) {
 	// 这里需要断言这个错误是否是指定错误码
 	var e *errorx.Error
 	if errors.As(err, &e) {
-		if slices.Contains([]int{404, 403, 429, 400}, e.Code) {
+		if slices.Contains([]int{404, 403, 429, 401, 400}, e.Code) {
 			c.AbortWithStatusJSON(e.Code, gin.H{"code": e.Code, "message": e.Message})
 		} else {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": e.Code, "message": e.Message})

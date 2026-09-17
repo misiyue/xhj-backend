@@ -6,7 +6,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
+	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/service"
 )
 
@@ -38,6 +40,12 @@ type MarzbanUserResponse struct {
 	SubscriptionURL       string  `json:"subscription_url"`
 	Created               bool    `json:"created"`
 	Message               string  `json:"message"`
+}
+
+type MarzbanCheckinStatusResponse struct {
+	CheckedIn   bool   `json:"checked_in"`
+	RewardHours int    `json:"reward_hours"`
+	NextResetAt string `json:"next_reset_at"`
 }
 
 // CreateUser 按传入的系统用户ID幂等创建 Marzban 用户。
@@ -93,6 +101,57 @@ func (m *Marzban) GetUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	}
 	return marzbanUserResponse(user), nil
 }
+
+// Checkin rewards the authenticated user's Marzban account with six hours.
+//
+//	@Summary      Marzban 每日签到
+//	@Description  需登录；每天北京时间可签到一次，账号到期时间增加6小时
+//	@Tags         Marzban
+//	@Produce      json
+//	@Success      200 {object} MarzbanUserResponse
+//	@Router       /api/v1/marzban/check-in [post]
+func (m *Marzban) Checkin(ctx *gin.Context) (*MarzbanUserResponse, error) {
+	claims, err := middleware.FormContext[entity.WebClaims](ctx)
+	if err != nil || claims.UserId <= 0 {
+		return nil, errorx.New(401, "请先登录")
+	}
+	user, err := m.MarzbanService.Checkin(ctx.Request.Context(), int(claims.UserId))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrMarzbanAlreadyCheckedIn):
+			return nil, errorx.New(429, err.Error())
+		case errors.Is(err, service.ErrMarzbanUserNotFound):
+			return nil, errorx.New(404, err.Error())
+		case errors.Is(err, service.ErrMarzbanUnlimitedExpire):
+			return nil, errorx.New(400, err.Error())
+		default:
+			return nil, err
+		}
+	}
+	response := marzbanUserResponse(user)
+	response.Message = "签到成功，已增加6小时"
+	return response, nil
+}
+
+// CheckinStatus reports today's reward state for the authenticated user.
+//
+//	@Summary      Marzban 签到状态
+//	@Tags         Marzban
+//	@Produce      json
+//	@Success      200 {object} MarzbanCheckinStatusResponse
+//	@Router       /api/v1/marzban/check-in [get]
+func (m *Marzban) CheckinStatus(ctx *gin.Context) (*MarzbanCheckinStatusResponse, error) {
+	claims, err := middleware.FormContext[entity.WebClaims](ctx)
+	if err != nil || claims.UserId <= 0 {
+		return nil, errorx.New(401, "请先登录")
+	}
+	checkedIn, nextResetAt, err := m.MarzbanService.CheckinStatus(ctx.Request.Context(), int(claims.UserId))
+	if err != nil {
+		return nil, err
+	}
+	return &MarzbanCheckinStatusResponse{CheckedIn: checkedIn, RewardHours: 6, NextResetAt: nextResetAt}, nil
+}
+
 func marzbanUserResponse(user *service.MarzbanUserInfo) *MarzbanUserResponse {
 	message := "查询成功"
 	if user.Created {

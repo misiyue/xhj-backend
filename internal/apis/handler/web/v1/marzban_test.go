@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/service"
 	"github.com/stretchr/testify/require"
 )
@@ -14,6 +16,7 @@ import (
 type marzbanServiceStub struct {
 	createdID int
 	queriedID int
+	checkinID int
 }
 
 func (s *marzbanServiceStub) CreateByID(_ context.Context, id int, dataLimit int64, _ int) (*service.MarzbanUserInfo, error) {
@@ -29,6 +32,28 @@ func (s *marzbanServiceStub) CreateByID(_ context.Context, id int, dataLimit int
 func (s *marzbanServiceStub) GetByID(_ context.Context, id int) (*service.MarzbanUserInfo, error) {
 	s.queriedID = id
 	return &service.MarzbanUserInfo{ID: id, Username: "xhj_0"}, nil
+}
+
+func (s *marzbanServiceStub) Checkin(_ context.Context, id int) (*service.MarzbanUserInfo, error) {
+	s.checkinID = id
+	return &service.MarzbanUserInfo{ID: id, Username: "xhj_0"}, nil
+}
+
+func (s *marzbanServiceStub) CheckinStatus(_ context.Context, _ int) (bool, string, error) {
+	return false, "", nil
+}
+
+func TestMarzbanCheckinUsesAuthenticatedUser(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	stub := &marzbanServiceStub{}
+	handler := &Marzban{MarzbanService: stub}
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	req := httptest.NewRequest("POST", "/api/v1/marzban/check-in", strings.NewReader(`{"id": 99}`))
+	ctx.Request = req.WithContext(context.WithValue(req.Context(), middleware.AuthClaimsKey{}, entity.WebClaims{UserId: 42}))
+	response, err := handler.Checkin(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 42, stub.checkinID)
+	require.Equal(t, 42, response.ID)
 }
 
 func TestCreateMarzbanUserAllowsZeroIDWithoutLogin(t *testing.T) {
