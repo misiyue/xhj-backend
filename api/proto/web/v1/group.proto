@@ -160,6 +160,14 @@ service Group {
       body: "*"
     };
   }
+
+  // 群置顶推广列表（group_totop，按 sort 倒序）
+  rpc Totops(GroupTotopsRequest) returns (GroupTotopsResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/totops"
+      body: "*"
+    };
+  }
 }
 
 // 群列表接口请求参数
@@ -409,6 +417,22 @@ message GroupFakersResponse {
     string username = 2;
     string nickname = 3;
     string avatar = 4;
+  }
+  repeated Item items = 1;
+}
+
+// 群置顶推广列表
+message GroupTotopsRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+message GroupTotopsResponse {
+  message Item {
+    int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+    string cover = 2;
+    string intro = 3;
+    string btn = 4;
+    string url = 5;
   }
   repeated Item items = 1;
 }

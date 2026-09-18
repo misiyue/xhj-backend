@@ -50,6 +50,8 @@ type IGroupHandler interface {
 	Overt(ctx context.Context, in *GroupOvertRequest) (*GroupOvertResponse, error)
 	// 群马甲用户列表
 	Fakers(ctx context.Context, in *GroupFakersRequest) (*GroupFakersResponse, error)
+	// 群置顶推广列表
+	Totops(ctx context.Context, in *GroupTotopsRequest) (*GroupTotopsResponse, error)
 }
 
 // RegisterGroupHandler 注册服务路由处理器
@@ -234,6 +236,15 @@ func RegisterGroupHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.Fakers(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/group/totops", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in GroupTotopsRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.Totops(ctx.Request.Context(), &in)
 	}))
 
 }
