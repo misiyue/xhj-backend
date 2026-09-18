@@ -233,3 +233,16 @@ type TalkRecordExtraTransfer struct {
 	Amount     float64 `json:"amount"`      // 转账金额（单位：分）
 	Remark     string  `json:"remark"`      // 转账备注
 }
+
+// TalkRecordExtraCmdBtn 指令消息按钮
+type TalkRecordExtraCmdBtn struct {
+	Text string `json:"text"`
+	Url  string `json:"url"`
+}
+
+// TalkRecordExtraCmd 用户指令卡片消息
+type TalkRecordExtraCmd struct {
+	File  string                  `json:"file"`
+	Intro string                  `json:"intro"`
+	Btns  []TalkRecordExtraCmdBtn `json:"btns"`
+}

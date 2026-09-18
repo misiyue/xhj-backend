@@ -469,6 +469,15 @@ func PreviewText(msgType int, extra string) string {
 			return entity.ChatMsgSysRetainDaysSetPreview(0)
 		}
 		return entity.ChatMsgSysRetainDaysSetPreview(data.RetainDays)
+	case entity.ChatMsgTypeCmd:
+		data := model.TalkRecordExtraCmd{}
+		if err := jsonutil.Unmarshal(extra, &data); err != nil {
+			return entity.ChatMsgTypeMapping[entity.ChatMsgTypeCmd]
+		}
+		if strings.TrimSpace(data.Intro) != "" {
+			return strutil.MtSubstr(strings.TrimSpace(data.Intro), 0, 200)
+		}
+		return entity.ChatMsgTypeMapping[entity.ChatMsgTypeCmd]
 	default:
 		if value, ok := entity.ChatMsgTypeMapping[msgType]; ok {
 			return value
