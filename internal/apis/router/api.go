@@ -319,10 +319,10 @@ func bootstrapGormDB(userRepo *repo.Users, c *v1.Common) *gorm.DB {
 }
 
 func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRoutes, handler *web.Handler) {
-	api.POST("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+	router.POST("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.Marzban.Checkin(c)
 	}))
-	api.GET("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+	router.GET("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.Marzban.CheckinStatus(c)
 	}))
 	api.POST("/api/v1/marzban/user", HandlerFunc(resp, func(c *gin.Context) (any, error) {
