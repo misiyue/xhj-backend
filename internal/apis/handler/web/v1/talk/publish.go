@@ -677,6 +677,18 @@ type onSendTransferMessage struct {
 	} `json:"body" binding:"required"`
 }
 
+type onSendCmdMessage struct {
+	BaseMessageRequest
+	Body struct {
+		File  string `json:"file"`
+		Intro string `json:"intro"`
+		Btns  []struct {
+			Text string `json:"text" binding:"required"`
+			Url  string `json:"url" binding:"required"`
+		} `json:"btns" binding:"required"`
+	} `json:"body" binding:"required"`
+}
+
 // 转账消息
 func (c *Publish) onSendTransfer(ctx *gin.Context) error {
 	in := &onSendTransferMessage{}
@@ -702,6 +714,38 @@ func (c *Publish) onSendTransfer(ctx *gin.Context) error {
 	return nil
 }
 
+// 指令卡片消息
+func (c *Publish) onSendCmd(ctx *gin.Context) error {
+	in := &onSendCmdMessage{}
+	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
+		return errorx.New(400, err.Error())
+	}
+
+	btns := make([]message.CreateCmdMessageBtn, 0, len(in.Body.Btns))
+	for _, b := range in.Body.Btns {
+		btns = append(btns, message.CreateCmdMessageBtn{
+			Text: strings.TrimSpace(b.Text),
+			Url:  strings.TrimSpace(b.Url),
+		})
+	}
+
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
+	err := c.MessageService.CreateCmdMessage(ctx.Request.Context(), message.CreateCmdMessage{
+		MsgId:      in.MsgId,
+		TalkMode:   in.TalkMode,
+		FromId:     uid,
+		ReceiverId: in.ReceiverId,
+		QuoteId:    in.QuoteId,
+		File:       strings.TrimSpace(in.Body.File),
+		Intro:      strings.TrimSpace(in.Body.Intro),
+		Btns:       btns,
+	})
+	if err != nil {
+		return ctx.Error(err)
+	}
+	return nil
+}
+
 func (c *Publish) transfer(ctx *gin.Context, typeValue string) error {
 	if mapping == nil {
 		mapping = make(map[string]func(ctx *gin.Context) error)
@@ -720,6 +764,7 @@ func (c *Publish) transfer(ctx *gin.Context, typeValue string) error {
 		mapping["call_invite"] = c.onSendCallInvite
 		mapping["red_envelope"] = c.onSendRedEnvelope
 		mapping["transfer"] = c.onSendTransfer
+		mapping["cmd"] = c.onSendCmd
 	}
 
 	if call, ok := mapping[typeValue]; ok {

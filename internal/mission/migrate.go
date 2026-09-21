@@ -113,6 +113,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.UserFaker{},
 		&model.GroupFaker{},
 		&model.UserCmd{},
+		&model.GroupTotop{},
 	)
 
 	if err != nil {

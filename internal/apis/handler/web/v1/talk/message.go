@@ -153,6 +153,7 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 		entity.ChatMsgTypeVote,
 		entity.ChatMsgTypeRedEnvelope,
 		entity.ChatMsgTypeTransfer,
+		entity.ChatMsgTypeCmd,
 	}
 
 	if slices.Contains(msgTypes, int(in.MsgType)) {

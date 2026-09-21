@@ -202,3 +202,19 @@ type CreateTransferMessage struct {
 	Amount     float64 `json:"amount"`      // 转账金额（单位：分）
 	Remark     string  `json:"remark"`      // 转账备注
 }
+
+type CreateCmdMessageBtn struct {
+	Text string `json:"text"`
+	Url  string `json:"url"`
+}
+
+type CreateCmdMessage struct {
+	MsgId      string                `json:"msg_id"`
+	TalkMode   int                   `json:"talk_mode"`
+	FromId     int                   `json:"from_id"`
+	ReceiverId int                   `json:"receiver_id"`
+	QuoteId    string                `json:"quote_id"`
+	File       string                `json:"file"`
+	Intro      string                `json:"intro"`
+	Btns       []CreateCmdMessageBtn `json:"btns"`
+}

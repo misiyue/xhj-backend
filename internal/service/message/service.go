@@ -77,6 +77,8 @@ type IMessage interface {
 	CreateRedEnvelopeMessage(ctx context.Context, option CreateRedEnvelopeMessage) error
 	// CreateTransferMessage 转账消息
 	CreateTransferMessage(ctx context.Context, option CreateTransferMessage) error
+	// CreateCmdMessage 指令卡片消息
+	CreateCmdMessage(ctx context.Context, option CreateCmdMessage) error
 }
 
 type IService interface {
@@ -531,6 +533,29 @@ func (s *Service) CreateTransferMessage(ctx context.Context, option CreateTransf
 			TransferId: option.TransferId,
 			Amount:     option.Amount,
 			Remark:     option.Remark,
+		}),
+	})
+}
+
+func (s *Service) CreateCmdMessage(ctx context.Context, option CreateCmdMessage) error {
+	btns := make([]model.TalkRecordExtraCmdBtn, 0, len(option.Btns))
+	for _, b := range option.Btns {
+		btns = append(btns, model.TalkRecordExtraCmdBtn{
+			Text: b.Text,
+			Url:  b.Url,
+		})
+	}
+	return s.CreateMessage(ctx, CreateMessageOption{
+		MsgId:      option.MsgId,
+		TalkMode:   option.TalkMode,
+		FromId:     option.FromId,
+		ReceiverId: option.ReceiverId,
+		QuoteId:    option.QuoteId,
+		MsgType:    entity.ChatMsgTypeCmd,
+		Extra: jsonutil.Encode(model.TalkRecordExtraCmd{
+			File:  option.File,
+			Intro: option.Intro,
+			Btns:  btns,
 		}),
 	})
 }
