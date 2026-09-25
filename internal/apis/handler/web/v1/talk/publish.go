@@ -441,7 +441,8 @@ type onMixedMessageMessage struct {
 		Items []struct {
 			Type    int    `json:"type" binding:"required"`
 			Content string `json:"content" binding:"required"`
-		} `json:"items" binding:"required"`
+			Link    string `json:"link"`
+		} `json:"items" binding:"required,min=1"`
 	} `json:"body" binding:"required"`
 }
 
@@ -457,6 +458,7 @@ func (c *Publish) onMixedMessage(ctx *gin.Context) error {
 		items = append(items, message.CreateMixedMessageItem{
 			Type:    item.Type,
 			Content: item.Content,
+			Link:    item.Link,
 		})
 	}
 

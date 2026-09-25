@@ -469,11 +469,16 @@ func (s *Service) CreateBusinessCardMessage(ctx context.Context, option CreateBu
 }
 
 func (s *Service) CreateMixedMessage(ctx context.Context, option CreateMixedMessage) error {
-	items := make([]*model.TalkRecordExtraMixedItem, 0)
-	for _, item := range option.MessageList {
+	normalized, err := normalizeMixedMessageList(option.MessageList)
+	if err != nil {
+		return err
+	}
+	items := make([]*model.TalkRecordExtraMixedItem, 0, len(normalized))
+	for _, item := range normalized {
 		items = append(items, &model.TalkRecordExtraMixedItem{
 			Type:    item.Type,
 			Content: item.Content,
+			Link:    item.Link,
 		})
 	}
 

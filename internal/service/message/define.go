@@ -166,8 +166,9 @@ type CreateMixedMessage struct {
 }
 
 type CreateMixedMessageItem struct {
-	Type    int    `json:"type"`    // 消息类型
-	Content string `json:"content"` // 消息内容
+	Type    int    `json:"type"`    // 消息类型（与单条消息 msg_type 一致）
+	Content string `json:"content"` // 文本可为纯文本或 TalkRecordExtraText JSON；其它类型为对应 extra JSON（图片可为 URL）
+	Link    string `json:"link"`    // 可选，图片跳转等
 }
 
 type CreateRTCCallMessage struct {
