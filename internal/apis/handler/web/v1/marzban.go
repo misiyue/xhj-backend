@@ -106,8 +106,8 @@ func (m *Marzban) GetUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 
 // Checkin rewards the requested Marzban account with six hours.
 //
-//	@Summary		Marzban 每日签到
-//	@Description	无需登录；按传入的系统用户ID签到，每天北京时间可签到一次，账号到期时间增加6小时
+//	@Summary		Marzban 签到
+//	@Description	无需登录；按传入的系统用户ID签到，距上次成功签到满6小时可再次签到，每次增加6小时
 //	@Tags			Marzban
 //	@Accept			json
 //	@Produce		json
@@ -137,10 +137,10 @@ func (m *Marzban) Checkin(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	return response, nil
 }
 
-// CheckinStatus reports today's reward state for the requested user.
+// CheckinStatus reports whether the requested user is in the six-hour cooldown.
 //
 //	@Summary	Marzban 签到状态
-//	@Description	无需登录；按系统用户ID查询当天签到状态
+//	@Description	无需登录；checked_in表示当前仍在6小时冷却期，next_reset_at为下次可签到时间
 //	@Tags		Marzban
 //	@Produce	json
 //	@Param		id	query		int	true	"本系统用户ID"

@@ -60,6 +60,7 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		&model.AppExplore{},
 		&model.AppModule{},
 		&model.MarzbanCheckin{},
+		&model.MarzbanCheckinState{},
 	}
 	for _, m := range models {
 		if m == (&model.AppExplore{}) || m == (&model.AppModule{}) {
