@@ -66,12 +66,22 @@ func (t *TalkSession) FindPrivatePairByLinkSessionId(ctx context.Context, linkSe
 	return t.FindAllByWhere(ctx, "session_id = ? AND talk_mode = ?", linkSessionID, 1)
 }
 
-// UpdateRetainDaysByLinkSessionId 按关联 session_id 批量更新 retain_days
+// UpdateRetainDaysByLinkSessionId 按关联 session_id 批量更新 retain_days（私聊）
 func (t *TalkSession) UpdateRetainDaysByLinkSessionId(ctx context.Context, linkSessionID, retainDays int) error {
 	if linkSessionID <= 0 {
 		return nil
 	}
 	return t.Db.WithContext(ctx).Model(&model.TalkSession{}).
 		Where("session_id = ? AND talk_mode = ?", linkSessionID, 1).
+		Update("retain_days", retainDays).Error
+}
+
+// UpdateRetainDaysById 按 talk_session 主键更新 retain_days（群聊等）
+func (t *TalkSession) UpdateRetainDaysById(ctx context.Context, id, retainDays int) error {
+	if id <= 0 {
+		return nil
+	}
+	return t.Db.WithContext(ctx).Model(&model.TalkSession{}).
+		Where("id = ?", id).
 		Update("retain_days", retainDays).Error
 }

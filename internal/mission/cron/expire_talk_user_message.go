@@ -13,16 +13,17 @@ import (
 var _ crontab.ICrontab = (*ExpireTalkUserMessage)(nil)
 
 type ExpireTalkUserMessage struct {
-	TalkUserMessageRepo *repo.TalkUserMessage
-	TalkSessionRepo     *repo.TalkSession
-	MessageStorage      *cache.MessageStorage
+	TalkUserMessageRepo  *repo.TalkUserMessage
+	TalkGroupMessageRepo *repo.TalkGroupMessage
+	TalkSessionRepo      *repo.TalkSession
+	MessageStorage       *cache.MessageStorage
 }
 
 func (c *ExpireTalkUserMessage) Name() string {
 	return "talk_user_message.expire_by_retain_days"
 }
 
-// Spec 每小时检查一次，按 retain_days 标记过期私聊消息
+// Spec 每小时检查一次，按 retain_days 标记过期私聊/群聊消息
 func (c *ExpireTalkUserMessage) Spec() string {
 	return "0 * * * *"
 }
@@ -32,6 +33,16 @@ func (c *ExpireTalkUserMessage) Enable() bool {
 }
 
 func (c *ExpireTalkUserMessage) Do(ctx context.Context) error {
+	if err := c.expirePrivate(ctx); err != nil {
+		return err
+	}
+	if err := c.expireGroup(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *ExpireTalkUserMessage) expirePrivate(ctx context.Context) error {
 	if c.TalkUserMessageRepo == nil {
 		slog.WarnContext(ctx, "私聊消息 retain_days 定时删除跳过：TalkUserMessageRepo 未注入，请重新生成 wire_gen.go")
 		return nil
@@ -52,6 +63,34 @@ func (c *ExpireTalkUserMessage) Do(ctx context.Context) error {
 	}
 	if cleared > 0 {
 		slog.InfoContext(ctx, "已清除空会话最后一条消息缓存", "sessions", cleared)
+	}
+	return nil
+}
+
+func (c *ExpireTalkUserMessage) expireGroup(ctx context.Context) error {
+	if c.TalkGroupMessageRepo == nil {
+		slog.WarnContext(ctx, "群聊消息 retain_days 定时删除跳过：TalkGroupMessageRepo 未注入，请重新生成 wire_gen.go")
+		return nil
+	}
+
+	// 1. 他人消息：写入 talk_group_message_del，仅对该用户隐藏
+	delN, err := c.TalkGroupMessageRepo.MarkOthersExpiredToDel(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "群聊他人消息写入 del 表失败", "error", err)
+		return err
+	}
+	if delN > 0 {
+		slog.InfoContext(ctx, "群聊他人过期消息已写入 del 表", "rows", delN)
+	}
+
+	// 2. 本人消息：is_revoked=3（过期删除），列表侧全局过滤
+	revN, err := c.TalkGroupMessageRepo.MarkOwnExpiredRevoked(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "群聊本人消息标记过期删除失败", "error", err)
+		return err
+	}
+	if revN > 0 {
+		slog.InfoContext(ctx, "群聊本人过期消息已标记 is_revoked=3", "rows", revN)
 	}
 	return nil
 }

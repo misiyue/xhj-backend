@@ -176,6 +176,9 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 		if record.IsRevoked == model.Yes {
 			return errors.New("消息已撤回")
 		}
+		if record.IsRevoked == model.TalkGroupMessageRevokedExpired {
+			return errors.New("消息已过期删除")
+		}
 
 		if time.Now().Unix() > record.SendTime.Add(3*time.Minute).Unix() {
 			return errors.New("超出有效撤回时间范围，无法进行撤销！")

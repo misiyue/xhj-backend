@@ -275,11 +275,12 @@ func linkSessionId(detail *model.TalkSession) int {
 	return linkSessionID(detail.Id, detail.SessionId)
 }
 
-// SessionSetRetainDays 设置私聊消息保留天数（按 session_id 同步己方与对方）
+// SessionSetRetainDays 设置消息保留天数（私聊按 session_id 同步双方；群聊仅更新当前用户）
 func (s *Session) SessionSetRetainDays(ctx context.Context, in *web.TalkSessionSetRetainDaysRequest) (*web.TalkSessionSetRetainDaysResponse, error) {
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
 	retainDays, err := s.TalkSessionService.SetRetainDays(ctx, &service.TalkSessionSetRetainDaysOpt{
 		UserId:        uid,
+		TalkMode:      int(in.GetTalkMode()),
 		LinkSessionId: int(in.GetSessionId()),
 		RetainDays:    int(in.GetRetainDays()),
 	})

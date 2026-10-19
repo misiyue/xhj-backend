@@ -350,11 +350,12 @@ func (s *TalkSessionService) SessionDetail(ctx context.Context, uid int, talkMod
 
 type TalkSessionSetRetainDaysOpt struct {
 	UserId        int
-	LinkSessionId int // talk_session.session_id（私聊成对关联 ID）
+	TalkMode      int // 1私聊 2群聊；0 按私聊
+	LinkSessionId int // 私聊：talk_session.session_id；群聊：talk_session.id
 	RetainDays    int
 }
 
-// SetRetainDays 设置私聊消息保留天数：校验己方与对方 talk_session 后，按 session_id 同步更新
+// SetRetainDays 设置消息保留天数：私聊按 session_id 同步双方；群聊仅更新当前用户该群会话
 func (s *TalkSessionService) SetRetainDays(ctx context.Context, opt *TalkSessionSetRetainDaysOpt) (int, error) {
 	if opt == nil || opt.UserId <= 0 || opt.LinkSessionId <= 0 {
 		return 0, entity.ErrPermissionDenied
@@ -363,6 +364,21 @@ func (s *TalkSessionService) SetRetainDays(ctx context.Context, opt *TalkSession
 		return 0, entity.ErrPermissionDenied
 	}
 
+	talkMode := opt.TalkMode
+	if talkMode == 0 {
+		talkMode = entity.ChatPrivateMode
+	}
+	if talkMode != entity.ChatPrivateMode && talkMode != entity.ChatGroupMode {
+		return 0, entity.ErrPermissionDenied
+	}
+
+	if talkMode == entity.ChatGroupMode {
+		return s.setGroupRetainDays(ctx, opt)
+	}
+	return s.setPrivateRetainDays(ctx, opt)
+}
+
+func (s *TalkSessionService) setPrivateRetainDays(ctx context.Context, opt *TalkSessionSetRetainDaysOpt) (int, error) {
 	rows, err := s.TalkSessionRepo.FindPrivatePairByLinkSessionId(ctx, opt.LinkSessionId)
 	if err != nil {
 		return 0, err
@@ -401,6 +417,30 @@ func (s *TalkSessionService) SetRetainDays(ctx context.Context, opt *TalkSession
 		}
 	}
 
+	return opt.RetainDays, nil
+}
+
+func (s *TalkSessionService) setGroupRetainDays(ctx context.Context, opt *TalkSessionSetRetainDaysOpt) (int, error) {
+	session, err := s.TalkSessionRepo.FindByWhere(ctx, "id = ? AND user_id = ? AND talk_mode = ?", opt.LinkSessionId, opt.UserId, entity.ChatGroupMode)
+	if err != nil {
+		return 0, err
+	}
+	if session == nil || session.Id == 0 {
+		return 0, entity.ErrDataNotFound
+	}
+	if s.GroupMemberRepo != nil && !s.GroupMemberRepo.IsMember(ctx, session.ReceiverId, opt.UserId, false) {
+		return 0, entity.ErrPermissionDenied
+	}
+
+	if err := s.TalkSessionRepo.UpdateRetainDaysById(ctx, session.Id, opt.RetainDays); err != nil {
+		return 0, err
+	}
+
+	if s.Message != nil {
+		if err := s.Message.CreateGroupRetainDaysSetMessage(ctx, opt.UserId, session.ReceiverId, opt.RetainDays); err != nil {
+			return 0, err
+		}
+	}
 	return opt.RetainDays, nil
 }
 

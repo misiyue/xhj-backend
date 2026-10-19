@@ -42,7 +42,7 @@ type TalkSessionItem struct {
 	AtMeUserCount int32 `protobuf:"varint,14,opt,name=at_me_user_count,json=atMeUserCount,proto3" json:"at_me_user_count,omitempty"`
 	// 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
 	SessionId int32 `protobuf:"varint,15,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	// 消息保留天数，0 表示不限制（私聊有效）
+	// 消息保留天数，0 表示不限制（私聊/群聊均有效）
 	RetainDays    int32 `protobuf:"varint,16,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -804,12 +804,15 @@ func (x *TalkSessionDetailResponse) GetSessionId() int32 {
 	return 0
 }
 
-// 设置消息保留天数（私聊成对 session_id）
+// 设置消息保留天数
 type TalkSessionSetRetainDaysRequest struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	SessionId int32                  `protobuf:"varint,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 私聊：成对关联 session_id；群聊：当前用户该群 talk_session.id
+	SessionId int32 `protobuf:"varint,1,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
 	// 0 表示不限制；最大 3650 天
-	RetainDays    int32 `protobuf:"varint,2,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
+	RetainDays int32 `protobuf:"varint,2,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
+	// 1:私聊 2:群聊；未传或 0 按私聊处理
+	TalkMode      int32 `protobuf:"varint,3,opt,name=talk_mode,json=talkMode,proto3" json:"talk_mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -854,6 +857,13 @@ func (x *TalkSessionSetRetainDaysRequest) GetSessionId() int32 {
 func (x *TalkSessionSetRetainDaysRequest) GetRetainDays() int32 {
 	if x != nil {
 		return x.RetainDays
+	}
+	return 0
+}
+
+func (x *TalkSessionSetRetainDaysRequest) GetTalkMode() int32 {
+	if x != nil {
+		return x.TalkMode
 	}
 	return 0
 }
@@ -1156,13 +1166,14 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\vretain_days\x18\x03 \x01(\x05R\n" +
 	"retainDays\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x04 \x01(\x05R\tsessionId\"v\n" +
+	"session_id\x18\x04 \x01(\x05R\tsessionId\"\xa0\x01\n" +
 	"\x1fTalkSessionSetRetainDaysRequest\x12&\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\tsessionId\x12+\n" +
 	"\vretain_days\x18\x02 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc2\x1c(\x00R\n" +
-	"retainDays\"I\n" +
+	"retainDays\x12(\n" +
+	"\ttalk_mode\x18\x03 \x01(\x05B\v\xbaH\b\x1a\x060\x000\x010\x02R\btalkMode\"I\n" +
 	" TalkSessionSetRetainDaysResponse\x12%\n" +
 	"\vretain_days\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\n" +
 	"retainDays\"\x18\n" +

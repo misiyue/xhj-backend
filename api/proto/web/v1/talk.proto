@@ -64,7 +64,7 @@ service Talk {
     };
   }
 
-  // 设置私聊会话消息保留天数（按 session_id 同时更新己方与对方 talk_session）
+  // 设置会话消息保留天数（私聊按 session_id 同步双方；群聊仅更新当前用户该群会话）
   rpc SessionSetRetainDays(TalkSessionSetRetainDaysRequest) returns (TalkSessionSetRetainDaysResponse) {
     option (google.api.http) = {
       post: "/api/v1/talk/session-set-retain-days"
@@ -91,7 +91,7 @@ message TalkSessionItem{
   int32 at_me_user_count = 14;
   // 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
   int32 session_id = 15;
-  // 消息保留天数，0 表示不限制（私聊有效）
+  // 消息保留天数，0 表示不限制（私聊/群聊均有效）
   int32 retain_days = 16;
 }
 
@@ -168,11 +168,14 @@ message TalkSessionDetailResponse{
   int32 session_id = 4;
 }
 
-// 设置消息保留天数（私聊成对 session_id）
+// 设置消息保留天数
 message TalkSessionSetRetainDaysRequest {
+  // 私聊：成对关联 session_id；群聊：当前用户该群 talk_session.id
   int32 session_id = 1 [(buf.validate.field).int32.gte = 1];
   // 0 表示不限制；最大 3650 天
   int32 retain_days = 2 [(buf.validate.field).int32 = {gte: 0, lte: 3650}];
+  // 1:私聊 2:群聊；未传或 0 按私聊处理
+  int32 talk_mode = 3 [(buf.validate.field).int32 = {in: [0, 1, 2]}];
 }
 
 message TalkSessionSetRetainDaysResponse {

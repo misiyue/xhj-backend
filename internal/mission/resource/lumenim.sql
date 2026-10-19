@@ -427,7 +427,7 @@ CREATE TABLE IF NOT EXISTS `talk_group_message`
     `msg_type`   int unsigned     NOT NULL DEFAULT '1' COMMENT '消息类型',
     `group_id`   int unsigned     NOT NULL COMMENT '群组ID',
     `from_id`    int unsigned     NOT NULL COMMENT '消息发送者ID',
-    `is_revoked` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否撤回[1:是;2:否;]',
+    `is_revoked` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否撤回[1:是;2:否;3:过期删除]',
     `extra`      json             NOT NULL COMMENT '消息扩展字段',
     `quote`      json             NOT NULL COMMENT '引用消息',
     `send_time`  datetime         NOT NULL COMMENT '发送时间',

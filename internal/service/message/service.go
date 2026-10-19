@@ -40,6 +40,8 @@ type IGroupMessage interface {
 	CreateGroupMessage(ctx context.Context, option CreateGroupMessageOption) error
 	// CreateGroupSysMessage 创建群系统消息
 	CreateGroupSysMessage(ctx context.Context, option CreateGroupSysMessageOption) error
+	// CreateGroupRetainDaysSetMessage 设置群聊 retain_days 后仅通知该用户（列表按 from_id 过滤 1201）
+	CreateGroupRetainDaysSetMessage(ctx context.Context, userId, groupId, retainDays int) error
 }
 
 type IMessage interface {

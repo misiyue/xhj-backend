@@ -38,6 +38,8 @@ type SubscribeMessage struct {
 type SubEventImMessagePayload struct {
 	TalkMode int    `json:"talk_mode"` // 1 单聊 2 群聊
 	Message  string `json:"message"`   // json 字符串
+	// TargetUserIds 可选：群聊时仅向指定用户投递（空则推送给全部群成员）
+	TargetUserIds []int `json:"target_user_ids,omitempty"`
 }
 
 // SubEventImMessageMerchantPayload 商户 C2C 消息订阅 payload

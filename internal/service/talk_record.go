@@ -93,6 +93,9 @@ func (s *TalkRecordService) FindTalkGroupRecord(ctx context.Context, msgId strin
 	if talkRecordGroupInfo == nil {
 		return nil, gorm.ErrRecordNotFound
 	}
+	if talkRecordGroupInfo.IsRevoked == model.TalkGroupMessageRevokedExpired {
+		return nil, gorm.ErrRecordNotFound
+	}
 
 	record := &model.TalkMessageRecord{
 		TalkMode:   entity.ChatGroupMode,
@@ -223,9 +226,12 @@ func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalk
 
 		query.Where("is_deleted = ?", model.No)
 	} else {
-		// 群聊：直接使用 GroupId 查询
+		// 群聊：直接使用 GroupId 查询；过滤过期删除（is_revoked=3）
+		// msg_type=1201（保留天数提示）仅对 from_id=当前用户 可见
 		query = query.Model(&model.TalkGroupMessage{})
 		query.Where("group_id = ?", opt.ReceiverId)
+		query.Where("is_revoked <> ?", model.TalkGroupMessageRevokedExpired)
+		query.Where("(msg_type <> ? OR from_id = ?)", entity.ChatMsgSysRetainDaysSet, opt.UserId)
 	}
 
 	// 关键字搜索：仅对文本/混合/代码等内容型消息按内容做模糊匹配。
@@ -294,6 +300,8 @@ func (s *TalkRecordService) FindForwardRecords(ctx context.Context, uid int, msg
 		query := s.Source.Db().Model(&model.TalkGroupMessage{})
 		query.Select(groupFields)
 		query.Where("msg_id in ?", msgIds)
+		query.Where("is_revoked <> ?", model.TalkGroupMessageRevokedExpired)
+		query.Where("(msg_type <> ? OR from_id = ?)", entity.ChatMsgSysRetainDaysSet, uid)
 		query.Order("id asc")
 		if err := query.Scan(&items).Error; err != nil {
 			return nil, err

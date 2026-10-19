@@ -721,12 +721,14 @@ func NewCronInjector(c *config.Config) *mission.CronProvider {
 		MerchantOrderRepo: merchantOrder,
 	}
 	talkUserMessage := repo.NewTalkRecordFriend(db)
+	talkGroupMessage := repo.NewTalkRecordGroup(db)
 	talkSession := repo.NewTalkSession(db)
 	messageStorage := cache.NewMessageStorage(client)
 	expireTalkUserMessage := &cron.ExpireTalkUserMessage{
-		TalkUserMessageRepo: talkUserMessage,
-		TalkSessionRepo:     talkSession,
-		MessageStorage:      messageStorage,
+		TalkUserMessageRepo:  talkUserMessage,
+		TalkGroupMessageRepo: talkGroupMessage,
+		TalkSessionRepo:      talkSession,
+		MessageStorage:       messageStorage,
 	}
 	crontab := &cron.Crontab{
 		ClearArticle:          clearArticle,

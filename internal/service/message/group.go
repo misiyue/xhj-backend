@@ -222,3 +222,56 @@ func (s *Service) CreateGroupSysMessage(ctx context.Context, option CreateGroupS
 		}),
 	})
 }
+
+// CreateGroupRetainDaysSetMessage 向群内写入一条保留天数系统提示（msg_type=1201），
+// from_id 记为设置者；列表查询仅对该用户返回该类消息，WebSocket 也只推给该用户。
+func (s *Service) CreateGroupRetainDaysSetMessage(ctx context.Context, userId, groupId, retainDays int) error {
+	if userId <= 0 || groupId <= 0 {
+		return nil
+	}
+
+	if s.TalkSessionRepo != nil {
+		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", userId, groupId, entity.ChatGroupMode); err == nil && sess != nil && sess.Id > 0 {
+			if sess.IsDelete == model.Yes {
+				_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
+					"is_delete":  model.No,
+					"updated_at": time.Now(),
+				}, "id = ?", sess.Id)
+			}
+		}
+	}
+
+	extra := jsonutil.Encode(map[string]int{"retain_days": retainDays})
+	item := &model.TalkGroupMessage{
+		MsgId:     strutil.NewMsgId(),
+		MsgType:   entity.ChatMsgSysRetainDaysSet,
+		GroupId:   groupId,
+		FromId:    userId, // 归属用户；列表侧按 from_id 过滤 1201
+		Quote:     "{}",
+		Extra:     extra,
+		IsRevoked: model.No,
+		SendTime:  time.Now(),
+	}
+	if err := s.Source.Db().WithContext(ctx).Create(item).Error; err != nil {
+		return err
+	}
+
+	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
+		Event: entity.SubEventImMessage,
+		Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
+			TalkMode:      entity.ChatGroupMode,
+			Message:       jsonutil.Encode(item),
+			TargetUserIds: []int{userId},
+		}),
+	})
+	if err != nil {
+		logger.Errorf("CreateGroupRetainDaysSetMessage push error:%s", err.Error())
+	}
+
+	_ = s.MessageStorage.Set(ctx, entity.ChatGroupMode, userId, groupId, &cache.LastCacheMessage{
+		Content:  s.getTextMessage(item.MsgType, extra),
+		Datetime: item.CreatedAt.Format(time.DateTime),
+	})
+
+	return nil
+}
