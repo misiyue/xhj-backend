@@ -484,16 +484,27 @@ func (s *Service) CreateMixedMessage(ctx context.Context, option CreateMixedMess
 		})
 	}
 
-	return s.CreateMessage(ctx, CreateMessageOption{
-		MsgId:      option.MsgId,
+	msgId := option.MsgId
+	if msgId == "" {
+		msgId = strutil.NewMsgId()
+	}
+
+	if err := s.CreateMessage(ctx, CreateMessageOption{
+		MsgId:      msgId,
 		TalkMode:   option.TalkMode,
 		FromId:     option.FromId,
 		ReceiverId: option.ReceiverId,
+		QuoteId:    option.QuoteId,
 		MsgType:    entity.ChatMsgTypeMixed,
 		Extra: jsonutil.Encode(model.TalkRecordExtraMixed{
 			Items: items,
 		}),
-	})
+	}); err != nil {
+		return err
+	}
+
+	// 子段冗余入库（is_revoked=0），供 history-records 按 msg_type 索引查询，不推送、不占会话
+	return s.createMixedSegmentRows(ctx, option.TalkMode, option.FromId, option.ReceiverId, msgId, normalized)
 }
 
 func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCallMessage) error {

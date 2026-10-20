@@ -424,17 +424,20 @@ CREATE TABLE IF NOT EXISTS `talk_group_message`
 (
     `id`         bigint unsigned  NOT NULL AUTO_INCREMENT COMMENT '聊天记录ID',
     `msg_id`     varchar(64)      NOT NULL COMMENT '消息ID',
+    `org_msg_id` varchar(64)      NOT NULL DEFAULT '' COMMENT '原消息ID（混合子段指向父消息）',
     `msg_type`   int unsigned     NOT NULL DEFAULT '1' COMMENT '消息类型',
     `group_id`   int unsigned     NOT NULL COMMENT '群组ID',
     `from_id`    int unsigned     NOT NULL COMMENT '消息发送者ID',
-    `is_revoked` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否撤回[1:是;2:否;3:过期删除]',
+    `is_revoked` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否撤回[0:隐藏子段;1:是;2:否]',
+    `is_deleted` tinyint(4)                DEFAULT '2' COMMENT '是否删除[1:是;2:否]',
     `extra`      json             NOT NULL COMMENT '消息扩展字段',
     `quote`      json             NOT NULL COMMENT '引用消息',
     `send_time`  datetime         NOT NULL COMMENT '发送时间',
     `created_at` datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_msgid` (`msg_id`),
-    KEY `idx_group_id` (`group_id`) USING BTREE
+    KEY `idx_group_id` (`group_id`) USING BTREE,
+    KEY `idx_org_msg_id` (`org_msg_id`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='群聊消息记录表';;
@@ -486,7 +489,7 @@ CREATE TABLE IF NOT EXISTS `talk_user_message`
     `user_id`     int unsigned     NOT NULL COMMENT '消息所属用户ID',
     `receiver_id` int unsigned     NOT NULL COMMENT '对方用户ID',
     `from_id`     int unsigned     NOT NULL COMMENT '消息发送者ID',
-    `is_revoked`  tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否撤回[1:是;2:否;]',
+    `is_revoked`  tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否撤回[0:隐藏子段;1:是;2:否]',
     `is_deleted`  tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否删除[1:是;2:否;]',
     `extra`       json             NOT NULL COMMENT '消息扩展字段',
     `quote`       json             NOT NULL COMMENT '引用消息',

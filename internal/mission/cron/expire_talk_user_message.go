@@ -83,14 +83,14 @@ func (c *ExpireTalkUserMessage) expireGroup(ctx context.Context) error {
 		slog.InfoContext(ctx, "群聊他人过期消息已写入 del 表", "rows", delN)
 	}
 
-	// 2. 本人消息：is_revoked=3（过期删除），列表侧全局过滤
-	revN, err := c.TalkGroupMessageRepo.MarkOwnExpiredRevoked(ctx)
+	// 2. 本人消息：is_deleted=1，列表侧全局过滤
+	delOwnN, err := c.TalkGroupMessageRepo.MarkOwnExpiredDeleted(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, "群聊本人消息标记过期删除失败", "error", err)
 		return err
 	}
-	if revN > 0 {
-		slog.InfoContext(ctx, "群聊本人过期消息已标记 is_revoked=3", "rows", revN)
+	if delOwnN > 0 {
+		slog.InfoContext(ctx, "群聊本人过期消息已标记 is_deleted=1", "rows", delOwnN)
 	}
 	return nil
 }

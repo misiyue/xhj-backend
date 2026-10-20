@@ -453,10 +453,12 @@ func (NewTalkUserMessage) TableName() string { return "talk_user_message" }
 type NewTalkGroupMessage struct {
 	Id        int64     `gorm:"column:id;primaryKey;autoIncrement"`
 	MsgId     string    `gorm:"column:msg_id;type:varchar(64)"`
+	OrgMsgId  string    `gorm:"column:org_msg_id;type:varchar(64);default:''"`
 	MsgType   int       `gorm:"column:msg_type"`
 	GroupId   int       `gorm:"column:group_id"`
 	FromId    int       `gorm:"column:from_id"`
 	IsRevoked int       `gorm:"column:is_revoked"`
+	IsDeleted int       `gorm:"column:is_deleted;default:2"`
 	Extra     string    `gorm:"column:extra;type:text"`
 	Quote     string    `gorm:"column:quote;type:text"`
 	SendTime  time.Time `gorm:"column:send_time"`
@@ -1202,7 +1204,7 @@ func migrateMessages(sqliteDB, mysqlDB *gorm.DB) (int, error) {
 			_ = getOrCreateSession(2, msg.FromUser, msg.ToUser, sendTime)
 			m := NewTalkGroupMessage{
 				MsgId: msgId, MsgType: msgType, GroupId: msg.ToUser,
-				FromId: msg.FromUser, IsRevoked: isRevoked,
+				FromId: msg.FromUser, IsRevoked: isRevoked, IsDeleted: 2,
 				Extra: extra, Quote: "", SendTime: sendTime, CreatedAt: sendTime,
 			}
 			if err := mysqlDB.Create(&m).Error; err != nil {

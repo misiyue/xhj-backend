@@ -66,6 +66,7 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 		Quote:     quoteJsonText,
 		Extra:     option.Extra,
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		SendTime:  time.Now(),
 	}
 
@@ -250,6 +251,7 @@ func (s *Service) CreateGroupRetainDaysSetMessage(ctx context.Context, userId, g
 		Quote:     "{}",
 		Extra:     extra,
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		SendTime:  time.Now(),
 	}
 	if err := s.Source.Db().WithContext(ctx).Create(item).Error; err != nil {

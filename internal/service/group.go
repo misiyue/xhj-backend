@@ -120,6 +120,7 @@ func (g *GroupService) Create(ctx context.Context, opt *GroupCreateOpt) (int, er
 			GroupId:   group.Id,
 			FromId:    0,
 			IsRevoked: model.No,
+			IsDeleted: model.No,
 			Extra: jsonutil.Encode(model.TalkRecordExtraGroupCreate{
 				OwnerId:   user.Id,
 				OwnerName: user.Nickname,
@@ -232,6 +233,7 @@ func (g *GroupService) Secede(ctx context.Context, groupId int, uid int) error {
 		GroupId:   groupId,
 		FromId:    0,
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		Extra: jsonutil.Encode(&model.TalkRecordExtraGroupMemberQuit{
 			OwnerId:   user.Id,
 			OwnerName: user.Nickname,
@@ -369,6 +371,7 @@ func (g *GroupService) Invite(ctx context.Context, opt *GroupInviteOpt) error {
 		GroupId:   opt.GroupId,
 		FromId:    0, // 系统消息
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		Extra:     "",
 		Quote:     "{}",
 		SendTime:  time.Now(),
@@ -481,6 +484,7 @@ func (g *GroupService) RemoveMember(ctx context.Context, opt *GroupRemoveMembers
 		GroupId:   opt.GroupId,
 		FromId:    0,
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		Extra: jsonutil.Encode(&model.TalkRecordExtraGroupMemberKicked{
 			OwnerId:   memberMaps[opt.UserId].Id,
 			OwnerName: memberMaps[opt.UserId].Nickname,

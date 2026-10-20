@@ -45,13 +45,14 @@ func (s *TalkRecordService) FindAllPrivateRecordByOriMsgId(ctx context.Context, 
 }
 
 type FindAllTalkRecordsOpt struct {
-	TalkType   int    // 对话类型
-	UserId     int    // 获取消息的用户
-	ReceiverId int    // 接收者ID
-	MsgType    []int  // 消息类型
-	Keyword    string // 搜索关键字（可选，按内容模糊匹配）
-	Cursor     int64  // 上次查询的游标
-	Limit      int    // 数据行数
+	TalkType      int    // 对话类型
+	UserId        int    // 获取消息的用户
+	ReceiverId    int    // 接收者ID
+	MsgType       []int  // 消息类型
+	Keyword       string // 搜索关键字（可选，按内容模糊匹配）
+	Cursor        int64  // 上次查询的游标
+	Limit         int    // 数据行数
+	IncludeHidden bool   // 是否包含 is_revoked=0 的混合子段（history-records 用）
 }
 
 func (s *TalkRecordService) FindTalkPrivateRecord(ctx context.Context, uid int, msgId string) (*model.TalkMessageRecord, error) {
@@ -93,7 +94,7 @@ func (s *TalkRecordService) FindTalkGroupRecord(ctx context.Context, msgId strin
 	if talkRecordGroupInfo == nil {
 		return nil, gorm.ErrRecordNotFound
 	}
-	if talkRecordGroupInfo.IsRevoked == model.TalkGroupMessageRevokedExpired {
+	if talkRecordGroupInfo.IsDeleted == model.Yes {
 		return nil, gorm.ErrRecordNotFound
 	}
 
@@ -129,13 +130,14 @@ func (s *TalkRecordService) FindAllTalkRecords(ctx context.Context, opt *FindAll
 	for {
 		// 这里查询数据放弃了关联查询，所以这里需要查询多次，防止查询中存在用户已删除的数据需要过滤掉
 		list, err := s.findAllRecords(ctx, &FindAllTalkRecordsOpt{
-			TalkType:   opt.TalkType,
-			UserId:     opt.UserId,
-			ReceiverId: opt.ReceiverId,
-			MsgType:    opt.MsgType,
-			Keyword:    opt.Keyword,
-			Cursor:     cursor,
-			Limit:      opt.Limit + 10, // 多查几条数据
+			TalkType:      opt.TalkType,
+			UserId:        opt.UserId,
+			ReceiverId:    opt.ReceiverId,
+			MsgType:       opt.MsgType,
+			Keyword:       opt.Keyword,
+			Cursor:        cursor,
+			Limit:         opt.Limit + 10, // 多查几条数据
+			IncludeHidden: opt.IncludeHidden,
 		})
 
 		if err != nil {
@@ -226,12 +228,17 @@ func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalk
 
 		query.Where("is_deleted = ?", model.No)
 	} else {
-		// 群聊：直接使用 GroupId 查询；过滤过期删除（is_revoked=3）
+		// 群聊：直接使用 GroupId 查询；过滤已删除（is_deleted=1）
 		// msg_type=1201（保留天数提示）仅对 from_id=当前用户 可见
 		query = query.Model(&model.TalkGroupMessage{})
 		query.Where("group_id = ?", opt.ReceiverId)
-		query.Where("is_revoked <> ?", model.TalkGroupMessageRevokedExpired)
+		query.Where("is_deleted = ?", model.No)
 		query.Where("(msg_type <> ? OR from_id = ?)", entity.ChatMsgSysRetainDaysSet, opt.UserId)
+	}
+
+	// 会话消息默认隐藏混合子段（is_revoked=0）；history-records 设 IncludeHidden 后可按类型索引取出
+	if !opt.IncludeHidden {
+		query.Where("is_revoked <> ?", model.TalkMsgRevokedHidden)
 	}
 
 	// 关键字搜索：仅对文本/混合/代码等内容型消息按内容做模糊匹配。
@@ -300,7 +307,8 @@ func (s *TalkRecordService) FindForwardRecords(ctx context.Context, uid int, msg
 		query := s.Source.Db().Model(&model.TalkGroupMessage{})
 		query.Select(groupFields)
 		query.Where("msg_id in ?", msgIds)
-		query.Where("is_revoked <> ?", model.TalkGroupMessageRevokedExpired)
+		query.Where("is_deleted = ?", model.No)
+		query.Where("is_revoked <> ?", model.TalkMsgRevokedHidden)
 		query.Where("(msg_type <> ? OR from_id = ?)", entity.ChatMsgSysRetainDaysSet, uid)
 		query.Order("id asc")
 		if err := query.Scan(&items).Error; err != nil {
@@ -312,7 +320,7 @@ func (s *TalkRecordService) FindForwardRecords(ctx context.Context, uid int, msg
 	} else {
 		query := s.Source.Db().Model(&model.TalkUserMessage{})
 		query.Select(privateFields)
-		query.Where("msg_id in ? and is_deleted = ?", msgIds, model.No)
+		query.Where("msg_id in ? and is_deleted = ? and is_revoked <> ?", msgIds, model.No, model.TalkMsgRevokedHidden)
 		query.Order("id asc")
 		if err := query.Scan(&items).Error; err != nil {
 			return nil, err

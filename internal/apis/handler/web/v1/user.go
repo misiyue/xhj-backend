@@ -294,9 +294,10 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := session.UserId
 
-	newEmail := strings.TrimSpace(req.Email)
+	newEmail := strings.ToLower(strings.TrimSpace(req.Email))
+	code := strings.TrimSpace(req.GetCode())
 	user, _ := u.UsersRepo.FindById(ctx, uid)
-	if user.Email == newEmail {
+	if strings.ToLower(strings.TrimSpace(user.Email)) == newEmail {
 		return nil, errorx.New(400, "邮箱与原邮箱一致无需修改")
 	}
 
@@ -313,7 +314,14 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 		return nil, entity.ErrPermissionDenied
 	}
 
-	if !u.EmailService.Verify(ctx, entity.EmailVerifyChannel, newEmail, req.Code) {
+	// 与换手机号一致：优先 email_change_account；兼容历史发信 channel=email_verify / 空 channel
+	ok := u.EmailService.Verify(ctx, entity.EmailChangeAccountChannel, newEmail, code)
+	usedChannel := entity.EmailChangeAccountChannel
+	if !ok {
+		ok = u.EmailService.Verify(ctx, entity.EmailVerifyChannel, newEmail, code)
+		usedChannel = entity.EmailVerifyChannel
+	}
+	if !ok {
 		return nil, errorx.New(400, "邮箱验证码错误")
 	}
 
@@ -330,7 +338,7 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 		return nil, err
 	}
 
-	u.EmailService.Delete(ctx, entity.EmailVerifyChannel, newEmail)
+	u.EmailService.Delete(ctx, usedChannel, newEmail)
 
 	_ = u.UsersRepo.ClearTableCache(ctx, user.Id)
 	return &web.UserEmailUpdateResponse{}, nil

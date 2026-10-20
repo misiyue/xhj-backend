@@ -74,19 +74,19 @@ func (u *Users) SearchByKeyword(ctx context.Context, keyword string) (*model.Use
 	active := "status = ?"
 	// 先尝试精确匹配用户名
 	user, err := u.Repo.FindByWhere(ctx, "username = ? AND "+active, keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 再尝试精确匹配邮箱
 	user, err = u.Repo.FindByWhere(ctx, "email = ? AND "+active, keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 再尝试精确匹配手机号
 	user, err = u.Repo.FindByWhere(ctx, "mobile = ? AND "+active, keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 
@@ -107,13 +107,13 @@ func (u *Users) SearchByKeyword(ctx context.Context, keyword string) (*model.Use
 func (u *Users) SearchByExactIdentifier(ctx context.Context, keyword string) (*model.Users, error) {
 	// 精确用户名
 	user, err := u.Repo.FindByWhere(ctx, "username = ? AND status = ?", keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 精确邮箱
 	user, err = u.Repo.FindByWhere(ctx, "email = ? AND status = ?", keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 

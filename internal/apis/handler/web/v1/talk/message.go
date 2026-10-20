@@ -140,9 +140,9 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 		}
 	}
 
+	// 默认不含 Mixed(12)：子段已按真实 msg_type 冗余入库，按类型筛选走索引即可
 	msgTypes := []int{
 		entity.ChatMsgTypeText,
-		entity.ChatMsgTypeMixed,
 		entity.ChatMsgTypeCode,
 		entity.ChatMsgTypeImage,
 		entity.ChatMsgTypeVideo,
@@ -154,20 +154,31 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 		entity.ChatMsgTypeRedEnvelope,
 		entity.ChatMsgTypeTransfer,
 		entity.ChatMsgTypeCmd,
+		entity.ChatMsgTypeMixed,
 	}
 
 	if slices.Contains(msgTypes, int(in.MsgType)) {
 		msgTypes = []int{int(in.MsgType)}
+	} else {
+		// 未指定类型时去掉 Mixed，避免与子段重复
+		filtered := make([]int, 0, len(msgTypes)-1)
+		for _, t := range msgTypes {
+			if t != entity.ChatMsgTypeMixed {
+				filtered = append(filtered, t)
+			}
+		}
+		msgTypes = filtered
 	}
 
 	records, err := m.TalkRecordsService.FindAllTalkRecords(ctx, &service.FindAllTalkRecordsOpt{
-		TalkType:   int(in.TalkMode),
-		MsgType:    msgTypes,
-		UserId:     uid,
-		ReceiverId: int(in.ReceiverId),
-		Keyword:    in.Keyword, // 新增：按内容关键字模糊搜索
-		Cursor:     int64(in.Cursor),
-		Limit:      int(in.Limit),
+		TalkType:      int(in.TalkMode),
+		MsgType:       msgTypes,
+		UserId:        uid,
+		ReceiverId:    int(in.ReceiverId),
+		Keyword:       in.Keyword,
+		Cursor:        int64(in.Cursor),
+		Limit:         int(in.Limit),
+		IncludeHidden: true,
 	})
 
 	if err != nil {

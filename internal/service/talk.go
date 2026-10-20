@@ -54,7 +54,7 @@ func (t *TalkService) DeleteRecord(ctx context.Context, opt *TalkDeleteRecordOpt
 	// 私有消息直接更新删除状态（不再需要 user_id，因为消息只存储一次）
 	if opt.TalkMode == entity.ChatPrivateMode {
 		return db.Model(model.TalkUserMessage{}).
-			Where("msg_id in ?", opt.MsgIds).
+			Where("msg_id in ? OR (org_msg_id in ? AND is_revoked = ?)", opt.MsgIds, opt.MsgIds, model.TalkMsgRevokedHidden).
 			Update("is_deleted", model.Yes).Error
 	}
 
@@ -71,8 +71,15 @@ func (t *TalkService) DeleteRecord(ctx context.Context, opt *TalkDeleteRecordOpt
 		return errors.New("删除异常! ")
 	}
 
-	items := make([]*model.TalkGroupMessageDel, 0, len(opt.MsgIds))
-	for _, msgId := range opt.MsgIds {
+	// 一并隐藏混合子段
+	var segmentMsgIds []string
+	db.Model(&model.TalkGroupMessage{}).
+		Where("group_id = ? AND org_msg_id in ? AND is_revoked = ?", opt.ReceiverId, opt.MsgIds, model.TalkMsgRevokedHidden).
+		Pluck("msg_id", &segmentMsgIds)
+
+	allMsgIds := append(append([]string{}, opt.MsgIds...), segmentMsgIds...)
+	items := make([]*model.TalkGroupMessageDel, 0, len(allMsgIds))
+	for _, msgId := range allMsgIds {
 		items = append(items, &model.TalkGroupMessageDel{
 			MsgId:     msgId,
 			GroupId:   opt.ReceiverId,
@@ -144,6 +151,9 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 			return err
 		}
 
+		if record.IsRevoked == model.TalkMsgRevokedHidden {
+			return errors.New("消息ID不存在")
+		}
 		if record.IsRevoked == model.Yes {
 			return errors.New("消息已撤回")
 		}
@@ -156,10 +166,15 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 		fromId = record.FromId
 		receiverId = record.ReceiverId
 
-		// 私聊表仅一条物理消息，按 msg_id 打 is_revoked
-		return db.Model(&model.TalkUserMessage{}).
+		// 父消息标记撤回；混合子段保持 is_revoked=0 并 is_deleted=1，避免进入会话列表
+		if err := db.Model(&model.TalkUserMessage{}).
 			Where("msg_id = ?", opt.MsgId).
-			Update("is_revoked", model.Yes).Error
+			Update("is_revoked", model.Yes).Error; err != nil {
+			return err
+		}
+		return db.Model(&model.TalkUserMessage{}).
+			Where("org_msg_id = ? AND is_revoked = ?", opt.MsgId, model.TalkMsgRevokedHidden).
+			Update("is_deleted", model.Yes).Error
 
 	case entity.ChatGroupMode:
 		var record model.TalkGroupMessage
@@ -173,10 +188,13 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 			return err
 		}
 
+		if record.IsRevoked == model.TalkMsgRevokedHidden {
+			return errors.New("消息ID不存在")
+		}
 		if record.IsRevoked == model.Yes {
 			return errors.New("消息已撤回")
 		}
-		if record.IsRevoked == model.TalkGroupMessageRevokedExpired {
+		if record.IsDeleted == model.Yes {
 			return errors.New("消息已过期删除")
 		}
 
@@ -187,9 +205,14 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 		fromId = record.FromId
 		receiverId = record.GroupId // 群聊时 receiverId 即 groupId，供 MessageStorage 维度使用
 
-		return db.Model(&model.TalkGroupMessage{}).
+		if err := db.Model(&model.TalkGroupMessage{}).
 			Where("msg_id = ?", record.MsgId).
-			Update("is_revoked", model.Yes).Error
+			Update("is_revoked", model.Yes).Error; err != nil {
+			return err
+		}
+		return db.Model(&model.TalkGroupMessage{}).
+			Where("org_msg_id = ? AND is_revoked = ?", record.MsgId, model.TalkMsgRevokedHidden).
+			Update("is_deleted", model.Yes).Error
 	}
 
 	return errors.New("暂不支持撤回消息")

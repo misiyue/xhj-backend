@@ -30,14 +30,14 @@ INNER JOIN talk_group_message m ON m.group_id = ts.receiver_id
 WHERE ts.talk_mode = 2
   AND ts.retain_days > 0
   AND m.from_id <> ts.user_id
-  AND m.is_revoked <> ?
+  AND m.is_deleted = ?
   AND m.send_time < DATE_SUB(NOW(), INTERVAL ts.retain_days DAY)
-`, model.TalkGroupMessageRevokedExpired)
+`, model.No)
 	return result.RowsAffected, result.Error
 }
 
-// MarkOwnExpiredRevoked 将本人发送、已过 retain_days 的群消息标记为过期删除（is_revoked = 3）
-func (t *TalkGroupMessage) MarkOwnExpiredRevoked(ctx context.Context) (int64, error) {
+// MarkOwnExpiredDeleted 将本人发送、已过 retain_days 的群消息标记为删除（is_deleted = 1）
+func (t *TalkGroupMessage) MarkOwnExpiredDeleted(ctx context.Context) (int64, error) {
 	result := t.Db.WithContext(ctx).Exec(`
 UPDATE talk_group_message AS m
 INNER JOIN talk_session AS ts
@@ -45,9 +45,9 @@ INNER JOIN talk_session AS ts
  AND ts.receiver_id = m.group_id
  AND ts.user_id = m.from_id
  AND ts.retain_days > 0
-SET m.is_revoked = ?
-WHERE m.is_revoked = ?
+SET m.is_deleted = ?
+WHERE m.is_deleted = ?
   AND m.send_time < DATE_SUB(NOW(), INTERVAL ts.retain_days DAY)
-`, model.TalkGroupMessageRevokedExpired, model.No)
+`, model.Yes, model.No)
 	return result.RowsAffected, result.Error
 }
