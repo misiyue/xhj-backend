@@ -7,6 +7,7 @@ import (
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/repository/cache"
+	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	message2 "github.com/gzydong/go-chat/internal/service/message"
 	"github.com/samber/lo"
@@ -172,7 +173,7 @@ func (c *Contact) Detail(ctx context.Context, in *web.ContactDetailRequest) (*we
 	}
 
 	resp.Relation = 1
-	if err == nil && contact.Status == 1 && c.ContactRepo.IsFriend(ctx, uid, user.Id, true) {
+	if err == nil && contact != nil && contact.Status == 1 && c.ContactRepo.IsFriend(ctx, uid, user.Id, true) {
 		resp.Relation = 2
 		resp.ContactGroupId = int32(contact.GroupId)
 		resp.ContactRemark = contact.Remark
@@ -198,13 +199,13 @@ func (c *Contact) Detail(ctx context.Context, in *web.ContactDetailRequest) (*we
 //	@Security		Bearer
 func (c *Contact) Search(ctx context.Context, in *web.ContactSearchRequest) (*web.ContactSearchResponse, error) {
 	// 添加好友时使用严格匹配：只按用户名 / 邮箱 / 手机号做等值查询，避免输入“2”时匹配到一堆包含 2 的邮箱/昵称
+	// 未找到时 repo 返回 Id=0 的完整结构，此处原样返回给前端（user_id=0）
 	user, err := c.UsersRepo.SearchByExactIdentifier(ctx, in.Mobile)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, entity.ErrUserNotExist
-		}
-
 		return nil, err
+	}
+	if user == nil {
+		user = &model.Users{}
 	}
 
 	return &web.ContactSearchResponse{

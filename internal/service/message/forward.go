@@ -25,54 +25,36 @@ type ForwardMessageOpt struct {
 	ToUserIdType int      `json:"to_user_id_type"` // 1:用户ID 2:群ID
 }
 
+type forwardSourceItem struct {
+	MsgId    string
+	MsgType  int
+	Extra    string
+	FromId   int
+	TalkType int // 消息实际所在会话类型（展平嵌套转发后使用）
+}
+
 // SplitForward 分拆转发
 func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) error {
 	var (
-		now          = time.Now()
-		db           = s.Source.Db().WithContext(ctx)
-		messageItems = make([]model.TalkRecord, 0)
+		now = time.Now()
+		db  = s.Source.Db().WithContext(ctx)
 	)
 
-	if req.TalkMode == entity.ChatGroupMode {
-		records := make([]model.TalkGroupMessage, 0)
+	sources, err := s.loadForwardSources(ctx, req)
+	if err != nil {
+		return err
+	}
+	sources, err = s.flattenForwardSources(ctx, sources, 0)
+	if err != nil {
+		return err
+	}
 
-		err := db.Model(&model.TalkGroupMessage{}).Where("group_id = ? and msg_id in ?", req.ReceiverId, req.MsgIds).Scan(&records).Error
-		if err != nil {
-			return err
-		}
-
-		for _, v := range records {
-			messageItems = append(messageItems, model.TalkRecord{
-				MsgType: v.MsgType,
-				Extra:   v.Extra,
-			})
-		}
-	} else {
-		records := make([]model.TalkUserMessage, 0)
-		var err error
-
-		// 优化方案：使用 session_id 查询
-		if s.TalkSessionRepo != nil {
-			session, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", req.UserId, req.ReceiverId, 1)
-			if err != nil {
-				return err
-			}
-			err = db.Model(&model.TalkUserMessage{}).Where("session_id = ? and msg_id in ?", session.SessionId, req.MsgIds).Scan(&records).Error
-		} else {
-			// 降级方案：使用传统方式查询
-			err = db.Model(&model.TalkUserMessage{}).Where("user_id = ? and receiver_id = ? and msg_id in ?", req.UserId, req.ReceiverId, req.MsgIds).Scan(&records).Error
-		}
-
-		if err != nil {
-			return err
-		}
-
-		for _, v := range records {
-			messageItems = append(messageItems, model.TalkRecord{
-				MsgType: v.MsgType,
-				Extra:   v.Extra,
-			})
-		}
+	messageItems := make([]model.TalkRecord, 0, len(sources))
+	for _, v := range sources {
+		messageItems = append(messageItems, model.TalkRecord{
+			MsgType: v.MsgType,
+			Extra:   v.Extra,
+		})
 	}
 
 	// 向群发送消息
@@ -235,66 +217,46 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 		pushMessageItems = make([]entity.SubEventImMessagePayload, 0)
 	)
 
-	if req.TalkMode == entity.ChatGroupMode {
-		records := make([]model.TalkGroupMessage, 0)
+	sources, err := s.loadForwardSources(ctx, req)
+	if err != nil {
+		return err
+	}
+	sources, err = s.flattenForwardSources(ctx, sources, 0)
+	if err != nil {
+		return err
+	}
+	if len(sources) == 0 {
+		return errors.New("没有可转发的消息")
+	}
 
-		err := db.Model(&model.TalkGroupMessage{}).Where("group_id = ? and msg_id in ?", req.ReceiverId, req.MsgIds).Order("id asc").Limit(3).Scan(&records).Error
-		if err != nil {
-			return err
-		}
+	// 展平后指向真实内容消息，再次打开/再次转发都能命中
+	leafMsgIds := make([]string, 0, len(sources))
+	for _, v := range sources {
+		leafMsgIds = append(leafMsgIds, v.MsgId)
+	}
+	extra.MsgIds = leafMsgIds
+	extra.TalkType = sources[0].TalkType
+	if extra.TalkType == 0 {
+		extra.TalkType = req.TalkMode
+	}
 
-		uids := make([]int, 0)
-		for _, v := range records {
-			uids = append(uids, v.FromId)
-		}
-
-		userNameItems, err := s.findUserNameList(ctx, uids)
-		if err != nil {
-			return err
-		}
-
-		for _, v := range records {
-			extra.Records = append(extra.Records, model.TalkRecordExtraForwardRecord{
-				Nickname: userNameItems[v.FromId],
-				Content:  PreviewText(v.MsgType, v.Extra),
-			})
-		}
-	} else {
-		records := make([]model.TalkUserMessage, 0)
-		var err error
-
-		// 优化方案：使用 session_id 查询
-		if s.TalkSessionRepo != nil {
-			session, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", req.UserId, req.ReceiverId, 1)
-			if err != nil {
-				return err
-			}
-			err = s.Source.Db().Model(&model.TalkUserMessage{}).Where("session_id = ? and msg_id in ?", session.SessionId, req.MsgIds).Order("id asc").Limit(3).Scan(&records).Error
-		} else {
-			// 降级方案：使用传统方式查询
-			err = s.Source.Db().Model(&model.TalkUserMessage{}).Where("user_id = ? and receiver_id = ? and msg_id in ?", req.UserId, req.ReceiverId, req.MsgIds).Order("id asc").Limit(3).Scan(&records).Error
-		}
-
-		if err != nil {
-			return err
-		}
-
-		uids := make([]int, 0)
-		for _, v := range records {
-			uids = append(uids, v.FromId)
-		}
-
-		userNameItems, err := s.findUserNameList(ctx, uids)
-		if err != nil {
-			return err
-		}
-
-		for _, v := range records {
-			extra.Records = append(extra.Records, model.TalkRecordExtraForwardRecord{
-				Nickname: userNameItems[v.FromId],
-				Content:  PreviewText(v.MsgType, v.Extra),
-			})
-		}
+	uids := make([]int, 0, len(sources))
+	for _, v := range sources {
+		uids = append(uids, v.FromId)
+	}
+	userNameItems, err := s.findUserNameList(ctx, uids)
+	if err != nil {
+		return err
+	}
+	limit := 3
+	if len(sources) < limit {
+		limit = len(sources)
+	}
+	for _, v := range sources[:limit] {
+		extra.Records = append(extra.Records, model.TalkRecordExtraForwardRecord{
+			Nickname: userNameItems[v.FromId],
+			Content:  PreviewText(v.MsgType, v.Extra),
+		})
 	}
 
 	switch req.ToUserIdType {
@@ -416,6 +378,188 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 	return nil
 }
 
+// loadForwardSources 从源会话加载待转发消息
+func (s *Service) loadForwardSources(ctx context.Context, req ForwardMessageOpt) ([]forwardSourceItem, error) {
+	db := s.Source.Db().WithContext(ctx)
+	out := make([]forwardSourceItem, 0, len(req.MsgIds))
+
+	if req.TalkMode == entity.ChatGroupMode {
+		records := make([]model.TalkGroupMessage, 0)
+		err := db.Model(&model.TalkGroupMessage{}).
+			Where("group_id = ? and msg_id in ?", req.ReceiverId, req.MsgIds).
+			Order("id asc").
+			Scan(&records).Error
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range records {
+			out = append(out, forwardSourceItem{
+				MsgId:    v.MsgId,
+				MsgType:  v.MsgType,
+				Extra:    v.Extra,
+				FromId:   v.FromId,
+				TalkType: entity.ChatGroupMode,
+			})
+		}
+		return out, nil
+	}
+
+	records := make([]model.TalkUserMessage, 0)
+	var err error
+	if s.TalkSessionRepo != nil {
+		session, e := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", req.UserId, req.ReceiverId, entity.ChatPrivateMode)
+		if e != nil {
+			return nil, e
+		}
+		err = db.Model(&model.TalkUserMessage{}).
+			Where("session_id = ? and msg_id in ?", session.SessionId, req.MsgIds).
+			Order("id asc").
+			Scan(&records).Error
+	} else {
+		err = db.Model(&model.TalkUserMessage{}).
+			Where("user_id = ? and receiver_id = ? and msg_id in ?", req.UserId, req.ReceiverId, req.MsgIds).
+			Order("id asc").
+			Scan(&records).Error
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range records {
+		out = append(out, forwardSourceItem{
+			MsgId:    v.MsgId,
+			MsgType:  v.MsgType,
+			Extra:    v.Extra,
+			FromId:   v.FromId,
+			TalkType: entity.ChatPrivateMode,
+		})
+	}
+	return out, nil
+}
+
+// flattenForwardSources 将嵌套的转发气泡展开为实际内容消息，保证再次转发后仍可打开
+func (s *Service) flattenForwardSources(ctx context.Context, items []forwardSourceItem, depth int) ([]forwardSourceItem, error) {
+	if depth >= 5 || len(items) == 0 {
+		return items, nil
+	}
+
+	out := make([]forwardSourceItem, 0, len(items))
+	for _, item := range items {
+		if item.MsgType != entity.ChatMsgTypeForward {
+			out = append(out, item)
+			continue
+		}
+
+		var extra model.TalkRecordExtraForward
+		if err := jsonutil.Unmarshal(item.Extra, &extra); err != nil || len(extra.MsgIds) == 0 {
+			out = append(out, item)
+			continue
+		}
+
+		nested, err := s.loadMessagesByMsgIds(ctx, extra.TalkType, extra.MsgIds)
+		if err != nil {
+			return nil, err
+		}
+		if len(nested) == 0 {
+			out = append(out, item)
+			continue
+		}
+		nested, err = s.flattenForwardSources(ctx, nested, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, nested...)
+	}
+	return out, nil
+}
+
+// loadMessagesByMsgIds 按 msg_id 加载消息（优先 talkType，缺的再查另一张表）
+func (s *Service) loadMessagesByMsgIds(ctx context.Context, talkType int, msgIds []string) ([]forwardSourceItem, error) {
+	if len(msgIds) == 0 {
+		return nil, nil
+	}
+	db := s.Source.Db().WithContext(ctx)
+	out := make([]forwardSourceItem, 0, len(msgIds))
+	found := make(map[string]struct{})
+
+	appendPrivate := func(ids []string) error {
+		rows := make([]model.TalkUserMessage, 0)
+		if err := db.Model(&model.TalkUserMessage{}).
+			Where("msg_id in ? and is_deleted = ? and is_revoked <> ?", ids, model.No, model.TalkMsgRevokedHidden).
+			Order("id asc").
+			Scan(&rows).Error; err != nil {
+			return err
+		}
+		for _, v := range rows {
+			if _, ok := found[v.MsgId]; ok {
+				continue
+			}
+			found[v.MsgId] = struct{}{}
+			out = append(out, forwardSourceItem{
+				MsgId:    v.MsgId,
+				MsgType:  v.MsgType,
+				Extra:    v.Extra,
+				FromId:   v.FromId,
+				TalkType: entity.ChatPrivateMode,
+			})
+		}
+		return nil
+	}
+	appendGroup := func(ids []string) error {
+		rows := make([]model.TalkGroupMessage, 0)
+		if err := db.Model(&model.TalkGroupMessage{}).
+			Where("msg_id in ? and is_deleted = ? and is_revoked <> ?", ids, model.No, model.TalkMsgRevokedHidden).
+			Order("id asc").
+			Scan(&rows).Error; err != nil {
+			return err
+		}
+		for _, v := range rows {
+			if _, ok := found[v.MsgId]; ok {
+				continue
+			}
+			found[v.MsgId] = struct{}{}
+			out = append(out, forwardSourceItem{
+				MsgId:    v.MsgId,
+				MsgType:  v.MsgType,
+				Extra:    v.Extra,
+				FromId:   v.FromId,
+				TalkType: entity.ChatGroupMode,
+			})
+		}
+		return nil
+	}
+
+	var err error
+	if talkType == entity.ChatGroupMode {
+		err = appendGroup(msgIds)
+	} else {
+		err = appendPrivate(msgIds)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	if len(out) < len(msgIds) {
+		missing := make([]string, 0)
+		for _, id := range msgIds {
+			if _, ok := found[id]; !ok {
+				missing = append(missing, id)
+			}
+		}
+		if len(missing) > 0 {
+			if talkType == entity.ChatGroupMode {
+				err = appendPrivate(missing)
+			} else {
+				err = appendGroup(missing)
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return out, nil
+}
+
 // ensurePrivateSession 确保私聊双方在 talk_session 中都有会话记录，否则对方会话栏不显示
 func (s *Service) ensurePrivateSession(ctx context.Context, uidA, uidB int) {
 	if s.TalkSessionRepo == nil {
@@ -480,6 +624,21 @@ func PreviewText(msgType int, extra string) string {
 			return strutil.MtSubstr(strings.TrimSpace(data.Intro), 0, 200)
 		}
 		return entity.ChatMsgTypeMapping[entity.ChatMsgTypeCmd]
+	case entity.ChatMsgTypeGroupNotice:
+		prefix := entity.ChatMsgTypeMapping[entity.ChatMsgTypeGroupNotice]
+		data := model.TalkRecordExtraGroupNotice{}
+		if err := jsonutil.Unmarshal(extra, &data); err != nil {
+			return prefix
+		}
+		content := strings.TrimSpace(data.Content)
+		if content == "" {
+			return prefix
+		}
+		// 去掉换行，会话列表单行展示
+		content = strings.ReplaceAll(content, "\r\n", " ")
+		content = strings.ReplaceAll(content, "\n", " ")
+		content = strings.ReplaceAll(content, "\r", " ")
+		return prefix + strutil.MtSubstr(content, 0, 50)
 	default:
 		if value, ok := entity.ChatMsgTypeMapping[msgType]; ok {
 			return value

@@ -102,15 +102,7 @@ func (c *Common) SendSms(ctx context.Context, in *web.CommonSendSmsRequest) (*we
 //	@Router			/api/v1/common/send-email [post]
 func (c *Common) SendEmail(ctx context.Context, req *web.CommonSendEmailRequest) (*web.CommonSendEmailResponse, error) {
 	emailAddr := strings.ToLower(strings.TrimSpace(req.Email))
-	// Determine the channel based on request
-	channel := entity.EmailVerifyChannel
-	if req.Channel != "" {
-		channel = strings.TrimSpace(req.Channel)
-		// 兼容前端沿用短信渠道名
-		if channel == entity.SmsChangeAccountChannel || channel == "change" {
-			channel = entity.EmailChangeAccountChannel
-		}
-	}
+	channel := entity.NormalizeEmailChannel(req.Channel)
 
 	// Send verification code using EmailService
 	code, err := c.EmailService.Send(ctx, channel, emailAddr)

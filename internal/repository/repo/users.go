@@ -104,21 +104,37 @@ func (u *Users) SearchByKeyword(ctx context.Context, keyword string) (*model.Use
 
 // SearchByExactIdentifier 通过精确账号搜索用户（添加好友用，只做完全匹配）
 // 规则：先按 username，再按 email，再按 mobile，全部是精确等值匹配，不做模糊 LIKE。排除停用/已注销。
+// 未找到时仍返回完整 Users 结构（id/user_id 为 0），不返回 nil。
 func (u *Users) SearchByExactIdentifier(ctx context.Context, keyword string) (*model.Users, error) {
+	empty := &model.Users{}
+
 	// 精确用户名
 	user, err := u.Repo.FindByWhere(ctx, "username = ? AND status = ?", keyword, model.UsersStatusNormal)
-	if err == nil && user != nil && user.Id > 0 {
+	if err != nil {
+		return nil, err
+	}
+	if user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 精确邮箱
 	user, err = u.Repo.FindByWhere(ctx, "email = ? AND status = ?", keyword, model.UsersStatusNormal)
-	if err == nil && user != nil && user.Id > 0 {
+	if err != nil {
+		return nil, err
+	}
+	if user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 精确手机号
-	return u.Repo.FindByWhere(ctx, "mobile = ? AND status = ?", keyword, model.UsersStatusNormal)
+	user, err = u.Repo.FindByWhere(ctx, "mobile = ? AND status = ?", keyword, model.UsersStatusNormal)
+	if err != nil {
+		return nil, err
+	}
+	if user != nil && user.Id > 0 {
+		return user, nil
+	}
+	return empty, nil
 }
 
 // PaginationByInviteUserId 分页查询被我邀请注册的用户（users.invite_user_id = inviterId），按 id 倒序

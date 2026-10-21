@@ -639,6 +639,7 @@ type UserEmailUpdateRequest struct {
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
 	Code          string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	EmailCode     string                 `protobuf:"bytes,4,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -690,6 +691,13 @@ func (x *UserEmailUpdateRequest) GetPassword() string {
 func (x *UserEmailUpdateRequest) GetCode() string {
 	if x != nil {
 		return x.Code
+	}
+	return ""
+}
+
+func (x *UserEmailUpdateRequest) GetEmailCode() string {
+	if x != nil {
+		return x.EmailCode
 	}
 	return ""
 }

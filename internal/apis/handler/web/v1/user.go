@@ -295,7 +295,15 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 	uid := session.UserId
 
 	newEmail := strings.ToLower(strings.TrimSpace(req.Email))
+	// 兼容前端传 code 或 email_code
 	code := strings.TrimSpace(req.GetCode())
+	if code == "" {
+		code = strings.TrimSpace(req.GetEmailCode())
+	}
+	if len(code) != 6 {
+		return nil, errorx.New(400, "请填写6位邮箱验证码")
+	}
+
 	user, _ := u.UsersRepo.FindById(ctx, uid)
 	if strings.ToLower(strings.TrimSpace(user.Email)) == newEmail {
 		return nil, errorx.New(400, "邮箱与原邮箱一致无需修改")
@@ -314,13 +322,7 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 		return nil, entity.ErrPermissionDenied
 	}
 
-	// 与换手机号一致：优先 email_change_account；兼容历史发信 channel=email_verify / 空 channel
-	ok := u.EmailService.Verify(ctx, entity.EmailChangeAccountChannel, newEmail, code)
-	usedChannel := entity.EmailChangeAccountChannel
-	if !ok {
-		ok = u.EmailService.Verify(ctx, entity.EmailVerifyChannel, newEmail, code)
-		usedChannel = entity.EmailVerifyChannel
-	}
+	usedChannel, ok := u.EmailService.VerifyAny(ctx, entity.EmailChangeVerifyChannels(), newEmail, code)
 	if !ok {
 		return nil, errorx.New(400, "邮箱验证码错误")
 	}

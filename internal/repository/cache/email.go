@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gzydong/go-chat/internal/pkg/encrypt"
@@ -19,6 +20,8 @@ func NewEmailStorage(redis *redis.Client) *EmailStorage {
 }
 
 func (e *EmailStorage) Set(ctx context.Context, channel string, email string, code string, exp time.Duration) error {
+	email = normalizeEmail(email)
+	code = strings.TrimSpace(code)
 	_, err := e.redis.Pipelined(ctx, func(pipe redis.Pipeliner) error {
 		pipe.Del(ctx, e.failName(channel, email))
 		pipe.Set(ctx, e.name(channel, email), code, exp)
@@ -28,41 +31,71 @@ func (e *EmailStorage) Set(ctx context.Context, channel string, email string, co
 }
 
 func (e *EmailStorage) Get(ctx context.Context, channel string, email string) (string, error) {
-	return e.redis.Get(ctx, e.name(channel, email)).Result()
+	return e.redis.Get(ctx, e.name(channel, normalizeEmail(email))).Result()
 }
 
 func (e *EmailStorage) Del(ctx context.Context, channel string, email string) error {
-	return e.redis.Del(ctx, e.name(channel, email)).Err()
+	return e.redis.Del(ctx, e.name(channel, normalizeEmail(email))).Err()
 }
 
 func (e *EmailStorage) Verify(ctx context.Context, channel string, email string, code string) bool {
-	value, err := e.Get(ctx, channel, email)
-	if err != nil || len(value) == 0 {
-		logger.Infof("[EmailStorage.Verify] Failed to get code from Redis - channel: %s, email: %s, error: %v", channel, email, err)
-		return false
+	_, ok := e.VerifyAny(ctx, []string{channel}, email, code)
+	return ok
+}
+
+// VerifyAny 按顺序在多个 channel 下查找验证码，命中则返回所用 channel
+func (e *EmailStorage) VerifyAny(ctx context.Context, channels []string, email string, code string) (string, bool) {
+	email = normalizeEmail(email)
+	code = strings.TrimSpace(code)
+	if email == "" || code == "" || len(channels) == 0 {
+		return "", false
 	}
 
-	logger.Infof("[EmailStorage.Verify] Retrieved code from Redis - channel: %s, email: %s, stored: %s, provided: %s, match: %v", channel, email, value, code, value == code)
-
-	if value == code {
-		return true
+	var lastStored string
+	var lastChannel string
+	for _, channel := range channels {
+		channel = strings.TrimSpace(channel)
+		if channel == "" {
+			continue
+		}
+		value, err := e.Get(ctx, channel, email)
+		if err != nil || len(value) == 0 {
+			logger.Infof("[EmailStorage.VerifyAny] miss - channel: %s, email: %s, err: %v", channel, email, err)
+			continue
+		}
+		lastStored = value
+		lastChannel = channel
+		logger.Infof("[EmailStorage.VerifyAny] hit key - channel: %s, email: %s, stored: %s, provided: %s, match: %v",
+			channel, email, value, code, value == code)
+		if value == code {
+			return channel, true
+		}
 	}
 
-	// 3分钟内同一个邮箱验证码错误次数超过5次，删除验证码
-	num := e.redis.Incr(ctx, e.failName(channel, email)).Val()
-	logger.Infof("[EmailStorage.Verify] Code mismatch - fail count: %d", num)
+	if lastChannel == "" {
+		logger.Infof("[EmailStorage.VerifyAny] no code found - email: %s, channels: %v", email, channels)
+		return "", false
+	}
+
+	// 找到过 key 但验证码不匹配：累计失败次数（记在最后一个命中的 channel）
+	num := e.redis.Incr(ctx, e.failName(lastChannel, email)).Val()
+	logger.Infof("[EmailStorage.VerifyAny] mismatch - channel: %s, fail: %d, stored: %s, provided: %s", lastChannel, num, lastStored, code)
 	if num >= 5 {
-		logger.Infof("[EmailStorage.Verify] Max failures reached, deleting code")
 		_, _ = e.redis.Pipelined(ctx, func(pipe redis.Pipeliner) error {
-			pipe.Del(ctx, e.name(channel, email))
-			pipe.Del(ctx, e.failName(channel, email))
+			for _, channel := range channels {
+				pipe.Del(ctx, e.name(channel, email))
+				pipe.Del(ctx, e.failName(channel, email))
+			}
 			return nil
 		})
 	} else if num == 1 {
-		e.redis.Expire(ctx, e.failName(channel, email), 3*time.Minute)
+		e.redis.Expire(ctx, e.failName(lastChannel, email), 3*time.Minute)
 	}
+	return "", false
+}
 
-	return false
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 func (e *EmailStorage) name(channel string, email string) string {
@@ -74,7 +107,7 @@ func (e *EmailStorage) failName(channel string, email string) string {
 }
 
 func (e *EmailStorage) sendTimeName(email string) string {
-	return fmt.Sprintf("im:auth:email_send_time:%s", encrypt.Md5(email))
+	return fmt.Sprintf("im:auth:email_send_time:%s", encrypt.Md5(normalizeEmail(email)))
 }
 
 // CanSend 检查邮箱是否可以发送验证码（距离上次发送是否超过60秒）

@@ -426,7 +426,10 @@ message UserMobileUpdateResponse{}
 message UserEmailUpdateRequest{
   string email = 1 [(buf.validate.field).string.min_len = 1];
   string password = 2 [(buf.validate.field).string.min_len = 1];
-  string code = 3 [(buf.validate.field).string.len = 6];
+  // 验证码（与 email_code 二选一，兼容旧字段名 code）
+  string code = 3;
+  // 验证码（前端常用字段名，与 username-update 的 email_code 一致）
+  string email_code = 4;
 }
 
 // 用户邮箱更新接口响应参数

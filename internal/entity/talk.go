@@ -82,6 +82,7 @@ var ChatMsgTypeMapping = map[int]string{
 	ChatMsgTypeVote:                  "[投票消息]",
 	ChatMsgTypeCode:                  "[代码消息]",
 	ChatMsgTypeMixed:                 "[图文消息]",
+	ChatMsgTypeGroupNotice:           "[群公告]",
 	ChatMsgTypeRTCCall:               "[通话记录]",
 	ChatMsgTypeRedEnvelope:           "[红包]",
 	ChatMsgTypeTransfer:              "[转账]",
