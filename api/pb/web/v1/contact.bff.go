@@ -30,6 +30,8 @@ type IContactHandler interface {
 	Block(ctx context.Context, in *ContactBlockRequest) (*ContactBlockResponse, error)
 	// 解除拉黑
 	Unblock(ctx context.Context, in *ContactUnblockRequest) (*ContactUnblockResponse, error)
+	// 黑名单列表
+	BlockList(ctx context.Context, in *ContactBlockListRequest) (*ContactBlockListResponse, error)
 }
 
 // RegisterContactHandler 注册服务路由处理器
@@ -124,6 +126,15 @@ func RegisterContactHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.Unblock(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/contact/block-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in ContactBlockListRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.BlockList(ctx.Request.Context(), &in)
 	}))
 
 }

@@ -928,6 +928,114 @@ func (*ContactUnblockResponse) Descriptor() ([]byte, []int) {
 	return file_web_v1_contact_proto_rawDescGZIP(), []int{17}
 }
 
+// 黑名单列表请求
+type ContactBlockListRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 页码，从 1 开始；未传或 0 时服务端按 1 处理
+	Page int32 `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
+	// 每页条数；未传或 0 时默认 20，最大 100
+	PageSize      int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContactBlockListRequest) Reset() {
+	*x = ContactBlockListRequest{}
+	mi := &file_web_v1_contact_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContactBlockListRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContactBlockListRequest) ProtoMessage() {}
+
+func (x *ContactBlockListRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_contact_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContactBlockListRequest.ProtoReflect.Descriptor instead.
+func (*ContactBlockListRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_contact_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ContactBlockListRequest) GetPage() int32 {
+	if x != nil {
+		return x.Page
+	}
+	return 0
+}
+
+func (x *ContactBlockListRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+// 黑名单列表响应
+type ContactBlockListResponse struct {
+	state         protoimpl.MessageState           `protogen:"open.v1"`
+	Items         []*ContactBlockListResponse_Item `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Total         int32                            `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContactBlockListResponse) Reset() {
+	*x = ContactBlockListResponse{}
+	mi := &file_web_v1_contact_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContactBlockListResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContactBlockListResponse) ProtoMessage() {}
+
+func (x *ContactBlockListResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_contact_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContactBlockListResponse.ProtoReflect.Descriptor instead.
+func (*ContactBlockListResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_contact_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ContactBlockListResponse) GetItems() []*ContactBlockListResponse_Item {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ContactBlockListResponse) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 type ContactListResponse_Item struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 用户ID
@@ -950,7 +1058,7 @@ type ContactListResponse_Item struct {
 
 func (x *ContactListResponse_Item) Reset() {
 	*x = ContactListResponse_Item{}
-	mi := &file_web_v1_contact_proto_msgTypes[18]
+	mi := &file_web_v1_contact_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -962,7 +1070,7 @@ func (x *ContactListResponse_Item) String() string {
 func (*ContactListResponse_Item) ProtoMessage() {}
 
 func (x *ContactListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_contact_proto_msgTypes[18]
+	mi := &file_web_v1_contact_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1027,6 +1135,74 @@ func (x *ContactListResponse_Item) GetGroupId() int32 {
 	return 0
 }
 
+type ContactBlockListResponse_Item struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        int32                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	Nickname      string                 `protobuf:"bytes,2,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	Remark        string                 `protobuf:"bytes,4,opt,name=remark,proto3" json:"remark,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContactBlockListResponse_Item) Reset() {
+	*x = ContactBlockListResponse_Item{}
+	mi := &file_web_v1_contact_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContactBlockListResponse_Item) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContactBlockListResponse_Item) ProtoMessage() {}
+
+func (x *ContactBlockListResponse_Item) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_contact_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContactBlockListResponse_Item.ProtoReflect.Descriptor instead.
+func (*ContactBlockListResponse_Item) Descriptor() ([]byte, []int) {
+	return file_web_v1_contact_proto_rawDescGZIP(), []int{19, 0}
+}
+
+func (x *ContactBlockListResponse_Item) GetUserId() int32 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *ContactBlockListResponse_Item) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
+}
+
+func (x *ContactBlockListResponse_Item) GetAvatar() string {
+	if x != nil {
+		return x.Avatar
+	}
+	return ""
+}
+
+func (x *ContactBlockListResponse_Item) GetRemark() string {
+	if x != nil {
+		return x.Remark
+	}
+	return ""
+}
+
 var File_web_v1_contact_proto protoreflect.FileDescriptor
 
 const file_web_v1_contact_proto_rawDesc = "" +
@@ -1088,7 +1264,18 @@ const file_web_v1_contact_proto_rawDesc = "" +
 	"\x14ContactBlockResponse\"=\n" +
 	"\x15ContactUnblockRequest\x12$\n" +
 	"\auser_id\x18\x01 \x01(\x05B\v\xe2A\x01\x02\xbaH\x04\x1a\x02(\x01R\x06userId\"\x18\n" +
-	"\x16ContactUnblockResponse2\xc4\a\n" +
+	"\x16ContactUnblockResponse\"^\n" +
+	"\x17ContactBlockListRequest\x12\x1b\n" +
+	"\x04page\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x04page\x12&\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpageSize\"\xfc\x01\n" +
+	"\x18ContactBlockListResponse\x12>\n" +
+	"\x05items\x18\x01 \x03(\v2\".web.ContactBlockListResponse.ItemB\x04\xe2A\x01\x02R\x05items\x12\x1a\n" +
+	"\x05total\x18\x02 \x01(\x05B\x04\xe2A\x01\x02R\x05total\x1a\x83\x01\n" +
+	"\x04Item\x12\x1d\n" +
+	"\auser_id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x06userId\x12 \n" +
+	"\bnickname\x18\x02 \x01(\tB\x04\xe2A\x01\x02R\bnickname\x12\x1c\n" +
+	"\x06avatar\x18\x03 \x01(\tB\x04\xe2A\x01\x02R\x06avatar\x12\x1c\n" +
+	"\x06remark\x18\x04 \x01(\tB\x04\xe2A\x01\x02R\x06remark2\xb5\b\n" +
 	"\aContact\x12Z\n" +
 	"\x04List\x12\x17.web.ContactListRequest\x1a\x18.web.ContactListResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/contact/list\x12b\n" +
 	"\x06Delete\x12\x19.web.ContactDeleteRequest\x1a\x1a.web.ContactDeleteResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/contact/delete\x12s\n" +
@@ -1099,7 +1286,8 @@ const file_web_v1_contact_proto_rawDesc = "" +
 	"\vChangeGroup\x12\x1e.web.ContactChangeGroupRequest\x1a\x1f.web.ContactChangeGroupResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/v1/contact/change-group\x12{\n" +
 	"\fOnlineStatus\x12\x1f.web.ContactOnlineStatusRequest\x1a .web.ContactOnlineStatusResponse\"(\x82\xd3\xe4\x93\x02\":\x01*\"\x1d/api/v1/contact/online-status\x12^\n" +
 	"\x05Block\x12\x18.web.ContactBlockRequest\x1a\x19.web.ContactBlockResponse\" \x82\xd3\xe4\x93\x02\x1a:\x01*\"\x15/api/v1/contact/block\x12f\n" +
-	"\aUnblock\x12\x1a.web.ContactUnblockRequest\x1a\x1b.web.ContactUnblockResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/contact/unblockB\fZ\n" +
+	"\aUnblock\x12\x1a.web.ContactUnblockRequest\x1a\x1b.web.ContactUnblockResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/contact/unblock\x12o\n" +
+	"\tBlockList\x12\x1c.web.ContactBlockListRequest\x1a\x1d.web.ContactBlockListResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/contact/block-listB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -1114,53 +1302,59 @@ func file_web_v1_contact_proto_rawDescGZIP() []byte {
 	return file_web_v1_contact_proto_rawDescData
 }
 
-var file_web_v1_contact_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_web_v1_contact_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_web_v1_contact_proto_goTypes = []any{
-	(*ContactListRequest)(nil),          // 0: web.ContactListRequest
-	(*ContactListResponse)(nil),         // 1: web.ContactListResponse
-	(*ContactDeleteRequest)(nil),        // 2: web.ContactDeleteRequest
-	(*ContactDeleteResponse)(nil),       // 3: web.ContactDeleteResponse
-	(*ContactEditRemarkRequest)(nil),    // 4: web.ContactEditRemarkRequest
-	(*ContactEditRemarkResponse)(nil),   // 5: web.ContactEditRemarkResponse
-	(*ContactDetailRequest)(nil),        // 6: web.ContactDetailRequest
-	(*ContactDetailResponse)(nil),       // 7: web.ContactDetailResponse
-	(*ContactSearchRequest)(nil),        // 8: web.ContactSearchRequest
-	(*ContactSearchResponse)(nil),       // 9: web.ContactSearchResponse
-	(*ContactChangeGroupRequest)(nil),   // 10: web.ContactChangeGroupRequest
-	(*ContactChangeGroupResponse)(nil),  // 11: web.ContactChangeGroupResponse
-	(*ContactOnlineStatusRequest)(nil),  // 12: web.ContactOnlineStatusRequest
-	(*ContactOnlineStatusResponse)(nil), // 13: web.ContactOnlineStatusResponse
-	(*ContactBlockRequest)(nil),         // 14: web.ContactBlockRequest
-	(*ContactBlockResponse)(nil),        // 15: web.ContactBlockResponse
-	(*ContactUnblockRequest)(nil),       // 16: web.ContactUnblockRequest
-	(*ContactUnblockResponse)(nil),      // 17: web.ContactUnblockResponse
-	(*ContactListResponse_Item)(nil),    // 18: web.ContactListResponse.Item
+	(*ContactListRequest)(nil),            // 0: web.ContactListRequest
+	(*ContactListResponse)(nil),           // 1: web.ContactListResponse
+	(*ContactDeleteRequest)(nil),          // 2: web.ContactDeleteRequest
+	(*ContactDeleteResponse)(nil),         // 3: web.ContactDeleteResponse
+	(*ContactEditRemarkRequest)(nil),      // 4: web.ContactEditRemarkRequest
+	(*ContactEditRemarkResponse)(nil),     // 5: web.ContactEditRemarkResponse
+	(*ContactDetailRequest)(nil),          // 6: web.ContactDetailRequest
+	(*ContactDetailResponse)(nil),         // 7: web.ContactDetailResponse
+	(*ContactSearchRequest)(nil),          // 8: web.ContactSearchRequest
+	(*ContactSearchResponse)(nil),         // 9: web.ContactSearchResponse
+	(*ContactChangeGroupRequest)(nil),     // 10: web.ContactChangeGroupRequest
+	(*ContactChangeGroupResponse)(nil),    // 11: web.ContactChangeGroupResponse
+	(*ContactOnlineStatusRequest)(nil),    // 12: web.ContactOnlineStatusRequest
+	(*ContactOnlineStatusResponse)(nil),   // 13: web.ContactOnlineStatusResponse
+	(*ContactBlockRequest)(nil),           // 14: web.ContactBlockRequest
+	(*ContactBlockResponse)(nil),          // 15: web.ContactBlockResponse
+	(*ContactUnblockRequest)(nil),         // 16: web.ContactUnblockRequest
+	(*ContactUnblockResponse)(nil),        // 17: web.ContactUnblockResponse
+	(*ContactBlockListRequest)(nil),       // 18: web.ContactBlockListRequest
+	(*ContactBlockListResponse)(nil),      // 19: web.ContactBlockListResponse
+	(*ContactListResponse_Item)(nil),      // 20: web.ContactListResponse.Item
+	(*ContactBlockListResponse_Item)(nil), // 21: web.ContactBlockListResponse.Item
 }
 var file_web_v1_contact_proto_depIdxs = []int32{
-	18, // 0: web.ContactListResponse.items:type_name -> web.ContactListResponse.Item
-	0,  // 1: web.Contact.List:input_type -> web.ContactListRequest
-	2,  // 2: web.Contact.Delete:input_type -> web.ContactDeleteRequest
-	4,  // 3: web.Contact.EditRemark:input_type -> web.ContactEditRemarkRequest
-	6,  // 4: web.Contact.Detail:input_type -> web.ContactDetailRequest
-	8,  // 5: web.Contact.Search:input_type -> web.ContactSearchRequest
-	10, // 6: web.Contact.ChangeGroup:input_type -> web.ContactChangeGroupRequest
-	12, // 7: web.Contact.OnlineStatus:input_type -> web.ContactOnlineStatusRequest
-	14, // 8: web.Contact.Block:input_type -> web.ContactBlockRequest
-	16, // 9: web.Contact.Unblock:input_type -> web.ContactUnblockRequest
-	1,  // 10: web.Contact.List:output_type -> web.ContactListResponse
-	3,  // 11: web.Contact.Delete:output_type -> web.ContactDeleteResponse
-	5,  // 12: web.Contact.EditRemark:output_type -> web.ContactEditRemarkResponse
-	7,  // 13: web.Contact.Detail:output_type -> web.ContactDetailResponse
-	9,  // 14: web.Contact.Search:output_type -> web.ContactSearchResponse
-	11, // 15: web.Contact.ChangeGroup:output_type -> web.ContactChangeGroupResponse
-	13, // 16: web.Contact.OnlineStatus:output_type -> web.ContactOnlineStatusResponse
-	15, // 17: web.Contact.Block:output_type -> web.ContactBlockResponse
-	17, // 18: web.Contact.Unblock:output_type -> web.ContactUnblockResponse
-	10, // [10:19] is the sub-list for method output_type
-	1,  // [1:10] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	20, // 0: web.ContactListResponse.items:type_name -> web.ContactListResponse.Item
+	21, // 1: web.ContactBlockListResponse.items:type_name -> web.ContactBlockListResponse.Item
+	0,  // 2: web.Contact.List:input_type -> web.ContactListRequest
+	2,  // 3: web.Contact.Delete:input_type -> web.ContactDeleteRequest
+	4,  // 4: web.Contact.EditRemark:input_type -> web.ContactEditRemarkRequest
+	6,  // 5: web.Contact.Detail:input_type -> web.ContactDetailRequest
+	8,  // 6: web.Contact.Search:input_type -> web.ContactSearchRequest
+	10, // 7: web.Contact.ChangeGroup:input_type -> web.ContactChangeGroupRequest
+	12, // 8: web.Contact.OnlineStatus:input_type -> web.ContactOnlineStatusRequest
+	14, // 9: web.Contact.Block:input_type -> web.ContactBlockRequest
+	16, // 10: web.Contact.Unblock:input_type -> web.ContactUnblockRequest
+	18, // 11: web.Contact.BlockList:input_type -> web.ContactBlockListRequest
+	1,  // 12: web.Contact.List:output_type -> web.ContactListResponse
+	3,  // 13: web.Contact.Delete:output_type -> web.ContactDeleteResponse
+	5,  // 14: web.Contact.EditRemark:output_type -> web.ContactEditRemarkResponse
+	7,  // 15: web.Contact.Detail:output_type -> web.ContactDetailResponse
+	9,  // 16: web.Contact.Search:output_type -> web.ContactSearchResponse
+	11, // 17: web.Contact.ChangeGroup:output_type -> web.ContactChangeGroupResponse
+	13, // 18: web.Contact.OnlineStatus:output_type -> web.ContactOnlineStatusResponse
+	15, // 19: web.Contact.Block:output_type -> web.ContactBlockResponse
+	17, // 20: web.Contact.Unblock:output_type -> web.ContactUnblockResponse
+	19, // 21: web.Contact.BlockList:output_type -> web.ContactBlockListResponse
+	12, // [12:22] is the sub-list for method output_type
+	2,  // [2:12] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_web_v1_contact_proto_init() }
@@ -1174,7 +1368,7 @@ func file_web_v1_contact_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_contact_proto_rawDesc), len(file_web_v1_contact_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

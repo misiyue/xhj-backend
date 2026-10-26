@@ -37,3 +37,11 @@ type ContactListItem struct {
 	IsOnline int    `json:"is_online"`                                            // 是否在线
 	GroupId  int    `gorm:"column:group_id" json:"group_id"`                      // 联系人分组
 }
+
+// ContactBlockListItem 黑名单列表项
+type ContactBlockListItem struct {
+	Id       int    `gorm:"column:id" json:"id"`
+	Nickname string `gorm:"column:nickname" json:"nickname"`
+	Avatar   string `gorm:"column:avatar" json:"avatar"`
+	Remark   string `gorm:"column:remark" json:"remark"`
+}

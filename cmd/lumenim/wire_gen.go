@@ -782,6 +782,8 @@ func NewQueueInjector(c *config.Config) *mission.QueueProvider {
 	}
 	userClient := cache.NewUserClient(client)
 	noticeTemplate := repo.NewNoticeTemplate(db, client)
+	contactRemark := cache.NewContactRemark(client)
+	repoContact := repo.NewContact(db, contactRemark, relation)
 	messageService := &message.Service{
 		Source:              source,
 		GroupMemberRepo:     groupMember,

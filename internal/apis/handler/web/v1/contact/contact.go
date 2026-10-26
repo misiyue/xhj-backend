@@ -300,3 +300,37 @@ func (c *Contact) Unblock(ctx context.Context, in *web.ContactUnblockRequest) (*
 	}
 	return &web.ContactUnblockResponse{}, nil
 }
+
+// BlockList 黑名单列表
+//
+//	@Summary		黑名单列表
+//	@Description	分页查询当前用户已拉黑的联系人
+//	@Tags			联系人
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactBlockListRequest	true	"黑名单列表请求"
+//	@Success		200		{object}	web.ContactBlockListResponse
+//	@Router			/api/v1/contact/block-list [post]
+//	@Security		Bearer
+func (c *Contact) BlockList(ctx context.Context, in *web.ContactBlockListRequest) (*web.ContactBlockListResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	list, total, err := c.ContactService.BlockList(ctx, uid, int(in.GetPage()), int(in.GetPageSize()))
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*web.ContactBlockListResponse_Item, 0, len(list))
+	for _, item := range list {
+		items = append(items, &web.ContactBlockListResponse_Item{
+			UserId:   int32(item.Id),
+			Nickname: item.Nickname,
+			Avatar:   item.Avatar,
+			Remark:   item.Remark,
+		})
+	}
+
+	return &web.ContactBlockListResponse{
+		Items: items,
+		Total: int32(total),
+	}, nil
+}

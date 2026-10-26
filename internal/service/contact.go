@@ -19,6 +19,7 @@ type IContactService interface {
 	MoveGroup(ctx context.Context, uid int, friendId int, groupId int) error
 	Block(ctx context.Context, uid, friendId int) error
 	Unblock(ctx context.Context, uid, friendId int) error
+	BlockList(ctx context.Context, uid, page, pageSize int) ([]*model.ContactBlockListItem, int64, error)
 }
 
 type ContactService struct {
@@ -127,6 +128,41 @@ func (s *ContactService) Unblock(ctx context.Context, uid, friendId int) error {
 		"updated_at": gorm.Expr("NOW()"),
 	}, "user_id = ? and friend_id = ? and status = ?", uid, friendId, model.ContactStatusNormal)
 	return err
+}
+
+// BlockList 黑名单分页列表（is_black=1）
+func (s *ContactService) BlockList(ctx context.Context, uid, page, pageSize int) ([]*model.ContactBlockListItem, int64, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	where := "contact.user_id = ? AND contact.status = ? AND contact.is_black = ?"
+	args := []any{uid, model.ContactStatusNormal, model.ContactIsBlackYes}
+
+	var total int64
+	if err := s.ContactRepo.Model(ctx).Where(where, args...).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var items []*model.ContactBlockListItem
+	err := s.ContactRepo.Model(ctx).
+		Select([]string{"users.id", "users.nickname", "users.avatar", "contact.remark"}).
+		Joins("inner join `users` ON `users`.id = contact.friend_id").
+		Where(where, args...).
+		Order("contact.updated_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Scan(&items).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	return items, total, nil
 }
 
 func (s *ContactService) MoveGroup(ctx context.Context, uid int, friendId int, groupId int) error {
