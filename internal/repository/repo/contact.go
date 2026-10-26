@@ -66,6 +66,25 @@ func (c *Contact) SetFriendRemark(ctx context.Context, uid int, friendId int, re
 	return c.cache.Set(ctx, uid, friendId, remark)
 }
 
+// IsBlocked 判断 uid 是否拉黑了 friendId（单向：contact.user_id=uid）
+func (c *Contact) IsBlocked(ctx context.Context, uid, friendId int) bool {
+	if uid <= 0 || friendId <= 0 {
+		return false
+	}
+	count, err := c.Repo.FindCount(ctx, "user_id = ? AND friend_id = ? AND status = ? AND is_black = ?",
+		uid, friendId, model.ContactStatusNormal, model.ContactIsBlackYes)
+	return err == nil && count > 0
+}
+
+// GetIsBlack 获取 uid 对 friendId 的拉黑状态，无关系返回 0
+func (c *Contact) GetIsBlack(ctx context.Context, uid, friendId int) int {
+	row, err := c.Repo.FindByWhere(ctx, "user_id = ? AND friend_id = ? AND status = ?", uid, friendId, model.ContactStatusNormal)
+	if err != nil || row == nil {
+		return model.ContactIsBlackNo
+	}
+	return row.IsBlack
+}
+
 func (c *Contact) LoadContactCache(ctx context.Context, uid int) error {
 
 	all, err := c.Repo.FindAll(ctx, func(db *gorm.DB) {

@@ -5,6 +5,9 @@ import "time"
 const (
 	ContactStatusNormal = 1
 	ContactStatusDelete = 2
+
+	ContactIsBlackNo  = 0 // 未拉黑
+	ContactIsBlackYes = 1 // 已拉黑
 )
 
 // Contact 用户好友关系表
@@ -12,9 +15,10 @@ type Contact struct {
 	Id        int       `gorm:"column:id;primary_key;AUTO_INCREMENT" json:"id"`                                                                  // 关系ID
 	UserId    int       `gorm:"column:user_id;index:idx_contact_user_friend,priority:1;index:idx_contact_user_status,priority:1" json:"user_id"` // 用户id
 	FriendId  int       `gorm:"column:friend_id;index:idx_contact_user_friend,priority:2" json:"friend_id"`                                      // 好友id
-	Remark    string    `gorm:"column:remark;" json:"remark"`                                                                                    // 好友的备注
+	Remark    string    `gorm:"column:remark;type:varchar(128)" json:"remark"`                                                                   // 好友的备注
 	Status    int       `gorm:"column:status;index:idx_contact_user_status,priority:2" json:"status"`                                            // 好友状态 [0:否;1:是]
-	GroupId   int       `gorm:"column:group_id;" json:"group_id"`                                                                                // 分组id
+	GroupId   int       `gorm:"column:group_id;default:0" json:"group_id"`                                                                       // 分组id
+	IsBlack   int       `gorm:"column:is_black;type:tinyint(4);default:0" json:"is_black"`                                                       // 是否拉黑：0-否，1-是
 	CreatedAt time.Time `gorm:"column:created_at;" json:"created_at"`                                                                            // 创建时间
 	UpdatedAt time.Time `gorm:"column:updated_at;" json:"updated_at"`                                                                            // 更新时间
 }

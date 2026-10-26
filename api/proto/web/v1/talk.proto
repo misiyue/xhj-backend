@@ -166,6 +166,8 @@ message TalkSessionDetailResponse{
   int32 retain_days = 3;
   // 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
   int32 session_id = 4;
+  // 当前用户是否拉黑对方（仅私聊有意义；0-否 1-是）
+  int32 is_black = 5;
 }
 
 // 设置消息保留天数

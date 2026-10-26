@@ -96,6 +96,7 @@ type Service struct {
 	TalkRecordsVoteRepo *repo.GroupVote
 	TalkSessionRepo     *repo.TalkSession
 	UsersRepo           *repo.Users
+	ContactRepo         *repo.Contact
 	Filesystem          filesystem.IFilesystem
 	UnreadStorage       *cache.UnreadStorage
 	MessageStorage      *cache.MessageStorage

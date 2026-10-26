@@ -741,7 +741,9 @@ type TalkSessionDetailResponse struct {
 	IsDisturb  int32                  `protobuf:"varint,2,opt,name=is_disturb,json=isDisturb,proto3" json:"is_disturb,omitempty"`
 	RetainDays int32                  `protobuf:"varint,3,opt,name=retain_days,json=retainDays,proto3" json:"retain_days,omitempty"`
 	// 私聊成对关联 session_id（talk_session.session_id，为 0 时回退为 talk_session.id）
-	SessionId     int32 `protobuf:"varint,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	SessionId int32 `protobuf:"varint,4,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	// 当前用户是否拉黑对方（仅私聊有意义；0-否 1-是）
+	IsBlack       int32 `protobuf:"varint,5,opt,name=is_black,json=isBlack,proto3" json:"is_black,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -800,6 +802,13 @@ func (x *TalkSessionDetailResponse) GetRetainDays() int32 {
 func (x *TalkSessionDetailResponse) GetSessionId() int32 {
 	if x != nil {
 		return x.SessionId
+	}
+	return 0
+}
+
+func (x *TalkSessionDetailResponse) GetIsBlack() int32 {
+	if x != nil {
+		return x.IsBlack
 	}
 	return 0
 }
@@ -1158,7 +1167,7 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\x18TalkSessionDetailRequest\x12&\n" +
 	"\ttalk_mode\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x040\x010\x02R\btalkMode\x12(\n" +
 	"\vreceiver_id\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +
-	"receiverId\"\x9d\x01\n" +
+	"receiverId\"\xb8\x01\n" +
 	"\x19TalkSessionDetailResponse\x12\x1b\n" +
 	"\x06is_top\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x05isTop\x12#\n" +
 	"\n" +
@@ -1166,7 +1175,8 @@ const file_web_v1_talk_proto_rawDesc = "" +
 	"\vretain_days\x18\x03 \x01(\x05R\n" +
 	"retainDays\x12\x1d\n" +
 	"\n" +
-	"session_id\x18\x04 \x01(\x05R\tsessionId\"\xa0\x01\n" +
+	"session_id\x18\x04 \x01(\x05R\tsessionId\x12\x19\n" +
+	"\bis_black\x18\x05 \x01(\x05R\aisBlack\"\xa0\x01\n" +
 	"\x1fTalkSessionSetRetainDaysRequest\x12&\n" +
 	"\n" +
 	"session_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\tsessionId\x12+\n" +

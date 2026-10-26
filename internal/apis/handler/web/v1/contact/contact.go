@@ -262,3 +262,41 @@ func (c *Contact) OnlineStatus(ctx context.Context, in *web.ContactOnlineStatusR
 
 	return resp, nil
 }
+
+// Block 拉黑联系人
+//
+//	@Summary		拉黑联系人
+//	@Description	单向拉黑；对方仍可发消息并落库到其视角，本方不接收推送/未读
+//	@Tags			联系人
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactBlockRequest	true	"拉黑请求"
+//	@Success		200		{object}	web.ContactBlockResponse
+//	@Router			/api/v1/contact/block [post]
+//	@Security		Bearer
+func (c *Contact) Block(ctx context.Context, in *web.ContactBlockRequest) (*web.ContactBlockResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if err := c.ContactService.Block(ctx, uid, int(in.UserId)); err != nil {
+		return nil, err
+	}
+	return &web.ContactBlockResponse{}, nil
+}
+
+// Unblock 解除拉黑
+//
+//	@Summary		解除拉黑
+//	@Description	取消对联系人的拉黑
+//	@Tags			联系人
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactUnblockRequest	true	"解除拉黑请求"
+//	@Success		200		{object}	web.ContactUnblockResponse
+//	@Router			/api/v1/contact/unblock [post]
+//	@Security		Bearer
+func (c *Contact) Unblock(ctx context.Context, in *web.ContactUnblockRequest) (*web.ContactUnblockResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if err := c.ContactService.Unblock(ctx, uid, int(in.UserId)); err != nil {
+		return nil, err
+	}
+	return &web.ContactUnblockResponse{}, nil
+}

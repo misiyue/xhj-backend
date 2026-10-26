@@ -64,6 +64,22 @@ service Contact {
       body: "*"
     };
   }
+
+  // 拉黑联系人
+  rpc Block(ContactBlockRequest) returns (ContactBlockResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contact/block"
+      body: "*"
+    };
+  }
+
+  // 解除拉黑
+  rpc Unblock(ContactUnblockRequest) returns (ContactUnblockResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contact/unblock"
+      body: "*"
+    };
+  }
 }
 
 // 联系人列表接口请求参数
@@ -163,3 +179,17 @@ message ContactOnlineStatusResponse{
   // 在线状态 [N:离线;Y:在线;]
   string online_status = 1 [(google.api.field_behavior) = REQUIRED];
 }
+
+// 拉黑联系人请求
+message ContactBlockRequest{
+  int32 user_id = 1 [(buf.validate.field).int32.gte = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+message ContactBlockResponse{}
+
+// 解除拉黑请求
+message ContactUnblockRequest{
+  int32 user_id = 1 [(buf.validate.field).int32.gte = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+message ContactUnblockResponse{}

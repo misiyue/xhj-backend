@@ -26,6 +26,10 @@ type IContactHandler interface {
 	ChangeGroup(ctx context.Context, in *ContactChangeGroupRequest) (*ContactChangeGroupResponse, error)
 	// 获取联系人在线状态接口
 	OnlineStatus(ctx context.Context, in *ContactOnlineStatusRequest) (*ContactOnlineStatusResponse, error)
+	// 拉黑联系人
+	Block(ctx context.Context, in *ContactBlockRequest) (*ContactBlockResponse, error)
+	// 解除拉黑
+	Unblock(ctx context.Context, in *ContactUnblockRequest) (*ContactUnblockResponse, error)
 }
 
 // RegisterContactHandler 注册服务路由处理器
@@ -102,6 +106,24 @@ func RegisterContactHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.OnlineStatus(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/contact/block", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in ContactBlockRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.Block(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/contact/unblock", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in ContactUnblockRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.Unblock(ctx.Request.Context(), &in)
 	}))
 
 }

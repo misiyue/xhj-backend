@@ -373,9 +373,10 @@ type NewContact struct {
 	Id        int       `gorm:"column:id;primaryKey;autoIncrement"`
 	UserId    int       `gorm:"column:user_id"`
 	FriendId  int       `gorm:"column:friend_id"`
-	Remark    string    `gorm:"column:remark;type:varchar(64)"`
+	Remark    string    `gorm:"column:remark;type:varchar(128)"`
 	Status    int       `gorm:"column:status"`
-	GroupId   int       `gorm:"column:group_id"`
+	GroupId   int       `gorm:"column:group_id;default:0"`
+	IsBlack   int       `gorm:"column:is_black;type:tinyint(4);default:0"`
 	CreatedAt time.Time `gorm:"column:created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at"`
 }

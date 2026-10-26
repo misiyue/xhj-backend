@@ -86,7 +86,7 @@ var ChatMsgTypeMapping = map[int]string{
 	ChatMsgTypeRTCCall:               "[通话记录]",
 	ChatMsgTypeRedEnvelope:           "[红包]",
 	ChatMsgTypeTransfer:              "[转账]",
-	ChatMsgTypeCmd:                   "[指令消息]",
+	ChatMsgTypeCmd:                   "[指令卡片消息]",
 	ChatMsgSysText:                   "[系统消息]",
 	ChatMsgSysGroupCreate:            "[创建群消息]",
 	ChatMsgSysGroupMemberJoin:        "[加入群消息]",

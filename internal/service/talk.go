@@ -92,26 +92,29 @@ func (t *TalkService) DeleteRecord(ctx context.Context, opt *TalkDeleteRecordOpt
 	return db.Create(items).Error
 }
 
-// Revoke 撤回消息核心业务：校验 → 更新 is_revoked →（成功时）更新会话最后一条文案 + Redis 通知 Comet 推 WebSocket
+// Revoke 撤回消息核心业务：校验 → 更新 is_revoked →（成功时）推 WebSocket；仅撤回「最新一条」时才改会话列表预览
 func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err error) {
 	db := t.Source.Db().WithContext(ctx)
 
 	// 供 defer 使用：会话列表「最后一条」缓存的维度（发送者视角的 fromId / 对端或群 ID）
 	var (
-		fromId     int
-		receiverId int
+		fromId           int
+		receiverId       int
+		updateLastPreview bool // 仅当被撤消息是会话当前最新一条时更新外层预览
 	)
 
-	// 仅在整次 Revoke 未报错时执行：更新 MessageStorage + 发布 sub.im.message.revoke
+	// 仅在整次 Revoke 未报错时执行：按需更新 MessageStorage + 发布 sub.im.message.revoke
 	defer func() {
 		if err == nil {
 			remark := "有消息已被撤回"
 
-			// 用发送者昵称拼展示文案；同时给该会话写最后一条预览（会话列表用）
 			user, _ := t.UserRepo.FindByIdWithCache(ctx, fromId)
 			if user != nil {
 				remark = fmt.Sprintf("【%s】撤回了一条消息", user.Nickname)
+			}
 
+			// 撤回非最新消息时不改会话列表提示，避免覆盖真实最新消息摘要
+			if updateLastPreview && t.MessageStorage != nil {
 				_ = t.MessageStorage.Set(ctx, opt.TalkMode, fromId, receiverId, &cache.LastCacheMessage{
 					Content:  remark,
 					Datetime: time.Now().Format(time.DateTime),
@@ -132,7 +135,7 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 			if e != nil {
 				logger.Errorf("revoke push message error:%s", e.Error())
 			} else {
-				logger.Infof("revoke redis push ok: talk_mode=%d msg_id=%s", opt.TalkMode, opt.MsgId)
+				logger.Infof("revoke redis push ok: talk_mode=%d msg_id=%s update_last=%v", opt.TalkMode, opt.MsgId, updateLastPreview)
 			}
 		}
 	}()
@@ -165,6 +168,7 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 
 		fromId = record.FromId
 		receiverId = record.ReceiverId
+		updateLastPreview = t.isLatestPrivateMessage(ctx, &record)
 
 		// 父消息标记撤回；混合子段保持 is_revoked=0 并 is_deleted=1，避免进入会话列表
 		if err := db.Model(&model.TalkUserMessage{}).
@@ -204,6 +208,7 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 
 		fromId = record.FromId
 		receiverId = record.GroupId // 群聊时 receiverId 即 groupId，供 MessageStorage 维度使用
+		updateLastPreview = t.isLatestGroupMessage(ctx, &record)
 
 		if err := db.Model(&model.TalkGroupMessage{}).
 			Where("msg_id = ?", record.MsgId).
@@ -216,6 +221,44 @@ func (t *TalkService) Revoke(ctx context.Context, opt *TalkRevokeOption) (err er
 	}
 
 	return errors.New("暂不支持撤回消息")
+}
+
+// isLatestPrivateMessage 判断消息是否为该私聊会话当前最新一条（排除隐藏子段与已删除）
+func (t *TalkService) isLatestPrivateMessage(ctx context.Context, record *model.TalkUserMessage) bool {
+	if record == nil || record.MsgId == "" {
+		return false
+	}
+	q := t.Source.Db().WithContext(ctx).Model(&model.TalkUserMessage{}).
+		Where("is_deleted = ? AND is_revoked <> ?", model.No, model.TalkMsgRevokedHidden)
+	if record.SessionId > 0 {
+		q = q.Where("session_id = ?", record.SessionId)
+	} else {
+		// 无 session_id 时按双方用户维度兜底
+		q = q.Where(
+			"(from_id = ? AND receiver_id = ?) OR (from_id = ? AND receiver_id = ?)",
+			record.FromId, record.ReceiverId, record.ReceiverId, record.FromId,
+		)
+	}
+	var latestMsgId string
+	if err := q.Select("msg_id").Order("id desc").Limit(1).Scan(&latestMsgId).Error; err != nil {
+		return false
+	}
+	return latestMsgId == record.MsgId
+}
+
+// isLatestGroupMessage 判断消息是否为该群当前最新一条（排除隐藏子段与已删除）
+func (t *TalkService) isLatestGroupMessage(ctx context.Context, record *model.TalkGroupMessage) bool {
+	if record == nil || record.GroupId <= 0 || record.MsgId == "" {
+		return false
+	}
+	var latestMsgId string
+	err := t.Source.Db().WithContext(ctx).Model(&model.TalkGroupMessage{}).
+		Where("group_id = ? AND is_deleted = ? AND is_revoked <> ?", record.GroupId, model.No, model.TalkMsgRevokedHidden).
+		Select("msg_id").Order("id desc").Limit(1).Scan(&latestMsgId).Error
+	if err != nil {
+		return false
+	}
+	return latestMsgId == record.MsgId
 }
 
 // MarkPrivateMessagesRead 将指定私聊消息标记为已读，返回实际更新的 msg_id 列表。

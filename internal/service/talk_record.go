@@ -224,8 +224,11 @@ func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalk
 			query.Where("session_id = ?", session.SessionId)
 		} else {
 			// 降级方案：使用传统方式查询（兼容未注入 TalkSessionRepo 的情况）
-			query.Where("user_id = ? and receiver_id = ?", opt.UserId, opt.ReceiverId)
+			query.Where("((from_id = ? and receiver_id = ?) or (from_id = ? and receiver_id = ?))",
+				opt.UserId, opt.ReceiverId, opt.ReceiverId, opt.UserId)
 		}
+		// user_id=0 双方可见；user_id=当前用户 为被拉黑方单方可见消息
+		query.Where("(user_id = 0 OR user_id = ?)", opt.UserId)
 
 		query.Where("is_deleted = ?", model.No)
 	} else {

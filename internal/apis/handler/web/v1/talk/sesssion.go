@@ -253,11 +253,17 @@ func (s *Session) SessionDetail(ctx context.Context, in *web.TalkSessionDetailRe
 		return nil, err
 	}
 
+	isBlack := int32(0)
+	if int(in.TalkMode) == entity.ChatPrivateMode && s.ContactRepo != nil {
+		isBlack = int32(s.ContactRepo.GetIsBlack(ctx, uid, int(in.ReceiverId)))
+	}
+
 	return &web.TalkSessionDetailResponse{
 		IsTop:      int32(detail.IsTop),
 		IsDisturb:  int32(detail.IsDisturb),
 		RetainDays: int32(detail.RetainDays),
 		SessionId:  int32(linkSessionID(detail.Id, detail.SessionId)),
+		IsBlack:    isBlack,
 	}, nil
 }
 

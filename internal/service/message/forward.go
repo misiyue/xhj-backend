@@ -110,10 +110,11 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 			}
 		}
 	} else {
-		// 单条转发 → 私聊：对每条被转发的消息，只在 talk_user_message 中插入 1 条记录（UserId=0），
-		// 再通过 WebSocket 给双方各推送一份视图，保证 storage 与普通私聊保持一致。
+		// 单条转发 → 私聊：对每条被转发的消息，只在 talk_user_message 中插入 1 条记录，
+		// 再通过 WebSocket 推送；被拉黑时仅发送方可见(user_id=from)，不推接收方。
 
-		// 为当前会话获取 session_id，确保历史消息接口能按 session_id 查询到这些转发消息
+		blockedByReceiver := s.ContactRepo != nil && s.ContactRepo.IsBlocked(ctx, req.ToUserId, req.UserId)
+
 		sessionId := 0
 		if s.TalkSessionRepo != nil {
 			if sess, err := s.TalkSessionRepo.FindByWhere(ctx,
@@ -130,19 +131,20 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 
 		s.ensurePrivateSession(ctx, req.UserId, req.ToUserId)
 
-		// 构造最近一条转发摘要用于会话列表 msg_text
-		recs := make([]model.TalkRecordExtraForwardRecord, 0, len(messageItems))
-		for _, v := range messageItems {
-			recs = append(recs, model.TalkRecordExtraForwardRecord{Content: PreviewText(v.MsgType, v.Extra)})
+		ownerUserId := 0
+		if blockedByReceiver {
+			ownerUserId = req.UserId
+		} else {
+			recs := make([]model.TalkRecordExtraForwardRecord, 0, len(messageItems))
+			for _, v := range messageItems {
+				recs = append(recs, model.TalkRecordExtraForwardRecord{Content: PreviewText(v.MsgType, v.Extra)})
+			}
+			msgPreview := forwardPreviewFromRecords(recs, 80)
+			msgTime := now.Format(time.DateTime)
+			_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, req.UserId, req.ToUserId, &cache.LastCacheMessage{Content: msgPreview, Datetime: msgTime})
+			s.UnreadStorage.Incr(ctx, req.ToUserId, entity.ChatPrivateMode, req.UserId)
 		}
-		msgPreview := forwardPreviewFromRecords(recs, 80)
-		msgTime := now.Format(time.DateTime)
-		_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, req.UserId, req.ToUserId, &cache.LastCacheMessage{Content: msgPreview, Datetime: msgTime})
-		_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, req.ToUserId, req.UserId, &cache.LastCacheMessage{Content: msgPreview, Datetime: msgTime})
-		// 接收方未读 +1
-		s.UnreadStorage.Incr(ctx, req.ToUserId, entity.ChatPrivateMode, req.UserId)
 
-		// 逐条落库并推送：每条消息只存一条记录（UserId=0），但推送给双方各一份视图
 		list := make([]*entity.SubscribeMessage, 0, len(messageItems)*2)
 		for _, v := range messageItems {
 			msgId := strutil.NewMsgId()
@@ -151,7 +153,7 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 				MsgId:      strutil.NewMsgId(),
 				OrgMsgId:   msgId,
 				MsgType:    v.MsgType,
-				UserId:     0, // 与普通私聊保持一致，逻辑所有者通过 session / 关系表处理
+				UserId:     ownerUserId,
 				ReceiverId: req.ToUserId,
 				FromId:     req.UserId,
 				SessionId:  sessionId,
@@ -167,30 +169,27 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 				continue
 			}
 
-			// 发送方视图
 			sender := *record
 			sender.UserId = req.UserId
+			list = append(list, &entity.SubscribeMessage{
+				Event: entity.SubEventImMessage,
+				Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
+					TalkMode: entity.ChatPrivateMode,
+					Message:  jsonutil.Encode(sender),
+				}),
+			})
 
-			// 接收方视图
-			receiver := *record
-			receiver.UserId = req.ToUserId
-
-			list = append(list,
-				&entity.SubscribeMessage{
-					Event: entity.SubEventImMessage,
-					Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
-						TalkMode: entity.ChatPrivateMode,
-						Message:  jsonutil.Encode(sender),
-					}),
-				},
-				&entity.SubscribeMessage{
+			if !blockedByReceiver {
+				receiver := *record
+				receiver.UserId = req.ToUserId
+				list = append(list, &entity.SubscribeMessage{
 					Event: entity.SubEventImMessage,
 					Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
 						TalkMode: entity.ChatPrivateMode,
 						Message:  jsonutil.Encode(receiver),
 					}),
-				},
-			)
+				})
+			}
 		}
 
 		if err := s.PushMessage.MultiPush(ctx, entity.ImTopicChat, list); err != nil {
@@ -261,10 +260,9 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 
 	switch req.ToUserIdType {
 	case entity.ChatPrivateMode: // 好友发送消息
-		// 私聊合并转发：与普通私聊、单条转发保持一致，只在 talk_user_message 中插入 1 条记录（UserId=0），
-		// 再通过 WebSocket 推送给双方各一份视图。
+		// 私聊合并转发：落库一条；被拉黑时仅发送方可见，不推接收方/未读/预览
+		blockedByReceiver := s.ContactRepo != nil && s.ContactRepo.IsBlocked(ctx, req.ToUserId, req.UserId)
 
-		// 为目标会话获取 session_id，便于历史消息接口按 session_id 查询到这条合并转发消息
 		sessionId := 0
 		if s.TalkSessionRepo != nil {
 			if sess, err := s.TalkSessionRepo.FindByWhere(ctx,
@@ -281,21 +279,22 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 
 		s.ensurePrivateSession(ctx, req.UserId, req.ToUserId)
 
-		// 更新会话「最后一条消息」缓存，会话列表 msg_text 显示合并转发摘要
-		msgPreview := forwardPreviewFromRecords(extra.Records, 80)
-		msgTime := now.Format(time.DateTime)
-		_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, req.UserId, req.ToUserId, &cache.LastCacheMessage{Content: msgPreview, Datetime: msgTime})
-		_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, req.ToUserId, req.UserId, &cache.LastCacheMessage{Content: msgPreview, Datetime: msgTime})
-		// 接收方未读数 +1
-		s.UnreadStorage.Incr(ctx, req.ToUserId, entity.ChatPrivateMode, req.UserId)
+		ownerUserId := 0
+		if blockedByReceiver {
+			ownerUserId = req.UserId
+		} else {
+			msgPreview := forwardPreviewFromRecords(extra.Records, 80)
+			msgTime := now.Format(time.DateTime)
+			_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, req.UserId, req.ToUserId, &cache.LastCacheMessage{Content: msgPreview, Datetime: msgTime})
+			s.UnreadStorage.Incr(ctx, req.ToUserId, entity.ChatPrivateMode, req.UserId)
+		}
 
-		// 实际落库：只存一条合并转发记录（UserId=0）
 		msgId := strutil.NewMsgId()
 		record := &model.TalkUserMessage{
 			MsgId:      strutil.NewMsgId(),
 			OrgMsgId:   msgId,
 			MsgType:    entity.ChatMsgTypeForward,
-			UserId:     0, // 逻辑所有权通过 session/关系控制
+			UserId:     ownerUserId,
 			ReceiverId: req.ToUserId,
 			FromId:     req.UserId,
 			SessionId:  sessionId,
@@ -310,23 +309,20 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 			return err
 		}
 
-		// 构造发送方/接收方视图并推送
 		sender := *record
 		sender.UserId = req.UserId
-
-		receiver := *record
-		receiver.UserId = req.ToUserId
-
-		pushMessageItems = append(pushMessageItems,
-			entity.SubEventImMessagePayload{
-				TalkMode: entity.ChatPrivateMode,
-				Message:  jsonutil.Encode(sender),
-			},
-			entity.SubEventImMessagePayload{
+		pushMessageItems = append(pushMessageItems, entity.SubEventImMessagePayload{
+			TalkMode: entity.ChatPrivateMode,
+			Message:  jsonutil.Encode(sender),
+		})
+		if !blockedByReceiver {
+			receiver := *record
+			receiver.UserId = req.ToUserId
+			pushMessageItems = append(pushMessageItems, entity.SubEventImMessagePayload{
 				TalkMode: entity.ChatPrivateMode,
 				Message:  jsonutil.Encode(receiver),
-			},
-		)
+			})
+		}
 
 	case entity.ChatGroupMode: // 向群发送消息
 		record := model.TalkGroupMessage{
@@ -616,13 +612,6 @@ func PreviewText(msgType int, extra string) string {
 		}
 		return entity.ChatMsgSysRetainDaysSetPreview(data.RetainDays)
 	case entity.ChatMsgTypeCmd:
-		data := model.TalkRecordExtraCmd{}
-		if err := jsonutil.Unmarshal(extra, &data); err != nil {
-			return entity.ChatMsgTypeMapping[entity.ChatMsgTypeCmd]
-		}
-		if strings.TrimSpace(data.Intro) != "" {
-			return strutil.MtSubstr(strings.TrimSpace(data.Intro), 0, 200)
-		}
 		return entity.ChatMsgTypeMapping[entity.ChatMsgTypeCmd]
 	case entity.ChatMsgTypeGroupNotice:
 		prefix := entity.ChatMsgTypeMapping[entity.ChatMsgTypeGroupNotice]

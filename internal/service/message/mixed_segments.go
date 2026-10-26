@@ -30,6 +30,11 @@ func (s *Service) createMixedSegmentRows(ctx context.Context, talkMode, fromId, 
 			}
 		}
 
+		ownerUserId := 0
+		if s.ContactRepo != nil && s.ContactRepo.IsBlocked(ctx, receiverId, fromId) {
+			ownerUserId = fromId
+		}
+
 		rows := make([]model.TalkUserMessage, 0, len(segments))
 		for _, seg := range segments {
 			rows = append(rows, model.TalkUserMessage{
@@ -37,6 +42,7 @@ func (s *Service) createMixedSegmentRows(ctx context.Context, talkMode, fromId, 
 				OrgMsgId:   parentMsgId,
 				SessionId:  sessionId,
 				MsgType:    seg.Type,
+				UserId:     ownerUserId,
 				ReceiverId: receiverId,
 				FromId:     fromId,
 				Extra:      seg.Content,
