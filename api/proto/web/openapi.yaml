@@ -658,6 +658,81 @@ paths:
                         application/json:
                             schema:
                                 $ref: '#/components/schemas/Status'
+    /api/v1/contact/block:
+        post:
+            tags:
+                - Contact
+            description: 拉黑联系人
+            operationId: Contact_Block
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ContactBlockRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContactBlockResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/contact/unblock:
+        post:
+            tags:
+                - Contact
+            description: 解除拉黑
+            operationId: Contact_Unblock
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ContactUnblockRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContactUnblockResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
+    /api/v1/contact/block-list:
+        post:
+            tags:
+                - Contact
+            description: 黑名单列表
+            operationId: Contact_BlockList
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ContactBlockListRequest'
+                required: true
+            responses:
+                "200":
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ContactBlockListResponse'
+                default:
+                    description: Default error response
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Status'
     /api/v1/emoticon/customize/create:
         post:
             tags:
@@ -2677,6 +2752,75 @@ components:
                 motto:
                     type: string
             description: 联系人搜索接口响应参数
+        ContactBlockRequest:
+            required:
+                - userId
+            type: object
+            properties:
+                userId:
+                    type: integer
+                    format: int32
+            description: 拉黑联系人请求
+        ContactBlockResponse:
+            type: object
+            properties: {}
+            description: 拉黑联系人响应
+        ContactUnblockRequest:
+            required:
+                - userId
+            type: object
+            properties:
+                userId:
+                    type: integer
+                    format: int32
+            description: 解除拉黑请求
+        ContactUnblockResponse:
+            type: object
+            properties: {}
+            description: 解除拉黑响应
+        ContactBlockListRequest:
+            type: object
+            properties:
+                page:
+                    type: integer
+                    format: int32
+                    description: 页码，从 1 开始
+                pageSize:
+                    type: integer
+                    format: int32
+                    description: 每页条数，默认 20，最大 100
+            description: 黑名单列表请求
+        ContactBlockListResponse:
+            required:
+                - items
+                - total
+            type: object
+            properties:
+                items:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/ContactBlockListResponse_Item'
+                total:
+                    type: integer
+                    format: int32
+            description: 黑名单列表响应
+        ContactBlockListResponse_Item:
+            required:
+                - userId
+                - nickname
+                - avatar
+                - remark
+            type: object
+            properties:
+                userId:
+                    type: integer
+                    format: int32
+                nickname:
+                    type: string
+                avatar:
+                    type: string
+                remark:
+                    type: string
         EmoticonCreateRequest:
             type: object
             properties:

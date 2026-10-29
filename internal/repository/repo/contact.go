@@ -85,6 +85,30 @@ func (c *Contact) GetIsBlack(ctx context.Context, uid, friendId int) int {
 	return row.IsBlack
 }
 
+// IsBlackMap 批量获取 uid 对好友的拉黑状态，key=friend_id，无记录视为 0
+func (c *Contact) IsBlackMap(ctx context.Context, uid int, friendIds []int) map[int]int {
+	out := make(map[int]int, len(friendIds))
+	if uid <= 0 || len(friendIds) == 0 {
+		return out
+	}
+	type row struct {
+		FriendId int `gorm:"column:friend_id"`
+		IsBlack  int `gorm:"column:is_black"`
+	}
+	var rows []row
+	err := c.Repo.Model(ctx).
+		Select("friend_id, is_black").
+		Where("user_id = ? AND status = ? AND friend_id IN ?", uid, model.ContactStatusNormal, friendIds).
+		Scan(&rows).Error
+	if err != nil {
+		return out
+	}
+	for _, r := range rows {
+		out[r.FriendId] = r.IsBlack
+	}
+	return out
+}
+
 func (c *Contact) LoadContactCache(ctx context.Context, uid int) error {
 
 	all, err := c.Repo.FindAll(ctx, func(db *gorm.DB) {

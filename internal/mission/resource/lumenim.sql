@@ -224,24 +224,25 @@ CREATE TABLE IF NOT EXISTS `file_upload`
 
 CREATE TABLE IF NOT EXISTS `group`
 (
-    `id`         int unsigned      NOT NULL AUTO_INCREMENT COMMENT '群ID',
-    `type`       tinyint unsigned  NOT NULL DEFAULT '1' COMMENT '群类型[1:普通群;2:企业群;]',
-    `name`       varchar(64)       NOT NULL DEFAULT '' COMMENT '群名称',
-    `profile`    varchar(128)      NOT NULL DEFAULT '' COMMENT '群介绍',
-    `avatar`     varchar(255)      NOT NULL DEFAULT '' COMMENT '群头像',
-    `max_num`    smallint unsigned NOT NULL DEFAULT '200' COMMENT '最大群成员数量',
-    `is_overt`   tinyint unsigned  NOT NULL DEFAULT '2' COMMENT '是否公开可见[1:是;2:否;]',
-    `is_mute`    tinyint unsigned  NOT NULL DEFAULT '2' COMMENT '是否全员禁言 [1:是;2:否;] 提示:不包含群主或管理员',
-    `is_dismiss` tinyint unsigned  NOT NULL DEFAULT '2' COMMENT '是否已解散[1:是;2:否;]',
-    `creator_id` int unsigned      NOT NULL COMMENT '创建者ID(群主ID)',
-    `created_at` datetime          NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at` datetime          NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_created_at` (`created_at`) USING BTREE,
-    KEY `idx_updated_at` (`updated_at`) USING BTREE
+    `id`              bigint(20)   NOT NULL AUTO_INCREMENT COMMENT '群ID',
+    `type`            tinyint(4)            DEFAULT NULL COMMENT '群类型[1:普通群;2:企业群;]',
+    `creator_id`      bigint(20)            DEFAULT NULL COMMENT '创建者ID(群主ID)',
+    `name`            varchar(255)          DEFAULT NULL COMMENT '群名称',
+    `profile`         varchar(255)          DEFAULT NULL COMMENT '群介绍',
+    `is_dismiss`      tinyint(4)            DEFAULT NULL COMMENT '是否已解散',
+    `avatar`          varchar(255)          DEFAULT NULL COMMENT '群头像',
+    `max_num`         int(11)               DEFAULT NULL COMMENT '最大群成员数量',
+    `is_overt`        tinyint(4)            DEFAULT NULL COMMENT '是否公开可见',
+    `is_mute`         tinyint(4)            DEFAULT NULL COMMENT '是否全员禁言',
+    `is_allow_invite` tinyint(4)            DEFAULT '1' COMMENT '群内是否允许成员互加好友',
+    `force_status`    tinyint(4)            DEFAULT '0' COMMENT '强制状态：1.群禁言',
+    `created_at`      datetime              DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updated_at`      datetime              DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_group_overt_dismiss_created` (`is_overt`, `is_dismiss`, `created_at`) USING BTREE
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_general_ci COMMENT ='聊天群';;
+  ROW_FORMAT = DYNAMIC COMMENT ='聊天群';;
 
 CREATE TABLE IF NOT EXISTS `group_apply`
 (
@@ -553,3 +554,19 @@ CREATE TABLE IF NOT EXISTS `article_history`
     KEY          `idx_article_id` (`article_id`) USING BTREE,
     KEY          `idx_user_id_article_id` (`user_id`,`article_id`) USING BTREE
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COMMENT='笔记历史记录表';;
+
+
+CREATE TABLE IF NOT EXISTS `user_report`
+(
+    `id`         int(11)      NOT NULL AUTO_INCREMENT,
+    `user_id`    int(11)               DEFAULT NULL COMMENT '上诉人用户id',
+    `defe_id`    int(11)               DEFAULT NULL COMMENT '被诉人用户或群id',
+    `defe_type`  tinyint(4)            DEFAULT NULL COMMENT '被诉人类型：1-用户，2-群',
+    `reason`     varchar(255)          DEFAULT NULL COMMENT '原因',
+    `status`     tinyint(4)            DEFAULT '0' COMMENT '状态：0-待处理，1-已处理',
+    `result`     tinyint(4)            DEFAULT '0' COMMENT '处理结果：1-账号封禁，2-群禁言',
+    `updated_at` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `created_at` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4 COMMENT ='用户举报表';;

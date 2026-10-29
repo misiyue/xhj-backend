@@ -110,31 +110,7 @@ func RegisterContactHandler(r gin.IRoutes, interceptor interface {
 		return handler.OnlineStatus(ctx.Request.Context(), &in)
 	}))
 
-	r.POST("/api/v1/contact/block", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in ContactBlockRequest
-		if err := interceptor.ShouldProto(ctx, &in); err != nil {
-			return nil, err
-		}
-
-		return handler.Block(ctx.Request.Context(), &in)
-	}))
-
-	r.POST("/api/v1/contact/unblock", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in ContactUnblockRequest
-		if err := interceptor.ShouldProto(ctx, &in); err != nil {
-			return nil, err
-		}
-
-		return handler.Unblock(ctx.Request.Context(), &in)
-	}))
-
-	r.POST("/api/v1/contact/block-list", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in ContactBlockListRequest
-		if err := interceptor.ShouldProto(ctx, &in); err != nil {
-			return nil, err
-		}
-
-		return handler.BlockList(ctx.Request.Context(), &in)
-	}))
+	// NOTE: block / unblock / block-list 在 internal/apis/router/api.go registerCustomApiRouter 显式注册，
+	// 避免仅依赖本文件时部署二进制未更新导致 404。
 
 }

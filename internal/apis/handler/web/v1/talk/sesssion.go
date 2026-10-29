@@ -331,8 +331,9 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 		}
 	}
 
-	// 获取好友备注
+	// 获取好友备注、拉黑状态
 	remarks, _ := s.ContactRepo.Remarks(ctx, uid, friends)
+	blackMap := s.ContactRepo.IsBlackMap(ctx, uid, friends)
 
 	items := make([]*web.TalkSessionItem, 0)
 	for _, item := range data {
@@ -362,6 +363,7 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 			value.Name = item.Nickname
 			value.Avatar = item.Avatar
 			value.Remark = remarks[item.ReceiverId]
+			value.IsBlack = int32(blackMap[item.ReceiverId])
 		} else {
 			value.Name = item.GroupName
 			value.Avatar = item.GroupAvatar

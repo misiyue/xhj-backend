@@ -59,18 +59,19 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		&model.AppVersion{},
 		&model.AppExplore{},
 		&model.AppModule{},
+		&model.UserReport{},
 		&model.MarzbanCheckin{},
 		&model.MarzbanCheckinState{},
 	}
 	for _, m := range models {
-		if m == (&model.AppExplore{}) || m == (&model.AppModule{}) {
+		if needAppDatetimeDefaults(m) {
 			table := m.(interface{ TableName() string }).TableName()
 			preFixAppTableNullTimestamps(db, table)
 		}
 		if err := db.AutoMigrate(m); err != nil {
 			panic(fmt.Errorf("database auto migrate %T error: %w", m, err))
 		}
-		if m == (&model.AppExplore{}) || m == (&model.AppModule{}) {
+		if needAppDatetimeDefaults(m) {
 			table := m.(interface{ TableName() string }).TableName()
 			ensureAppDatetimeDefaults(db, table)
 		}
@@ -83,6 +84,15 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 	sqlDB.SetConnMaxLifetime(time.Duration(conf.MySQL.ConnMaxLifetime) * time.Second)
 
 	return db
+}
+
+func needAppDatetimeDefaults(m any) bool {
+	switch m.(type) {
+	case *model.AppExplore, *model.AppModule, *model.AppVersion, *model.UserReport:
+		return true
+	default:
+		return false
+	}
 }
 
 // preFixAppTableNullTimestamps 迁移前补齐空时间，避免 NOT NULL + DEFAULT 变更失败

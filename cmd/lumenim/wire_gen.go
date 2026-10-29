@@ -199,6 +199,10 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	repoContact := repo.NewContact(db, contactRemark, relation)
 	repoGroup := repo.NewGroup(db)
 	groupMember := repo.NewGroupMember(db, relation)
+	userReport := repo.NewUserReport(db)
+	v1User.ContactRepo = repoContact
+	v1User.GroupMemberRepo = groupMember
+	v1User.UserReportRepo = userReport
 	talkService := &service.TalkService{
 		Source:          source,
 		GroupMemberRepo: groupMember,

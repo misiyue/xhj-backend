@@ -384,18 +384,20 @@ type NewContact struct {
 func (NewContact) TableName() string { return "contact" }
 
 type NewGroup struct {
-	Id        int       `gorm:"column:id;primaryKey;autoIncrement"`
-	Type      int       `gorm:"column:type"`
-	CreatorId int       `gorm:"column:creator_id"`
-	Name      string    `gorm:"column:name;type:varchar(64)"`
-	Profile   string    `gorm:"column:profile;type:varchar(512)"`
-	IsDismiss int       `gorm:"column:is_dismiss"`
-	Avatar    string    `gorm:"column:avatar;type:varchar(255)"`
-	MaxNum    int       `gorm:"column:max_num"`
-	IsOvert   int       `gorm:"column:is_overt"`
-	IsMute    int       `gorm:"column:is_mute"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	Id            int       `gorm:"column:id;primaryKey;autoIncrement;type:bigint(20)"`
+	Type          int       `gorm:"column:type;type:tinyint(4)"`
+	CreatorId     int       `gorm:"column:creator_id;type:bigint(20)"`
+	Name          string    `gorm:"column:name;type:varchar(255)"`
+	Profile       string    `gorm:"column:profile;type:varchar(255)"`
+	IsDismiss     int       `gorm:"column:is_dismiss;type:tinyint(4)"`
+	Avatar        string    `gorm:"column:avatar;type:varchar(255)"`
+	MaxNum        int       `gorm:"column:max_num;type:int(11)"`
+	IsOvert       int       `gorm:"column:is_overt;type:tinyint(4)"`
+	IsMute        int       `gorm:"column:is_mute;type:tinyint(4)"`
+	IsAllowInvite int       `gorm:"column:is_allow_invite;type:tinyint(4);default:1"`
+	ForceStatus   int       `gorm:"column:force_status;type:tinyint(4);default:0"`
+	CreatedAt     time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP"`
+	UpdatedAt     time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`
 }
 
 func (NewGroup) TableName() string { return "group" }

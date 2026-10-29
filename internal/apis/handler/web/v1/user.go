@@ -31,36 +31,39 @@ var usernamePattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{5,19}$`)
 var _ web.IUserHandler = (*User)(nil)
 
 type User struct {
-	Config              *config.Config
-	Redis               *redis.Client
-	UsersRepo           *repo.Users
-	WalletUserRepo      *repo.WalletUser
-	MerchantRepo        *repo.Merchant
-	MerchantTaskRepo    *repo.MerchantTask
-	MerchantPaytypeRepo   *repo.MerchantPaytype
-	MerchantPaymentRepo   *repo.MerchantPayment
-	MerchantOrderRepo     *repo.MerchantOrder
+	Config                  *config.Config
+	Redis                   *redis.Client
+	UsersRepo               *repo.Users
+	WalletUserRepo          *repo.WalletUser
+	MerchantRepo            *repo.Merchant
+	MerchantTaskRepo        *repo.MerchantTask
+	MerchantPaytypeRepo     *repo.MerchantPaytype
+	MerchantPaymentRepo     *repo.MerchantPayment
+	MerchantOrderRepo       *repo.MerchantOrder
 	MerchantOrderErrLogRepo *repo.MerchantOrderErrLog
-	MerchantHdOrderRepo *repo.MerchantHdOrder
-	MerchantHmOrderRepo *repo.MerchantHmOrder
-	MerchantSessionRepo *repo.MerchantSession
-	MerchantMessageRepo *repo.MerchantMessage
-	PushMessage         *logic.PushMessage
-	MessageStorage      *cache.MessageStorage
-	UnreadStorage       *cache.UnreadStorage
-	UserClient          *cache.UserClient
-	NoticeTemplateRepo  *repo.NoticeTemplate
-	SysNotice           *logic.SysNotice
-	TalkSessionService  service.ITalkSessionService
-	ContactApplyService service.IContactApplyService
-	GroupApplyStorage   *cache.GroupApplyStorage
-	NoticeLetterRepo    *repo.NoticeLetter
-	UserCmdRepo         *repo.UserCmd
-	OrganizeRepo        *repo.Organize
-	UserService         service.IUserService
-	SmsService          service.ISmsService
-	EmailService        service.IEmailService
-	Rsa                 rsautil.IRsa
+	MerchantHdOrderRepo     *repo.MerchantHdOrder
+	MerchantHmOrderRepo     *repo.MerchantHmOrder
+	MerchantSessionRepo     *repo.MerchantSession
+	MerchantMessageRepo     *repo.MerchantMessage
+	PushMessage             *logic.PushMessage
+	MessageStorage          *cache.MessageStorage
+	UnreadStorage           *cache.UnreadStorage
+	UserClient              *cache.UserClient
+	NoticeTemplateRepo      *repo.NoticeTemplate
+	SysNotice               *logic.SysNotice
+	TalkSessionService      service.ITalkSessionService
+	ContactApplyService     service.IContactApplyService
+	GroupApplyStorage       *cache.GroupApplyStorage
+	NoticeLetterRepo        *repo.NoticeLetter
+	UserCmdRepo             *repo.UserCmd
+	OrganizeRepo            *repo.Organize
+	ContactRepo             *repo.Contact
+	GroupMemberRepo         *repo.GroupMember
+	UserReportRepo          *repo.UserReport
+	UserService             service.IUserService
+	SmsService              service.ISmsService
+	EmailService            service.IEmailService
+	Rsa                     rsautil.IRsa
 }
 
 // Detail 获取登录用户详情接口

@@ -71,6 +71,7 @@ func (g *GroupService) Create(ctx context.Context, opt *GroupCreateOpt) (int, er
 		IsOvert:       model.No,
 		IsMute:        model.No,
 		IsAllowInvite: 1, // 与 GroupDetailResponse：1 允许群内互加
+		ForceStatus:   model.GroupForceStatusNone,
 	}
 
 	err = g.Source.Db().Transaction(func(tx *gorm.DB) error {

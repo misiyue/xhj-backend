@@ -93,6 +93,8 @@ message TalkSessionItem{
   int32 session_id = 15;
   // 消息保留天数，0 表示不限制（私聊/群聊均有效）
   int32 retain_days = 16;
+  // 当前用户是否拉黑对方（仅私聊有意义；0-否 1-是；群聊为 0）
+  int32 is_black = 17;
 }
 
 // 会话创建接口请求参数

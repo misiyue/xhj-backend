@@ -72,6 +72,11 @@ func (a *AuthService) IsAuth(ctx context.Context, opt *AuthOption) error {
 		return errors.New("已被群主或管理员禁言！")
 	}
 
+	// 强制禁言：所有群成员（含群主/管理员）均不可发消息
+	if opt.IsVerifyGroupMute && groupInfo.ForceStatus == model.GroupForceStatusMute {
+		return errors.New("该群已被强制禁言")
+	}
+
 	if opt.IsVerifyGroupMute && groupInfo.IsMute == model.Yes && memberInfo.Leader == model.GroupMemberLeaderOrdinary {
 		return errors.New("此群聊已开启全员禁言！")
 	}

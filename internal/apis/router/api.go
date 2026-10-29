@@ -578,4 +578,36 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 	api.POST("/api/v1/message/mentions/all", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.TalkMessage.GetAllMentions(c.Request.Context())
 	}))
+
+	// 联系人拉黑 / 解除拉黑 / 黑名单列表（显式注册，勿仅依赖 contact.bff.go）
+	api.POST("/api/v1/contact/block", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		var in web2.ContactBlockRequest
+		if err := resp.ShouldProto(c, &in); err != nil {
+			return nil, err
+		}
+		return handler.V1.Contact.Block(c.Request.Context(), &in)
+	}))
+	api.POST("/api/v1/contact/unblock", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		var in web2.ContactUnblockRequest
+		if err := resp.ShouldProto(c, &in); err != nil {
+			return nil, err
+		}
+		return handler.V1.Contact.Unblock(c.Request.Context(), &in)
+	}))
+	api.POST("/api/v1/contact/block-list", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		var in web2.ContactBlockListRequest
+		if err := resp.ShouldProto(c, &in); err != nil {
+			return nil, err
+		}
+		return handler.V1.Contact.BlockList(c.Request.Context(), &in)
+	}))
+
+	// 用户举报
+	api.POST("/api/v1/user/report", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		var in v1.UserReportRequest
+		if err := c.ShouldBindJSON(&in); err != nil {
+			return nil, err
+		}
+		return handler.V1.User.Report(c.Request.Context(), &in)
+	}))
 }
