@@ -12,7 +12,7 @@ const (
 
 	// ForceStatus 强制状态
 	GroupForceStatusNone = 0 // 无
-	GroupForceStatusMute = 1 // 强制群禁言
+	GroupForceStatusMute = 1 // 强制禁言：所有人（含群主/管理员）不可发言
 )
 
 type Group struct {
@@ -21,14 +21,14 @@ type Group struct {
 	CreatorId int    `gorm:"column:creator_id;type:bigint(20)" json:"creator_id"`                                     // 创建者ID(群主ID)
 	Name      string `gorm:"column:name;type:varchar(255)" json:"name"`                                               // 群名称
 	Profile   string `gorm:"column:profile;type:varchar(255)" json:"profile"`                                         // 群介绍
-	IsDismiss int    `gorm:"column:is_dismiss;type:tinyint(4);index:idx_group_overt_dismiss_created,priority:2" json:"is_dismiss"` // 是否已解散[1:否;2:是;]
+	IsDismiss int    `gorm:"column:is_dismiss;type:tinyint(4);index:idx_group_overt_dismiss_created,priority:2" json:"is_dismiss"` // 是否已解散[1:是;2:否;]
 	Avatar    string `gorm:"column:avatar;type:varchar(255)" json:"avatar"`                                           // 群头像
 	MaxNum    int    `gorm:"column:max_num;type:int(11)" json:"max_num"`                                              // 最大群成员数量
-	IsOvert   int    `gorm:"column:is_overt;type:tinyint(4);index:idx_group_overt_dismiss_created,priority:1" json:"is_overt"`     // 是否公开可见[1:否;2:是;]
-	IsMute    int    `gorm:"column:is_mute;type:tinyint(4)" json:"is_mute"`                                           // 是否全员禁言 [1:否;2:是;] 提示:不包含群主或管理员
+	IsOvert   int    `gorm:"column:is_overt;type:tinyint(4);index:idx_group_overt_dismiss_created,priority:1" json:"is_overt"`     // 是否公开可见[1:是;2:否;]
+	IsMute    int    `gorm:"column:is_mute;type:tinyint(4)" json:"is_mute"`                                           // 全员禁言[1:是;2:否;]：仅限制普通成员，群主/管理员可发言
 	// 群内是否允许成员互加好友 [1:允许;2:不允许;] 与接口 GroupDetailResponse.is_allow_invite 一致
 	IsAllowInvite int `gorm:"column:is_allow_invite;type:tinyint(4);default:1" json:"is_allow_invite"`
-	// 强制状态：0-无，1-群禁言
+	// 强制禁言：0-无，1-所有人不可发言（含群主/管理员）；与 is_mute 全员禁言区分
 	ForceStatus int       `gorm:"column:force_status;type:tinyint(4);default:0" json:"force_status"`
 	CreatedAt   time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP;index:idx_group_overt_dismiss_created,priority:3" json:"created_at"` // 创建时间
 	UpdatedAt   time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" json:"updated_at"`                     // 更新时间

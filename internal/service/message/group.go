@@ -43,7 +43,8 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 	// 如果当前用户之前对该群的会话做过「删除会话」，此处重新发消息时需要自动恢复：
 	// 将 talk_session 中 user_id=发送者、receiver_id=群ID、talk_mode=2 的记录的 is_delete 从 1 改回 2。
 	if s.TalkSessionRepo != nil {
-		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.FromId, option.ReceiverId, entity.ChatGroupMode); err == nil && sess.Id > 0 {
+		// FindByWhere 未命中时返回 (nil, nil)，必须先判 sess != nil
+		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.FromId, option.ReceiverId, entity.ChatGroupMode); err == nil && sess != nil && sess.Id > 0 {
 			if sess.IsDelete == model.Yes {
 				_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
 					"is_delete":  model.No,

@@ -50,6 +50,9 @@ func (a *AuthService) IsAuth(ctx context.Context, opt *AuthOption) error {
 	if err != nil {
 		return err
 	}
+	if groupInfo == nil {
+		return errors.New("此群聊不存在！")
+	}
 
 	if groupInfo.IsDismiss == model.Yes {
 		return errors.New("此群聊已解散！")
@@ -63,21 +66,32 @@ func (a *AuthService) IsAuth(ctx context.Context, opt *AuthOption) error {
 
 		return errors.New("系统繁忙，请稍后再试！！！")
 	}
+	if memberInfo == nil {
+		return errors.New("暂无权限发送消息！")
+	}
 
 	if memberInfo.IsQuit == model.Yes {
 		return errors.New("暂无权限发送消息！")
 	}
 
+	// 成员个人禁言（对所有人生效，含群主/管理员）
 	if memberInfo.IsMute == model.Yes {
 		return errors.New("已被群主或管理员禁言！")
 	}
 
-	// 强制禁言：所有群成员（含群主/管理员）均不可发消息
-	if opt.IsVerifyGroupMute && groupInfo.ForceStatus == model.GroupForceStatusMute {
+	if !opt.IsVerifyGroupMute {
+		return nil
+	}
+
+	// force_status=1：强制禁言，所有人不可发言（含群主、管理员）
+	if groupInfo.ForceStatus == model.GroupForceStatusMute {
 		return errors.New("该群已被强制禁言")
 	}
 
-	if opt.IsVerifyGroupMute && groupInfo.IsMute == model.Yes && memberInfo.Leader == model.GroupMemberLeaderOrdinary {
+	// is_mute 全员禁言：仅普通成员不可发言，群主和管理员仍可发言
+	isManager := memberInfo.Leader == model.GroupMemberLeaderOwner ||
+		memberInfo.Leader == model.GroupMemberLeaderAdmin
+	if groupInfo.IsMute == model.Yes && !isManager {
 		return errors.New("此群聊已开启全员禁言！")
 	}
 

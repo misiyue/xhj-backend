@@ -16,8 +16,8 @@ type GroupMember struct {
 	UserId    int       `gorm:"column:user_id;index:idx_group_member_group_user,priority:2;index:idx_group_member_user_quit,priority:1" json:"user_id"`           // 用户ID
 	Leader    int       `gorm:"column:leader;index:idx_group_member_group_quit_leader,priority:3" json:"leader"`                                                  // 成员属性[1:群主;2:管理员;3:普通成员;]
 	UserCard  string    `gorm:"column:user_card;" json:"user_card"`                                                                                               // 群名片
-	IsQuit    int       `gorm:"column:is_quit;index:idx_group_member_group_quit_leader,priority:2;index:idx_group_member_user_quit,priority:2" json:"is_quit"`    // 是否退群[1:否;2:是;]
-	IsMute    int       `gorm:"column:is_mute;" json:"is_mute"`                                                                                                   // 是否禁言[1:否;2:是;]
+	IsQuit    int       `gorm:"column:is_quit;index:idx_group_member_group_quit_leader,priority:2;index:idx_group_member_user_quit,priority:2" json:"is_quit"`    // 是否退群[1:是;2:否;]
+	IsMute    int       `gorm:"column:is_mute;" json:"is_mute"`                                                                                                   // 是否禁言[1:是;2:否;]
 	JoinTime  time.Time `gorm:"column:join_time;" json:"join_time"`                                                                                               // 入群时间
 	CreatedAt time.Time `gorm:"column:created_at;" json:"created_at"`                                                                                             // 创建时间
 	UpdatedAt time.Time `gorm:"column:updated_at;" json:"updated_at"`                                                                                             // 更新时间

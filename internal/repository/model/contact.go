@@ -12,15 +12,15 @@ const (
 
 // Contact 用户好友关系表
 type Contact struct {
-	Id        int       `gorm:"column:id;primary_key;AUTO_INCREMENT" json:"id"`                                                                  // 关系ID
-	UserId    int       `gorm:"column:user_id;index:idx_contact_user_friend,priority:1;index:idx_contact_user_status,priority:1" json:"user_id"` // 用户id
-	FriendId  int       `gorm:"column:friend_id;index:idx_contact_user_friend,priority:2" json:"friend_id"`                                      // 好友id
-	Remark    string    `gorm:"column:remark;type:varchar(128)" json:"remark"`                                                                   // 好友的备注
-	Status    int       `gorm:"column:status;index:idx_contact_user_status,priority:2" json:"status"`                                            // 好友状态 [0:否;1:是]
-	GroupId   int       `gorm:"column:group_id;default:0" json:"group_id"`                                                                       // 分组id
-	IsBlack   int       `gorm:"column:is_black;type:tinyint(4);default:0" json:"is_black"`                                                       // 是否拉黑：0-否，1-是
-	CreatedAt time.Time `gorm:"column:created_at;" json:"created_at"`                                                                            // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;" json:"updated_at"`                                                                            // 更新时间
+	Id       int    `gorm:"column:id;primaryKey;autoIncrement;type:bigint(20)" json:"id"`
+	UserId   int    `gorm:"column:user_id;type:bigint(20);uniqueIndex:idx_contact_user_friend,priority:1;index:idx_contact_user_status,priority:1" json:"user_id"`
+	FriendId int    `gorm:"column:friend_id;type:bigint(20);uniqueIndex:idx_contact_user_friend,priority:2" json:"friend_id"`
+	Remark   string `gorm:"column:remark;type:varchar(128)" json:"remark"`
+	Status   int    `gorm:"column:status;type:tinyint(4);index:idx_contact_user_status,priority:2" json:"status"`
+	GroupId  int    `gorm:"column:group_id;type:bigint(20);default:0" json:"group_id"`
+	IsBlack  int    `gorm:"column:is_black;type:tinyint(4);default:0" json:"is_black"` // 是否拉黑：0-否，1-是
+	CreatedAt time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
 func (Contact) TableName() string {

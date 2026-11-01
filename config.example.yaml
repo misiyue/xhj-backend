@@ -99,7 +99,7 @@ jwt:
 # 跨域配置
 cors:
   origin: "*"
-  headers: "Content-Type,Cache-Control,User-Agent,Keep-Alive,DNT,AccessToken,Authorization"
+  headers: "Content-Type,Cache-Control,User-Agent,Keep-Alive,DNT,AccessToken,Authorization,Accept-Language"
   methods: "OPTIONS,GET,POST,PUT,DELETE"
   credentials: false
   max_age: 600
@@ -107,8 +107,14 @@ cors:
 
 # 文件系统配置【qiniu 暂不支持】
 # 注意：高可用部署时不能使用 local，必须使用 minio/aws/cos/oss 等分布式存储
+#
+# ========== 存储平台切换（改这一项即可）==========
+# default 取值: local | minio | aws | cos | oss
+#   - 阿里云 OSS 直传：default: oss  （并填写下方 oss 配置）
+#   - Amazon S3 直传：  default: aws  （并填写下方 aws 配置）
+# 前端预签名接口 POST /api/v1/upload/presigned-url 按 default 自动走对应平台
 filesystem:
-  default: local  # 支持: local, minio, aws, cos, oss
+  default: oss  # ← 切换存储平台：oss 或 aws（也支持 local / minio / cos）
   local:
     # 文件保存的根目录
     root: "/path/xx/lumenim/"
@@ -127,14 +133,18 @@ filesystem:
     bucket_private: "im-private"
     endpoint: "im-cdn.xxx.com"
     ssl: false
+  # Amazon S3（default: aws 时启用）
   aws:
-    secret_id: "xxxxxx"
-    secret_key: "xxxxx"
-    bucket_public: "im-static"
-    bucket_private: "im-private"
-    region: "ap-northeast-1"
-    endpoint: "" # Optional, leave empty for standard AWS S3
+    secret_id: "AKIAXXXXXXXX"          # AWS Access Key ID
+    secret_key: "xxxxxxxx"             # AWS Secret Access Key
+    bucket_public: "im-static"         # 公开桶（上传默认使用）
+    bucket_private: "im-private"       # 私有桶
+    region: "ap-northeast-1"           # 区域，如 us-east-1 / ap-southeast-1
+    endpoint: ""                       # 标准 AWS 留空；MinIO/自定义 S3 网关填写，如 s3.example.com
+    use_path_style: false              # 标准 AWS 建议 false；自定义 endpoint 常需 true
     ssl: true
+    s3_domain: ""                      # 可选：CloudFront/自定义 CDN 域名，用于返回 object_url
+    s3_domain_ssl_enabled: true
   cos:
     secret_id: "xxxxxx"
     secret_key: "xxxxx"
@@ -146,6 +156,7 @@ filesystem:
     app_id: "125xxxxx"
     cos_domain: "abc.example.com"
     cos_domain_ssl_enabled: true
+  # 阿里云 OSS（default: oss 时启用）
   oss:
     access_key_id: "xxxxxx"
     access_secret: "xxxxx"

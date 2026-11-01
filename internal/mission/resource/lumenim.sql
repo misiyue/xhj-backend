@@ -111,22 +111,21 @@ CREATE TABLE IF NOT EXISTS `article_tag`
 
 CREATE TABLE IF NOT EXISTS `contact`
 (
-    `id`         int unsigned     NOT NULL AUTO_INCREMENT COMMENT '关系ID',
-    `user_id`    int unsigned     NOT NULL DEFAULT '0' COMMENT '用户id',
-    `friend_id`  int unsigned     NOT NULL DEFAULT '0' COMMENT '好友id',
-    `remark`     varchar(128)     DEFAULT NULL COMMENT '好友的备注',
-    `status`     tinyint unsigned NOT NULL DEFAULT '0' COMMENT '好友状态 [0:否;1:是]',
-    `group_id`   int unsigned     NOT NULL DEFAULT '0' COMMENT '分组ID',
-    `is_black`   tinyint(4)                DEFAULT '0' COMMENT '是否拉黑：0-否，1-是',
-    `created_at` datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `updated_at` datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_friend` (`user_id`, `friend_id`) USING BTREE,
-    KEY `idx_created_at` (`created_at`) USING BTREE,
-    KEY `idx_updated_at` (`updated_at`) USING BTREE
+    `id`         bigint(20)   NOT NULL AUTO_INCREMENT,
+    `user_id`    bigint(20)            DEFAULT NULL,
+    `friend_id`  bigint(20)            DEFAULT NULL,
+    `remark`     varchar(128)          DEFAULT NULL,
+    `status`     tinyint(4)            DEFAULT NULL,
+    `group_id`   bigint(20)            DEFAULT '0',
+    `is_black`   tinyint(4)            DEFAULT '0' COMMENT '是否拉黑：0-否，1-是',
+    `created_at` datetime              DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` datetime              DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE KEY `idx_contact_user_friend` (`user_id`, `friend_id`) USING BTREE,
+    KEY `idx_contact_user_status` (`user_id`, `status`) USING BTREE
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_general_ci COMMENT ='用户好友关系表';;
+  ROW_FORMAT = DYNAMIC COMMENT ='用户好友关系表';;
 
 
 CREATE TABLE IF NOT EXISTS `contact_apply`
@@ -229,13 +228,13 @@ CREATE TABLE IF NOT EXISTS `group`
     `creator_id`      bigint(20)            DEFAULT NULL COMMENT '创建者ID(群主ID)',
     `name`            varchar(255)          DEFAULT NULL COMMENT '群名称',
     `profile`         varchar(255)          DEFAULT NULL COMMENT '群介绍',
-    `is_dismiss`      tinyint(4)            DEFAULT NULL COMMENT '是否已解散',
+    `is_dismiss`      tinyint(4)            DEFAULT NULL COMMENT '是否已解散[1:是;2:否]',
     `avatar`          varchar(255)          DEFAULT NULL COMMENT '群头像',
     `max_num`         int(11)               DEFAULT NULL COMMENT '最大群成员数量',
-    `is_overt`        tinyint(4)            DEFAULT NULL COMMENT '是否公开可见',
-    `is_mute`         tinyint(4)            DEFAULT NULL COMMENT '是否全员禁言',
+    `is_overt`        tinyint(4)            DEFAULT NULL COMMENT '是否公开可见[1:是;2:否]',
+    `is_mute`         tinyint(4)            DEFAULT NULL COMMENT '全员禁言[1:是;2:否]：仅限制普通成员，群主/管理员可发言',
     `is_allow_invite` tinyint(4)            DEFAULT '1' COMMENT '群内是否允许成员互加好友',
-    `force_status`    tinyint(4)            DEFAULT '0' COMMENT '强制状态：1.群禁言',
+    `force_status`    tinyint(4)            DEFAULT '0' COMMENT '强制禁言：0无 1所有人不可发言(含群主/管理员)；全员禁言用 is_mute',
     `created_at`      datetime              DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`      datetime              DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`) USING BTREE,

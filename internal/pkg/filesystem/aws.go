@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -32,11 +33,22 @@ func NewAwsFilesystem(conf AwsSystemConfig) *AwsFilesystem {
 		panic(fmt.Sprintf("unable to load SDK config, %v", err))
 	}
 
-	// Create an Amazon S3 service client
+	usePathStyle := conf.UsePathStyle
+	// 自定义 endpoint（如 MinIO）未显式配置时默认 path-style，兼容性更好
+	if conf.Endpoint != "" && !conf.UsePathStyle {
+		usePathStyle = true
+	}
+
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true // Force path style if needed, usually cleaner for compatibility
+		o.UsePathStyle = usePathStyle
 		if conf.Endpoint != "" {
-			o.BaseEndpoint = aws.String(conf.Endpoint)
+			endpoint := strings.TrimSpace(conf.Endpoint)
+			endpoint = strings.TrimPrefix(strings.TrimPrefix(endpoint, "https://"), "http://")
+			scheme := "https"
+			if !conf.SSL {
+				scheme = "http"
+			}
+			o.BaseEndpoint = aws.String(fmt.Sprintf("%s://%s", scheme, endpoint))
 		}
 	})
 
@@ -125,6 +137,10 @@ func (m AwsFilesystem) GetObject(bucketName string, objectName string) ([]byte, 
 }
 
 func (m AwsFilesystem) PublicUrl(bucketName, objectName string) string {
+	// 公开桶优先返回直链；无自定义域名时退回短期 GET 预签名
+	if m.config.S3Domain != "" || m.config.BucketPublic == bucketName {
+		return m.GetAwsObjectURL(bucketName, objectName)
+	}
 	request, err := m.presignClient.PresignGetObject(context.TODO(), &s3.GetObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(objectName),
@@ -134,11 +150,62 @@ func (m AwsFilesystem) PublicUrl(bucketName, objectName string) string {
 	if err != nil {
 		panic(err)
 	}
-	// For public bucket, we might want to return the direct URL if it's configured as public access,
-	// but using presigned URL with long expiry or just URL construction is common.
-	// The Minio implementation returns a presigned URL.
-
 	return request.URL
+}
+
+// GeneratePresignedPutURL 生成 Amazon S3 预签名 PUT URL，供前端直传。
+// 前端 PUT 时 Content-Type 必须与签名时一致。
+func (m AwsFilesystem) GeneratePresignedPutURL(bucketName, objectName string, expire time.Duration, contentType string) (string, error) {
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	if expire <= 0 {
+		expire = time.Hour
+	}
+
+	request, err := m.presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket:      aws.String(bucketName),
+		Key:         aws.String(objectName),
+		ContentType: aws.String(contentType),
+	}, func(o *s3.PresignOptions) {
+		o.Expires = expire
+	})
+	if err != nil {
+		return "", fmt.Errorf("generate s3 presigned put url failed: %w", err)
+	}
+	return request.URL, nil
+}
+
+// GetAwsObjectURL 返回上传完成后的对象访问地址
+func (m AwsFilesystem) GetAwsObjectURL(bucketName, objectName string) string {
+	objectName = strings.TrimPrefix(objectName, "/")
+	scheme := "https"
+	if !m.config.SSL {
+		scheme = "http"
+	}
+
+	if domain := strings.TrimSpace(m.config.S3Domain); domain != "" {
+		domain = strings.TrimPrefix(strings.TrimPrefix(domain, "https://"), "http://")
+		if m.config.S3DomainSSL {
+			scheme = "https"
+		} else if !m.config.SSL {
+			scheme = "http"
+		}
+		return fmt.Sprintf("%s://%s/%s", scheme, domain, objectName)
+	}
+
+	if endpoint := strings.TrimSpace(m.config.Endpoint); endpoint != "" {
+		endpoint = strings.TrimPrefix(strings.TrimPrefix(endpoint, "https://"), "http://")
+		// 自定义 endpoint 使用 path-style: https://endpoint/bucket/key
+		return fmt.Sprintf("%s://%s/%s/%s", scheme, endpoint, bucketName, objectName)
+	}
+
+	// 标准 AWS virtual-hosted-style
+	region := m.config.Region
+	if region == "" {
+		region = "us-east-1"
+	}
+	return fmt.Sprintf("%s://%s.s3.%s.amazonaws.com/%s", scheme, bucketName, region, objectName)
 }
 
 func (m AwsFilesystem) PrivateUrl(bucketName, objectName string, filename string, expire time.Duration) string {

@@ -153,11 +153,35 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		}
 	}
 
+	// contact：对齐字段属性（含 is_black、时间列默认值）
+	if app.DB.Migrator().HasTable("contact") {
+		if !app.DB.Migrator().HasColumn(&model.Contact{}, "is_black") {
+			if err := app.DB.Exec(
+				"ALTER TABLE `contact` ADD COLUMN `is_black` tinyint(4) NULL DEFAULT 0 COMMENT '是否拉黑：0-否，1-是' AFTER `group_id`",
+			).Error; err != nil {
+				logger.Warnf("add contact.is_black: %v", err)
+			}
+		}
+		if err := app.DB.Exec(
+			"ALTER TABLE `contact` " +
+				"MODIFY COLUMN `user_id` bigint(20) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `friend_id` bigint(20) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `remark` varchar(128) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `status` tinyint(4) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `group_id` bigint(20) NULL DEFAULT 0, " +
+				"MODIFY COLUMN `is_black` tinyint(4) NULL DEFAULT 0 COMMENT '是否拉黑：0-否，1-是', " +
+				"MODIFY COLUMN `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP, " +
+				"MODIFY COLUMN `updated_at` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+		).Error; err != nil {
+			logger.Warnf("ensure contact column attributes: %v", err)
+		}
+	}
+
 	// group：补齐 force_status / is_allow_invite / 时间列属性（AutoMigrate 对已存在列默认值不一定生效）
 	if app.DB.Migrator().HasTable("group") {
 		if !app.DB.Migrator().HasColumn(&model.Group{}, "force_status") {
 			if err := app.DB.Exec(
-				"ALTER TABLE `group` ADD COLUMN `force_status` tinyint(4) NULL DEFAULT 0 COMMENT '强制状态：1.群禁言'",
+				"ALTER TABLE `group` ADD COLUMN `force_status` tinyint(4) NULL DEFAULT 0 COMMENT '强制禁言：0无 1所有人不可发言(含群主/管理员)'",
 			).Error; err != nil {
 				logger.Warnf("add group.force_status: %v", err)
 			}
@@ -165,7 +189,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		if err := app.DB.Exec(
 			"ALTER TABLE `group` " +
 				"MODIFY COLUMN `is_allow_invite` tinyint(4) NULL DEFAULT 1 COMMENT '群内是否允许成员互加好友', " +
-				"MODIFY COLUMN `force_status` tinyint(4) NULL DEFAULT 0 COMMENT '强制状态：1.群禁言', " +
+				"MODIFY COLUMN `force_status` tinyint(4) NULL DEFAULT 0 COMMENT '强制禁言：0无 1所有人不可发言(含群主/管理员)', " +
 				"MODIFY COLUMN `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', " +
 				"MODIFY COLUMN `updated_at` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'",
 		).Error; err != nil {

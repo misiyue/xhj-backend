@@ -46,39 +46,8 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 	// 接收方是否拉黑了发送方：被拉黑方可发且落库到自己视角(user_id=from)，拉黑方不接收
 	blockedByReceiver := s.ContactRepo != nil && s.ContactRepo.IsBlocked(ctx, option.ReceiverId, option.FromId)
 
-	// 获取会话的 session_id（双向私聊都使用同一个 session_id，
-	// 用于在会话列表中将同一对用户的消息归到同一个会话下面）
-	sessionId := 0
-	if s.TalkSessionRepo != nil {
-		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.FromId, option.ReceiverId, 1); err == nil && sess.Id > 0 {
-			// 如果之前该会话被标记为删除（is_delete = 1），此处发送新消息时自动恢复为未删除，
-			// 这样 /talk/session-list 下次查询就会重新显示这条会话，而不是一直被过滤掉。
-			if sess.IsDelete == model.Yes {
-				_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
-					"is_delete":  model.No,
-					"updated_at": time.Now(),
-				}, "id = ?", sess.Id)
-				sess.IsDelete = model.No
-			}
-
-			sessionId = sess.SessionId
-			if sessionId == 0 {
-				sessionId = sess.Id
-			}
-		}
-		// 被拉黑时不恢复接收方已删除会话，避免拉黑方会话列表被顶起
-		if !blockedByReceiver {
-			if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.ReceiverId, option.FromId, 1); err == nil && sess.Id > 0 {
-				if sess.IsDelete == model.Yes {
-					_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
-						"is_delete":  model.No,
-						"updated_at": time.Now(),
-					}, "id = ?", sess.Id)
-					sess.IsDelete = model.No
-				}
-			}
-		}
-	}
+	// 确保双方会话存在，并写入统一的 session_id（避免对方拉历史/会话列表漏消息）
+	sessionId := s.resolvePrivateLinkSessionId(ctx, option.FromId, option.ReceiverId, !blockedByReceiver)
 
 	// 正常消息 user_id=0 双方可见；被拉黑时 user_id=发送方，仅发送方查询可见
 	ownerUserId := 0
@@ -167,14 +136,13 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 		data.SendTime = time.Now()
 	}
 
-	// 如果没有 session_id，尝试从 talk_session 获取
-	if data.SessionId == 0 && s.TalkSessionRepo != nil {
-		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", data.UserId, data.ReceiverId, 1); err == nil && sess.Id > 0 {
-			data.SessionId = sess.SessionId
-			if data.SessionId == 0 {
-				data.SessionId = sess.Id
-			}
+	// 如果没有 session_id，解析/创建双方共享 session_id，避免对方拉历史漏消息
+	if data.SessionId == 0 {
+		fromId := data.FromId
+		if fromId <= 0 {
+			fromId = data.UserId
 		}
+		data.SessionId = s.resolvePrivateLinkSessionId(ctx, fromId, data.ReceiverId, true)
 	}
 
 	data.IsRevoked = model.No

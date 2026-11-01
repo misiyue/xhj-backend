@@ -13,7 +13,6 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/samber/lo"
-	"gorm.io/gorm"
 )
 
 type ForwardMessageOpt struct {
@@ -120,7 +119,7 @@ func (s *Service) toSplitForward(ctx context.Context, req ForwardMessageOpt) err
 			if sess, err := s.TalkSessionRepo.FindByWhere(ctx,
 				"user_id = ? and receiver_id = ? and talk_mode = ?",
 				req.UserId, req.ToUserId, entity.ChatPrivateMode,
-			); err == nil && sess.Id > 0 {
+			); err == nil && sess != nil && sess.Id > 0 {
 				if sess.SessionId > 0 {
 					sessionId = sess.SessionId
 				} else {
@@ -268,7 +267,7 @@ func (s *Service) toCombineForward(ctx context.Context, req ForwardMessageOpt) e
 			if sess, err := s.TalkSessionRepo.FindByWhere(ctx,
 				"user_id = ? and receiver_id = ? and talk_mode = ?",
 				req.UserId, req.ToUserId, entity.ChatPrivateMode,
-			); err == nil && sess.Id > 0 {
+			); err == nil && sess != nil && sess.Id > 0 {
 				if sess.SessionId > 0 {
 					sessionId = sess.SessionId
 				} else {
@@ -558,23 +557,83 @@ func (s *Service) loadMessagesByMsgIds(ctx context.Context, talkType int, msgIds
 
 // ensurePrivateSession 确保私聊双方在 talk_session 中都有会话记录，否则对方会话栏不显示
 func (s *Service) ensurePrivateSession(ctx context.Context, uidA, uidB int) {
-	if s.TalkSessionRepo == nil {
-		return
+	_ = s.resolvePrivateLinkSessionId(ctx, uidA, uidB, true)
+}
+
+// resolvePrivateLinkSessionId 确保发送方（及可选接收方）会话存在，回填并返回共享 session_id。
+// FindByWhere 未命中返回 (nil, nil)，不能依赖 gorm.ErrRecordNotFound。
+func (s *Service) resolvePrivateLinkSessionId(ctx context.Context, fromId, receiverId int, ensureReceiver bool) int {
+	if s.TalkSessionRepo == nil || fromId <= 0 || receiverId <= 0 {
+		return 0
 	}
-	for _, pair := range []struct{ uid, rid int }{{uidA, uidB}, {uidB, uidA}} {
-		_, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", pair.uid, pair.rid, entity.ChatPrivateMode)
-		if err != nil && errors.Is(err, gorm.ErrRecordNotFound) {
-			_ = s.TalkSessionRepo.Create(ctx, &model.TalkSession{
-				UserId:     pair.uid,
-				ReceiverId: pair.rid,
-				TalkMode:   entity.ChatPrivateMode,
-				IsTop:      model.No,
-				IsDelete:   model.No,
-				IsDisturb:  model.No,
-				IsRobot:    model.No,
-			})
+
+	getOrCreate := func(uid, rid int) *model.TalkSession {
+		sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", uid, rid, entity.ChatPrivateMode)
+		if err != nil {
+			return nil
+		}
+		if sess != nil && sess.Id > 0 {
+			return sess
+		}
+		sess = &model.TalkSession{
+			UserId:     uid,
+			ReceiverId: rid,
+			TalkMode:   entity.ChatPrivateMode,
+			IsTop:      model.No,
+			IsDelete:   model.No,
+			IsDisturb:  model.No,
+			IsRobot:    model.No,
+		}
+		if err := s.TalkSessionRepo.Create(ctx, sess); err != nil {
+			logger.Errorf("create private talk_session failed uid=%d rid=%d: %v", uid, rid, err)
+			return nil
+		}
+		return sess
+	}
+
+	sender := getOrCreate(fromId, receiverId)
+	if sender == nil {
+		return 0
+	}
+
+	var receiver *model.TalkSession
+	if ensureReceiver {
+		receiver = getOrCreate(receiverId, fromId)
+	} else {
+		receiver, _ = s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", receiverId, fromId, entity.ChatPrivateMode)
+	}
+
+	linkId := sender.SessionId
+	if linkId == 0 && receiver != nil && receiver.SessionId > 0 {
+		linkId = receiver.SessionId
+	}
+	if linkId == 0 {
+		linkId = sender.Id
+	}
+
+	now := time.Now()
+	syncSession := func(sess *model.TalkSession, restoreDeleted bool) {
+		if sess == nil || sess.Id <= 0 {
+			return
+		}
+		updates := map[string]any{}
+		if sess.SessionId != linkId {
+			updates["session_id"] = linkId
+			sess.SessionId = linkId
+		}
+		if restoreDeleted && sess.IsDelete == model.Yes {
+			updates["is_delete"] = model.No
+			updates["updated_at"] = now
+			sess.IsDelete = model.No
+		}
+		if len(updates) > 0 {
+			_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, updates, "id = ?", sess.Id)
 		}
 	}
+
+	syncSession(sender, true)
+	syncSession(receiver, ensureReceiver)
+	return linkId
 }
 
 func (s *Service) findUserNameList(ctx context.Context, uids []int) (map[int]string, error) {

@@ -370,15 +370,15 @@ type NewUser struct {
 func (NewUser) TableName() string { return "users" }
 
 type NewContact struct {
-	Id        int       `gorm:"column:id;primaryKey;autoIncrement"`
-	UserId    int       `gorm:"column:user_id"`
-	FriendId  int       `gorm:"column:friend_id"`
+	Id        int       `gorm:"column:id;primaryKey;autoIncrement;type:bigint(20)"`
+	UserId    int       `gorm:"column:user_id;type:bigint(20)"`
+	FriendId  int       `gorm:"column:friend_id;type:bigint(20)"`
 	Remark    string    `gorm:"column:remark;type:varchar(128)"`
-	Status    int       `gorm:"column:status"`
-	GroupId   int       `gorm:"column:group_id;default:0"`
+	Status    int       `gorm:"column:status;type:tinyint(4)"`
+	GroupId   int       `gorm:"column:group_id;type:bigint(20);default:0"`
 	IsBlack   int       `gorm:"column:is_black;type:tinyint(4);default:0"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	CreatedAt time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP"`
+	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`
 }
 
 func (NewContact) TableName() string { return "contact" }
@@ -1006,22 +1006,23 @@ func migrateGroups(sqliteDB, mysqlDB *gorm.DB) (int, error) {
 
 	count := 0
 	for _, old := range oldGroups {
-		isDismiss := 1
+		// 与 model.Yes=1 / model.No=2 一致：[1:是;2:否]
+		isDismiss := 2 // 否：未解散
 		if old.Status == 0 || old.DeleteTime > 0 {
-			isDismiss = 2
+			isDismiss = 1 // 是：已解散
 		}
 
-		isOvert := 1
+		isOvert := 2 // 否：非公开
 		if old.IsPublic == 1 {
-			isOvert = 2
+			isOvert = 1 // 是：公开
 		}
 
-		isMute := 1
+		isMute := 2 // 否：未全员禁言
 		if old.Setting != "" && old.Setting != "null" {
 			var s map[string]interface{}
 			if err := json.Unmarshal([]byte(old.Setting), &s); err == nil {
 				if fmt.Sprintf("%v", s["nospeak"]) == "1" {
-					isMute = 2
+					isMute = 1 // 是：全员禁言（群主/管理员仍可发言）
 				}
 			}
 		}
@@ -1067,14 +1068,15 @@ func migrateGroupMembers(sqliteDB, mysqlDB *gorm.DB) (int, error) {
 			leader = 3
 		}
 
-		isQuit := 1
+		// 与 model.Yes=1 / model.No=2 一致：[1:是;2:否]
+		isQuit := 2 // 否：在群
 		if old.Status == 0 || old.DeleteTime > 0 {
-			isQuit = 2
+			isQuit = 1 // 是：已退群
 		}
 
-		isMute := 1
+		isMute := 2 // 否：未禁言
 		if old.NoSpeakTime > 0 && old.NoSpeakTime > time.Now().Unix() {
-			isMute = 2
+			isMute = 1 // 是：成员禁言
 		}
 
 		joinTime := time.Unix(old.CreateTime, 0)

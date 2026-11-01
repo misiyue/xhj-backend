@@ -212,24 +212,12 @@ func (s *TalkRecordService) findAllRecords(ctx context.Context, opt *FindAllTalk
 	}
 
 	if opt.TalkType == 1 {
-		// 私聊：先查询 TalkSession 获取 SessionId
+		// 私聊：按收发双方查询，避免仅用 session_id 时因 0/双方不一致导致漏消息
 		query = query.Model(&model.TalkUserMessage{})
-
-		if s.TalkSessionRepo != nil {
-			// 优化方案：使用 SessionId 查询
-			session, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", opt.UserId, opt.ReceiverId, opt.TalkType)
-			if err != nil {
-				return nil, err
-			}
-			query.Where("session_id = ?", session.SessionId)
-		} else {
-			// 降级方案：使用传统方式查询（兼容未注入 TalkSessionRepo 的情况）
-			query.Where("((from_id = ? and receiver_id = ?) or (from_id = ? and receiver_id = ?))",
-				opt.UserId, opt.ReceiverId, opt.ReceiverId, opt.UserId)
-		}
+		query.Where("((from_id = ? and receiver_id = ?) or (from_id = ? and receiver_id = ?))",
+			opt.UserId, opt.ReceiverId, opt.ReceiverId, opt.UserId)
 		// user_id=0 双方可见；user_id=当前用户 为被拉黑方单方可见消息
 		query.Where("(user_id = 0 OR user_id = ?)", opt.UserId)
-
 		query.Where("is_deleted = ?", model.No)
 	} else {
 		// 群聊：直接使用 GroupId 查询；过滤已删除（is_deleted=1）
