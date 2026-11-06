@@ -506,9 +506,11 @@ type ContactSearchResponse struct {
 	UserId        int32                  `protobuf:"varint,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Mobile        string                 `protobuf:"bytes,2,opt,name=mobile,proto3" json:"mobile,omitempty"`
 	Nickname      string                 `protobuf:"bytes,3,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Username      string                 `protobuf:"bytes,4,opt,name=username,proto3" json:"username,omitempty"`
 	Avatar        string                 `protobuf:"bytes,5,opt,name=avatar,proto3" json:"avatar,omitempty"`
 	Gender        int32                  `protobuf:"varint,6,opt,name=gender,proto3" json:"gender,omitempty"`
 	Motto         string                 `protobuf:"bytes,7,opt,name=motto,proto3" json:"motto,omitempty"`
+	Email         string                 `protobuf:"bytes,8,opt,name=email,proto3" json:"email,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -564,6 +566,13 @@ func (x *ContactSearchResponse) GetNickname() string {
 	return ""
 }
 
+func (x *ContactSearchResponse) GetUsername() string {
+	if x != nil {
+		return x.Username
+	}
+	return ""
+}
+
 func (x *ContactSearchResponse) GetAvatar() string {
 	if x != nil {
 		return x.Avatar
@@ -581,6 +590,13 @@ func (x *ContactSearchResponse) GetGender() int32 {
 func (x *ContactSearchResponse) GetMotto() string {
 	if x != nil {
 		return x.Motto
+	}
+	return ""
+}
+
+func (x *ContactSearchResponse) GetEmail() string {
+	if x != nil {
+		return x.Email
 	}
 	return ""
 }

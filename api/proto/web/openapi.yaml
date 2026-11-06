@@ -2732,9 +2732,11 @@ components:
                 - userId
                 - mobile
                 - nickname
+                - username
                 - avatar
                 - gender
                 - motto
+                - email
             type: object
             properties:
                 userId:
@@ -2744,12 +2746,16 @@ components:
                     type: string
                 nickname:
                     type: string
+                username:
+                    type: string
                 avatar:
                     type: string
                 gender:
                     type: integer
                     format: int32
                 motto:
+                    type: string
+                email:
                     type: string
             description: 联系人搜索接口响应参数
         ContactBlockRequest:

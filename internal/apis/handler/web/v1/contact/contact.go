@@ -212,9 +212,11 @@ func (c *Contact) Search(ctx context.Context, in *web.ContactSearchRequest) (*we
 		UserId:   int32(user.Id),
 		Mobile:   lo.FromPtr[string](user.Mobile),
 		Nickname: user.Nickname,
+		Username: user.Username,
 		Avatar:   user.Avatar,
 		Gender:   int32(user.Gender),
 		Motto:    user.Motto,
+		Email:    user.Email,
 	}, nil
 }
 

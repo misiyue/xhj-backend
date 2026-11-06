@@ -163,9 +163,11 @@ message ContactSearchResponse{
   int32 user_id = 1  [(google.api.field_behavior) = REQUIRED];
   string mobile = 2  [(google.api.field_behavior) = REQUIRED];
   string nickname = 3  [(google.api.field_behavior) = REQUIRED];
+  string username = 4  [(google.api.field_behavior) = REQUIRED];
   string avatar = 5  [(google.api.field_behavior) = REQUIRED];
   int32 gender = 6  [(google.api.field_behavior) = REQUIRED];
   string motto = 7  [(google.api.field_behavior) = REQUIRED];
+  string email = 8  [(google.api.field_behavior) = REQUIRED];
 }
 
 // 修改联系人分组接口请求参数
