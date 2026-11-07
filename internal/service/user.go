@@ -220,7 +220,8 @@ type UserForgetOpt struct {
 // Forget 账号找回
 func (s *UserService) Forget(ctx context.Context, opt *UserForgetOpt) (bool, error) {
 	user, err := s.UsersRepo.FindByEmail(ctx, opt.Email)
-	if err != nil || user.Id == 0 {
+	// FindByWhere 未命中返回 (nil, nil)，必须先判空，否则会空指针 500
+	if err != nil || user == nil || user.Id == 0 {
 		return false, errors.New("账号不存在! ")
 	}
 
