@@ -111,10 +111,11 @@ type SubEventImMessageReadPayload struct {
 }
 
 type SubEventImSessionUnreadClearedPayload struct {
-	UserId     int `json:"user_id"`
-	TalkMode   int `json:"talk_mode"`
-	ReceiverId int `json:"receiver_id"`
-	UnreadNum  int `json:"unread_num"`
+	UserId        int `json:"user_id"`
+	TalkMode      int `json:"talk_mode"`
+	ReceiverId    int `json:"receiver_id"`
+	UnreadNum     int `json:"unread_num"`
+	AtMeUserCount int `json:"at_me_user_count"` // 群聊查看后 @ 未读一并清零
 }
 
 // SubEventSysNoticePayload 系统通知订阅 payload（queue -> comet）

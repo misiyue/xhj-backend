@@ -9,6 +9,8 @@ import (
 	"github.com/gzydong/go-chat/external/wallet"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/encrypt"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
+	"github.com/gzydong/go-chat/internal/pkg/strutil"
 	"github.com/gzydong/go-chat/internal/pkg/utils"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
@@ -94,21 +96,21 @@ type UserRegisterOpt struct {
 	Email    string
 	Password string
 	Platform string
-	Username string // 可选：显式指定登录用户名
+	Username string // 已废弃：注册时忽略，username 由自增 id 自动生成
 	// InviteUserId 邀请人用户 ID（来自有效邀请码的生成者）；0 表示无
 	InviteUserId int
 	// DeviceCode 客户端设备码（可选；开启设备注册限制时由接口层校验）
 	DeviceCode string
 }
 
-// Register 注册用户（仅校验邮箱/手机号是否重复，不校验 username 唯一性）
+// Register 注册用户（仅校验邮箱/手机号是否重复；username 由自增 id 自动生成）
 func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*model.Users, error) {
 	// 检查手机号是否已存在
 	if opt.Mobile != "" && s.UsersRepo.IsMobileExist(ctx, opt.Mobile) {
 		return nil, errors.New("手机号已被注册")
 	}
 
-	// 检查邮箱是否已存在（不检查 username）
+	// 检查邮箱是否已存在
 	if opt.Email != "" {
 		if user, _ := s.UsersRepo.FindByEmail(ctx, opt.Email); user != nil && user.Id > 0 {
 			return nil, errors.New("邮箱已被注册")
@@ -119,6 +121,7 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 	user := &model.Users{
 		Nickname:  opt.Nickname,
 		Email:     opt.Email,
+		Username:  strutil.TempRegisterUsername(), // 占位，插入拿到自增 id 后再生成正式 username
 		Gender:    model.UsersGenderDefault,
 		Password:  encrypt.HashPassword(opt.Password, salt),
 		Salt:      salt,
@@ -141,30 +144,29 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 		user.Mobile = lo.ToPtr(opt.Mobile)
 	}
 
-	// 设置用户名（登录名）：
-	// 优先使用显式传入的 Username，否则依次回退到 Mobile / Email / Nickname
-	if opt.Username != "" {
-		user.Username = opt.Username
-	} else if opt.Mobile != "" {
-		user.Username = opt.Mobile
-	} else if opt.Email != "" {
-		user.Username = opt.Email
-	} else {
-		user.Username = opt.Nickname
-	}
-
 	if err := s.UsersRepo.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
-	// 为新注册用户回填 user_id（旧系统 ID），这里直接使用当前自增 Id，保证不会与已有导入数据冲突
-	// 如果未来有从旧 IM 导入的用户，可以在导入脚本中单独设置 user_id，这里只作用于通过 Register 创建的新用户。
-	if user.Id > 0 {
-		_, _ = s.UsersRepo.UpdateById(ctx, user.Id, map[string]any{
-			"user_id": user.Id,
-		})
-		user.UserId = user.Id
+	if user.Id <= 0 {
+		return nil, errors.New("注册失败：未获取到用户 ID")
 	}
+
+	// 回填 user_id，并按自增 id 生成唯一 username：xhj + 32 位字母/-_+=
+	username, err := s.allocateAutoUsername(ctx, user.Id)
+	if err != nil {
+		return nil, err
+	}
+	_, err = s.UsersRepo.UpdateById(ctx, user.Id, map[string]any{
+		"user_id":    user.Id,
+		"username":   username,
+		"updated_at": time.Now(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	user.UserId = user.Id
+	user.Username = username
 
 	// 注册时同步 U 卡信息（写回 users.uuid / users.user_code）
 	if err := s.syncUCardIfNeeded(ctx, user, opt.Password); err != nil {
@@ -172,6 +174,21 @@ func (s *UserService) Register(ctx context.Context, opt *UserRegisterOpt) (*mode
 	}
 
 	return user, nil
+}
+
+// allocateAutoUsername 按 user_id 生成 xhj 风格唯一登录名；若与历史数据冲突则换 salt 重试
+func (s *UserService) allocateAutoUsername(ctx context.Context, userID int) (string, error) {
+	for salt := 0; salt < 32; salt++ {
+		name := strutil.EncodeUserIDUsernameWithSalt(userID, salt)
+		exist, err := s.UsersRepo.FindByUsername(ctx, name)
+		if err != nil {
+			return "", err
+		}
+		if exist == nil || exist.Id == 0 || exist.Id == userID {
+			return name, nil
+		}
+	}
+	return "", fmt.Errorf("无法为用户 %d 分配唯一 username", userID)
 }
 
 // Login 登录处理
@@ -202,9 +219,10 @@ func (s *UserService) Login(ctx context.Context, account string, password string
 		return nil, entity.ErrAccountDisabled
 	}
 
-	// 登录时补同步 U 卡信息：若 uuid 或 user_code 不存在则调用接口同步写回
+	// 登录时补同步 U 卡：uuid==0 会调钱包 RegisterThirdParty；失败则阻断登录并提示维护中
 	if err := s.syncUCardIfNeeded(ctx, user, password); err != nil {
-		return nil, err
+		logger.Errorf("login sync u-card failed: user_id=%d err=%s", user.Id, err.Error())
+		return nil, entity.ErrServiceMaintenance
 	}
 
 	return user, nil

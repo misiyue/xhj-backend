@@ -270,7 +270,7 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		Platform:     in.Platform,
 		InviteUserId: inviteUserId,
 		DeviceCode:   deviceCode,
-		// Username 没有前端字段时，内部会自动用 mobile/email/nickname 生成
+		// Username 由服务端按自增 user_id 自动生成（xhj + 字母/-_+=），忽略客户端传入
 	})
 
 	if err != nil {

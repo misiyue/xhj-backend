@@ -177,17 +177,15 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 }
 
 func (s *Service) CreatePrivateSysMessage(ctx context.Context, option CreatePrivateSysMessageOption) error {
-	return s.CreateToUserPrivateMessage(ctx, &model.TalkUserMessage{
-		MsgId:      strutil.NewMsgId(),
+	// 走 CreatePrivateMessage：user_id=0 双方可见、双向推送并更新会话预览；
+	// 旧实现 user_id=FromId 导致对方拉历史看不到「已成为好友」等系统提示，会话列表却显示 [系统消息]。
+	return s.CreatePrivateMessage(ctx, CreatePrivateMessageOption{
 		MsgType:    entity.ChatMsgSysText,
-		UserId:     option.FromId,
+		FromId:     option.FromId,
 		ReceiverId: option.ReceiverId,
-		FromId:     0,
 		Extra: jsonutil.Encode(model.TalkRecordExtraText{
 			Content: option.Content,
 		}),
-		Quote:    "{}",
-		SendTime: time.Now(),
 	})
 }
 

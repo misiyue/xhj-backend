@@ -16,6 +16,8 @@ const (
 	registerIPKeyFmt     = "register:ip:%s"
 	registerDeviceKeyFmt = "register:device:%s"
 	registerIPTTL        = 24 * time.Hour
+	// registerDeviceTTL 设备注册额度窗口，避免无 TTL 永久占内存
+	registerDeviceTTL = 365 * 24 * time.Hour
 )
 
 var (
@@ -73,7 +75,7 @@ func (l *RegisterLimiter) TryAcquireIP(ctx context.Context, ip string, limit int
 	}, nil
 }
 
-// TryAcquireDevice 占用 1 次设备计数（无 TTL，永久累计）。
+// TryAcquireDevice 占用 1 次设备计数（365 天窗口；兼容历史无 TTL key 补 Expire）。
 func (l *RegisterLimiter) TryAcquireDevice(ctx context.Context, deviceCode string, limit int) (release func(context.Context), err error) {
 	if l == nil || l.RDB == nil || limit <= 0 {
 		return func(context.Context) {}, nil
@@ -82,6 +84,12 @@ func (l *RegisterLimiter) TryAcquireDevice(ctx context.Context, deviceCode strin
 	n, err := l.RDB.Incr(ctx, key).Result()
 	if err != nil {
 		return nil, err
+	}
+	if n == 1 {
+		_ = l.RDB.Expire(ctx, key, registerDeviceTTL).Err()
+	} else if ttl, ttlErr := l.RDB.TTL(ctx, key).Result(); ttlErr == nil && ttl < 0 {
+		// 历史永久 key：补上过期，避免长期占内存
+		_ = l.RDB.Expire(ctx, key, registerDeviceTTL).Err()
 	}
 	if int(n) > limit {
 		_, _ = l.RDB.Decr(ctx, key).Result()

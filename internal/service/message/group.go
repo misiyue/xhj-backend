@@ -95,13 +95,25 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 		logger.Errorf("CreateGroupMessage publish message error:%s", err.Error())
 	}
 
+	// 大群未读分批写入，避免单次 Pipeline 命令数随成员线性爆炸
+	const unreadPipeBatch = 300
 	pipe := s.Source.Redis().Pipeline()
+	n := 0
 	for _, uid := range memberIds {
-		if uid != item.FromId {
-			s.UnreadStorage.PipeIncr(ctx, pipe, uid, entity.ChatGroupMode, item.GroupId)
+		if uid == item.FromId {
+			continue
+		}
+		s.UnreadStorage.PipeIncr(ctx, pipe, uid, entity.ChatGroupMode, item.GroupId)
+		n++
+		if n >= unreadPipeBatch {
+			_, _ = pipe.Exec(ctx)
+			pipe = s.Source.Redis().Pipeline()
+			n = 0
 		}
 	}
-	_, _ = pipe.Exec(ctx)
+	if n > 0 {
+		_, _ = pipe.Exec(ctx)
+	}
 
 	// 处理 @ 提及通知：将被 @ 用户写入 MentionStorage，并额外推送一条 @ 通知事件
 	s.processMentions(ctx, item, option.Extra, memberIds)

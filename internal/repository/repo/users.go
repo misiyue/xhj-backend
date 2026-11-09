@@ -60,6 +60,15 @@ func (u *Users) FindByUsername(ctx context.Context, username string) (*model.Use
 	return u.Repo.FindByWhere(ctx, "username = ?", username)
 }
 
+// IsUsernameExist 登录名是否已存在
+func (u *Users) IsUsernameExist(ctx context.Context, username string) bool {
+	if username == "" {
+		return false
+	}
+	user, err := u.FindByUsername(ctx, username)
+	return err == nil && user != nil && user.Id > 0
+}
+
 // FindByUsernameOrEmail 按 username 或 email 精确匹配（优先 username）
 func (u *Users) FindByUsernameOrEmail(ctx context.Context, account string) (*model.Users, error) {
 	user, err := u.Repo.FindByWhere(ctx, "username = ?", account)

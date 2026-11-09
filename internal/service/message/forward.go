@@ -655,13 +655,23 @@ func (s *Service) findUserNameList(ctx context.Context, uids []int) (map[int]str
 // PreviewText 会话列表最后一条消息摘要（与 talk session-list 的 MsgText 一致）
 func PreviewText(msgType int, extra string) string {
 	switch msgType {
-	case entity.ChatMsgTypeText:
+	case entity.ChatMsgTypeText, entity.ChatMsgSysText:
+		// 普通文本 / 私聊系统文本：展示真实内容，避免会话列表只显示「[系统消息]」
 		data := model.TalkRecordExtraText{}
 		if err := jsonutil.Unmarshal(extra, &data); err != nil {
+			if msgType == entity.ChatMsgSysText {
+				return entity.ChatMsgTypeMapping[entity.ChatMsgSysText]
+			}
 			return ""
 		}
-
-		return strutil.MtSubstr(data.Content, 0, 200)
+		content := strings.TrimSpace(data.Content)
+		if content == "" {
+			if msgType == entity.ChatMsgSysText {
+				return entity.ChatMsgTypeMapping[entity.ChatMsgSysText]
+			}
+			return ""
+		}
+		return strutil.MtSubstr(content, 0, 200)
 	case entity.ChatMsgSysRetainDaysSet:
 		var data struct {
 			RetainDays int `json:"retain_days"`

@@ -216,6 +216,10 @@ func (a Apply) Agree(ctx context.Context, in *web.GroupApplyAgreeRequest) (*web.
 		return nil, err
 	}
 
+	if a.GroupApplyStorage != nil {
+		a.GroupApplyStorage.Decr(ctx, uid)
+	}
+
 	return &web.GroupApplyAgreeResponse{}, nil
 }
 
@@ -259,6 +263,10 @@ func (a Apply) Decline(ctx context.Context, in *web.GroupApplyDeclineRequest) (*
 	_, err = a.GroupApplyRepo.UpdateByWhere(ctx, data, "id = ?", in.ApplyId)
 	if err != nil {
 		return nil, err
+	}
+
+	if a.GroupApplyStorage != nil {
+		a.GroupApplyStorage.Decr(ctx, uid)
 	}
 
 	return &web.GroupApplyDeclineResponse{}, nil

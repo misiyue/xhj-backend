@@ -67,7 +67,7 @@ func (s *ContactApplyService) Create(ctx context.Context, opt *ContactApplyCreat
 		}),
 	})
 
-	s.Source.Redis().Incr(ctx, fmt.Sprintf("im:contact:apply:%d", opt.FriendId))
+	s.incrApplyUnread(ctx, opt.FriendId)
 	s.tryOneSignalContactApply(ctx, opt.FriendId, opt.UserId)
 	return nil
 }
@@ -171,10 +171,16 @@ func (s *ContactApplyService) Accept(ctx context.Context, opt *ContactApplyAccep
 			UpdatedAt:  now,
 		}
 
-		// 如果已存在则忽略
+		// 如果已存在则恢复（曾经是好友再删除后 is_delete 可能为已删）
 		if err := tx.Create(session1).Error; err != nil {
-			// 如果记录已存在，则获取现有记录
 			tx.Where("user_id = ? and receiver_id = ? and talk_mode = ?", session1.UserId, session1.ReceiverId, session1.TalkMode).First(&session1)
+			if session1.Id > 0 {
+				_ = tx.Model(&model.TalkSession{}).Where("id = ?", session1.Id).Updates(map[string]any{
+					"is_delete":  model.No,
+					"updated_at": now,
+				}).Error
+				session1.IsDelete = model.No
+			}
 		}
 
 		// 为被申请人创建talk_session
@@ -190,10 +196,16 @@ func (s *ContactApplyService) Accept(ctx context.Context, opt *ContactApplyAccep
 			UpdatedAt:  now,
 		}
 
-		// 如果已存在则忽略
+		// 如果已存在则恢复
 		if err := tx.Create(session2).Error; err != nil {
-			// 如果记录已存在，则获取现有记录
 			tx.Where("user_id = ? and receiver_id = ? and talk_mode = ?", session2.UserId, session2.ReceiverId, session2.TalkMode).First(&session2)
+			if session2.Id > 0 {
+				_ = tx.Model(&model.TalkSession{}).Where("id = ?", session2.Id).Updates(map[string]any{
+					"is_delete":  model.No,
+					"updated_at": now,
+				}).Error
+				session2.IsDelete = model.No
+			}
 		}
 
 		// 设置session_id，使两条记录关联
@@ -214,6 +226,8 @@ func (s *ContactApplyService) Accept(ctx context.Context, opt *ContactApplyAccep
 	if err != nil {
 		return &applyInfo, err
 	}
+
+	s.decrApplyUnread(ctx, opt.UserId)
 
 	// 通知申请人：好友申请已被接受
 	var user model.Users
@@ -244,6 +258,8 @@ func (s *ContactApplyService) Decline(ctx context.Context, opt *ContactApplyDecl
 	if err != nil {
 		return err
 	}
+
+	s.decrApplyUnread(ctx, opt.UserId)
 
 	_ = s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventContactApply,
@@ -289,16 +305,42 @@ func (s *ContactApplyService) List(ctx context.Context, uid int) ([]*model.Apply
 	return items, nil
 }
 
-func (s *ContactApplyService) GetApplyUnreadNum(ctx context.Context, uid int) int {
+const contactApplyUnreadTTL = 90 * 24 * time.Hour
 
-	num, err := s.Source.Redis().Get(ctx, fmt.Sprintf("im:contact:apply:%d", uid)).Int()
-	if err != nil {
+func (s *ContactApplyService) applyUnreadKey(uid int) string {
+	return fmt.Sprintf("im:contact:apply:%d", uid)
+}
+
+func (s *ContactApplyService) incrApplyUnread(ctx context.Context, uid int) {
+	if uid <= 0 {
+		return
+	}
+	key := s.applyUnreadKey(uid)
+	pipe := s.Source.Redis().Pipeline()
+	pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, contactApplyUnreadTTL)
+	_, _ = pipe.Exec(ctx)
+}
+
+func (s *ContactApplyService) decrApplyUnread(ctx context.Context, uid int) {
+	if uid <= 0 {
+		return
+	}
+	key := s.applyUnreadKey(uid)
+	n, err := s.Source.Redis().Decr(ctx, key).Result()
+	if err != nil || n <= 0 {
+		_ = s.Source.Redis().Del(ctx, key).Err()
+	}
+}
+
+func (s *ContactApplyService) GetApplyUnreadNum(ctx context.Context, uid int) int {
+	num, err := s.Source.Redis().Get(ctx, s.applyUnreadKey(uid)).Int()
+	if err != nil || num < 0 {
 		return 0
 	}
-
 	return num
 }
 
 func (s *ContactApplyService) ClearApplyUnreadNum(ctx context.Context, uid int) {
-	s.Source.Redis().Del(ctx, fmt.Sprintf("im:contact:apply:%d", uid))
+	s.Source.Redis().Del(ctx, s.applyUnreadKey(uid))
 }

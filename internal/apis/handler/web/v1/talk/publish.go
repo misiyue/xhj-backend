@@ -2,7 +2,6 @@ package talk
 
 import (
 	"context"
-	"html"
 	"strconv"
 	"strings"
 
@@ -120,7 +119,7 @@ func (c *Publish) onSendText(ctx *gin.Context) error {
 		TalkMode:   in.TalkMode,
 		FromId:     uid,
 		ReceiverId: in.ReceiverId,
-		Content:    html.EscapeString(in.Body.Content),
+		Content:    in.Body.Content,
 		QuoteId:    in.QuoteId,
 		Mentions:   in.Body.Mentions,
 	})
