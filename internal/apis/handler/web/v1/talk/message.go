@@ -35,7 +35,6 @@ type Message struct {
 	TalkRecordFriendRepo   *repo.TalkUserMessage
 	TalkRecordGroupRepo    *repo.TalkGroupMessage
 	TalkGroupMsgReaderRepo *repo.TalkGroupMsgReader
-	TalkSessionRepo        *repo.TalkSession
 	PushMessage            *logic.PushMessage
 	TalkRecordsService     service.ITalkRecordService
 	GroupMemberService     service.IGroupMemberService
@@ -111,12 +110,7 @@ func (m *Message) Records(ctx context.Context, in *web.MessageRecordsRequest) (*
 
 	// 打开群聊拉取首屏消息时清零 at_me（前端未必会调 session-clear-unread-num）
 	if in.TalkMode == entity.ChatGroupMode && in.Cursor == 0 {
-		rawGroupId := int(in.ReceiverId)
-		groupId := resolveTalkReceiverId(ctx, m.TalkSessionRepo, uid, int(in.TalkMode), rawGroupId)
-		clearGroupAtMeMentions(ctx, m.MentionStorage, m.PushMessage, uid, groupId)
-		if rawGroupId != groupId {
-			clearGroupAtMeMentions(ctx, m.MentionStorage, m.PushMessage, uid, rawGroupId)
-		}
+		clearGroupAtMeMentions(ctx, m.MentionStorage, m.PushMessage, uid, int(in.ReceiverId))
 	}
 
 	return &web.MessageRecordsResponse{

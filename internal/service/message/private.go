@@ -74,7 +74,7 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 		return err
 	}
 
-	// 推送：始终推送给发送方；未被拉黑时再推接收方
+	// 推送：始终推送给发送方；未被拉黑时再推接收方（关键路径：Redis 推送 + 未读）
 	pipe := s.Source.Redis().Pipeline()
 
 	senderMessage := *message
@@ -88,9 +88,10 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 	}
 	pipe.Publish(ctx, entity.ImTopicChat, jsonutil.Encode(senderContent))
 
+	needOneSignal := false
 	if !blockedByReceiver {
 		if option.MsgType != entity.ChatMsgTypeRTCCall {
-			s.tryOneSignalUserChat(ctx, option.ReceiverId, entity.ChatPrivateMode, option.FromId)
+			needOneSignal = true
 		}
 
 		receiverMessage := *message
@@ -115,6 +116,15 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 	}
 
 	_, _ = pipe.Exec(ctx)
+
+	// OneSignal 外部 HTTP 异步，不阻塞发消息接口
+	if needOneSignal {
+		toUID := option.ReceiverId
+		fromUID := option.FromId
+		s.goAfterSend("private_onesignal", func(asyncCtx context.Context) {
+			s.tryOneSignalUserChat(asyncCtx, toUID, entity.ChatPrivateMode, fromUID)
+		})
+	}
 
 	return nil
 }
@@ -152,8 +162,6 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 		return err
 	}
 
-	s.tryOneSignalUserChat(ctx, data.ReceiverId, entity.ChatPrivateMode, data.FromId)
-
 	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventImMessage,
 		Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
@@ -171,6 +179,12 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 	_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, data.UserId, data.ReceiverId, &cache.LastCacheMessage{
 		Content:  s.getTextMessage(data.MsgType, data.Extra),
 		Datetime: data.CreatedAt.Format(time.DateTime),
+	})
+
+	toUID := data.ReceiverId
+	fromUID := data.FromId
+	s.goAfterSend("private_to_user_onesignal", func(asyncCtx context.Context) {
+		s.tryOneSignalUserChat(asyncCtx, toUID, entity.ChatPrivateMode, fromUID)
 	})
 
 	return nil

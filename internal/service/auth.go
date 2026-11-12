@@ -70,6 +70,7 @@ func (a *AuthService) IsAuth(ctx context.Context, opt *AuthOption) error {
 		return errors.New("暂无权限发送消息！")
 	}
 
+	// 兼容历史脏数据：is_quit=0 也视为在群（仅 1 表示已退群）
 	if memberInfo.IsQuit == model.Yes {
 		return errors.New("暂无权限发送消息！")
 	}

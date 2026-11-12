@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 
 	"github.com/gzydong/go-chat/internal/pkg/core"
 	"github.com/gzydong/go-chat/internal/repository/cache"
@@ -51,7 +52,16 @@ func (g *GroupMember) IsMember(ctx context.Context, gid, uid int, cache bool) bo
 
 func (g *GroupMember) FindByUserId(ctx context.Context, gid, uid int) (*model.GroupMember, error) {
 	member := &model.GroupMember{}
-	err := g.Repo.Model(ctx).Where("group_id = ? and user_id = ?", gid, uid).First(member).Error
+	// 优先取未退群记录，避免历史 is_quit=1 脏行抢先命中导致误判无权限
+	err := g.Repo.Model(ctx).Where("group_id = ? and user_id = ? and is_quit = ?", gid, uid, model.No).First(member).Error
+	if err == nil {
+		return member, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	// 回落任意记录，供上层区分「已退群」与「从未入群」
+	err = g.Repo.Model(ctx).Where("group_id = ? and user_id = ?", gid, uid).First(member).Error
 	return member, err
 }
 
