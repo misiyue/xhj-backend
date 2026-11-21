@@ -206,6 +206,8 @@ message GroupListResponse{
     string profile = 4 [(google.api.field_behavior) = REQUIRED];
     int32 leader = 5 [(google.api.field_behavior) = REQUIRED];
     int32 creator_id = 7 [(google.api.field_behavior) = REQUIRED];
+    // 是否开启进群密码：0 否 1 是
+    int32 is_secret = 8;
   }
 
   repeated Item items = 1 [(google.api.field_behavior) = REQUIRED];

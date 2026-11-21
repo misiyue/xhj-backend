@@ -57,4 +57,5 @@ type GroupItem struct {
 	Leader    int    `json:"leader"`
 	IsDisturb int    `json:"is_disturb"`
 	CreatorId int    `json:"creator_id"`
+	IsSecret  int    `json:"is_secret"`
 }

@@ -544,7 +544,7 @@ func (g *GroupService) List(ctx context.Context, userId int) ([]*model.GroupItem
 	db := g.Source.Db().WithContext(ctx)
 
 	tx := db.Model(&model.GroupMember{})
-	tx.Select("`group`.id,`group`.name as group_name,`group`.avatar,`group`.profile,group_member.leader,`group`.creator_id")
+	tx.Select("`group`.id,`group`.name as group_name,`group`.avatar,`group`.profile,group_member.leader,`group`.creator_id,IFNULL(`group`.is_secret,0) as is_secret")
 	tx.Joins("left join `group` on `group`.id = group_member.group_id")
 	tx.Where("group_member.user_id = ? and group_member.is_quit = ?", userId, model.No)
 	tx.Order("group_member.created_at desc")

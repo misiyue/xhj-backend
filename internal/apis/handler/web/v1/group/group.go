@@ -74,6 +74,7 @@ func (g Group) List(ctx context.Context, in *web.GroupListRequest) (*web.GroupLi
 			Profile:   item.Profile,
 			Leader:    int32(item.Leader),
 			CreatorId: int32(item.CreatorId),
+			IsSecret:  int32(item.IsSecret),
 		})
 	}
 
@@ -352,9 +353,6 @@ func (g Group) Invite(ctx context.Context, in *web.GroupInviteRequest) (*web.Gro
 
 	if group != nil && group.IsDismiss == model.Yes {
 		return nil, entity.ErrGroupDismissed
-	}
-	if group != nil && group.SecretEnabled() {
-		return nil, errorx.New(400, "该群已开启密码验证")
 	}
 
 	count, err := g.GroupMemberRepo.FindCount(ctx, "group_id = ? and is_quit = ?", in.GroupId, model.No)

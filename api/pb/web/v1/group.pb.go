@@ -2230,13 +2230,15 @@ func (x *GroupTotopsResponse) GetItems() []*GroupTotopsResponse_Item {
 }
 
 type GroupListResponse_Item struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	GroupId       int32                  `protobuf:"varint,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
-	GroupName     string                 `protobuf:"bytes,2,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty"`
-	Avatar        string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
-	Profile       string                 `protobuf:"bytes,4,opt,name=profile,proto3" json:"profile,omitempty"`
-	Leader        int32                  `protobuf:"varint,5,opt,name=leader,proto3" json:"leader,omitempty"`
-	CreatorId     int32                  `protobuf:"varint,7,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	GroupId   int32                  `protobuf:"varint,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	GroupName string                 `protobuf:"bytes,2,opt,name=group_name,json=groupName,proto3" json:"group_name,omitempty"`
+	Avatar    string                 `protobuf:"bytes,3,opt,name=avatar,proto3" json:"avatar,omitempty"`
+	Profile   string                 `protobuf:"bytes,4,opt,name=profile,proto3" json:"profile,omitempty"`
+	Leader    int32                  `protobuf:"varint,5,opt,name=leader,proto3" json:"leader,omitempty"`
+	CreatorId int32                  `protobuf:"varint,7,opt,name=creator_id,json=creatorId,proto3" json:"creator_id,omitempty"`
+	// 是否开启进群密码：0 否 1 是
+	IsSecret      int32 `protobuf:"varint,8,opt,name=is_secret,json=isSecret,proto3" json:"is_secret,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2309,6 +2311,13 @@ func (x *GroupListResponse_Item) GetLeader() int32 {
 func (x *GroupListResponse_Item) GetCreatorId() int32 {
 	if x != nil {
 		return x.CreatorId
+	}
+	return 0
+}
+
+func (x *GroupListResponse_Item) GetIsSecret() int32 {
+	if x != nil {
+		return x.IsSecret
 	}
 	return 0
 }
@@ -2823,9 +2832,9 @@ var File_web_v1_group_proto protoreflect.FileDescriptor
 const file_web_v1_group_proto_rawDesc = "" +
 	"\n" +
 	"\x12web/v1/group.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\x12\n" +
-	"\x10GroupListRequest\"\x9c\x02\n" +
+	"\x10GroupListRequest\"\xb9\x02\n" +
 	"\x11GroupListResponse\x127\n" +
-	"\x05items\x18\x01 \x03(\v2\x1b.web.GroupListResponse.ItemB\x04\xe2A\x01\x02R\x05items\x1a\xcd\x01\n" +
+	"\x05items\x18\x01 \x03(\v2\x1b.web.GroupListResponse.ItemB\x04\xe2A\x01\x02R\x05items\x1a\xea\x01\n" +
 	"\x04Item\x12\x1f\n" +
 	"\bgroup_id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\agroupId\x12#\n" +
 	"\n" +
@@ -2834,7 +2843,8 @@ const file_web_v1_group_proto_rawDesc = "" +
 	"\aprofile\x18\x04 \x01(\tB\x04\xe2A\x01\x02R\aprofile\x12\x1c\n" +
 	"\x06leader\x18\x05 \x01(\x05B\x04\xe2A\x01\x02R\x06leader\x12#\n" +
 	"\n" +
-	"creator_id\x18\a \x01(\x05B\x04\xe2A\x01\x02R\tcreatorId\"V\n" +
+	"creator_id\x18\a \x01(\x05B\x04\xe2A\x01\x02R\tcreatorId\x12\x1b\n" +
+	"\tis_secret\x18\b \x01(\x05R\bisSecret\"V\n" +
 	"\x12GroupCreateRequest\x12\x1b\n" +
 	"\x04name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12#\n" +
 	"\buser_ids\x18\x02 \x03(\x05B\b\xbaH\x05\x92\x01\x02\b\x01R\auserIds\"6\n" +
