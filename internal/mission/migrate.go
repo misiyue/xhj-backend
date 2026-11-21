@@ -39,6 +39,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		// 群组相关
 		&model.Group{},
 		&model.GroupApply{},
+		&model.GroupAdApply{},
 		&model.GroupMember{},
 		&model.GroupNotice{},
 		&model.GroupVote{},

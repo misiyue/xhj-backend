@@ -2229,6 +2229,94 @@ func (x *GroupTotopsResponse) GetItems() []*GroupTotopsResponse_Item {
 	return nil
 }
 
+type GroupAdApplyRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GroupId       int32                  `protobuf:"varint,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
+	Intro         string                 `protobuf:"bytes,2,opt,name=intro,proto3" json:"intro,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GroupAdApplyRequest) Reset() {
+	*x = GroupAdApplyRequest{}
+	mi := &file_web_v1_group_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GroupAdApplyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GroupAdApplyRequest) ProtoMessage() {}
+
+func (x *GroupAdApplyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_group_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GroupAdApplyRequest.ProtoReflect.Descriptor instead.
+func (*GroupAdApplyRequest) Descriptor() ([]byte, []int) {
+	return file_web_v1_group_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GroupAdApplyRequest) GetGroupId() int32 {
+	if x != nil {
+		return x.GroupId
+	}
+	return 0
+}
+
+func (x *GroupAdApplyRequest) GetIntro() string {
+	if x != nil {
+		return x.Intro
+	}
+	return ""
+}
+
+type GroupAdApplyResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GroupAdApplyResponse) Reset() {
+	*x = GroupAdApplyResponse{}
+	mi := &file_web_v1_group_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GroupAdApplyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GroupAdApplyResponse) ProtoMessage() {}
+
+func (x *GroupAdApplyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_web_v1_group_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GroupAdApplyResponse.ProtoReflect.Descriptor instead.
+func (*GroupAdApplyResponse) Descriptor() ([]byte, []int) {
+	return file_web_v1_group_proto_rawDescGZIP(), []int{47}
+}
+
 type GroupListResponse_Item struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	GroupId   int32                  `protobuf:"varint,1,opt,name=group_id,json=groupId,proto3" json:"group_id,omitempty"`
@@ -2245,7 +2333,7 @@ type GroupListResponse_Item struct {
 
 func (x *GroupListResponse_Item) Reset() {
 	*x = GroupListResponse_Item{}
-	mi := &file_web_v1_group_proto_msgTypes[46]
+	mi := &file_web_v1_group_proto_msgTypes[48]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2257,7 +2345,7 @@ func (x *GroupListResponse_Item) String() string {
 func (*GroupListResponse_Item) ProtoMessage() {}
 
 func (x *GroupListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_group_proto_msgTypes[46]
+	mi := &file_web_v1_group_proto_msgTypes[48]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2334,7 +2422,7 @@ type GroupDetailResponse_Notice struct {
 
 func (x *GroupDetailResponse_Notice) Reset() {
 	*x = GroupDetailResponse_Notice{}
-	mi := &file_web_v1_group_proto_msgTypes[47]
+	mi := &file_web_v1_group_proto_msgTypes[49]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2346,7 +2434,7 @@ func (x *GroupDetailResponse_Notice) String() string {
 func (*GroupDetailResponse_Notice) ProtoMessage() {}
 
 func (x *GroupDetailResponse_Notice) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_group_proto_msgTypes[47]
+	mi := &file_web_v1_group_proto_msgTypes[49]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2408,7 +2496,7 @@ type GroupMemberListResponse_Item struct {
 
 func (x *GroupMemberListResponse_Item) Reset() {
 	*x = GroupMemberListResponse_Item{}
-	mi := &file_web_v1_group_proto_msgTypes[48]
+	mi := &file_web_v1_group_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2420,7 +2508,7 @@ func (x *GroupMemberListResponse_Item) String() string {
 func (*GroupMemberListResponse_Item) ProtoMessage() {}
 
 func (x *GroupMemberListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_group_proto_msgTypes[48]
+	mi := &file_web_v1_group_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2512,7 +2600,7 @@ type GetInviteFriendsResponse_Item struct {
 
 func (x *GetInviteFriendsResponse_Item) Reset() {
 	*x = GetInviteFriendsResponse_Item{}
-	mi := &file_web_v1_group_proto_msgTypes[49]
+	mi := &file_web_v1_group_proto_msgTypes[51]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2524,7 +2612,7 @@ func (x *GetInviteFriendsResponse_Item) String() string {
 func (*GetInviteFriendsResponse_Item) ProtoMessage() {}
 
 func (x *GetInviteFriendsResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_group_proto_msgTypes[49]
+	mi := &file_web_v1_group_proto_msgTypes[51]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2592,7 +2680,7 @@ type GroupOvertListResponse_Item struct {
 
 func (x *GroupOvertListResponse_Item) Reset() {
 	*x = GroupOvertListResponse_Item{}
-	mi := &file_web_v1_group_proto_msgTypes[50]
+	mi := &file_web_v1_group_proto_msgTypes[52]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2604,7 +2692,7 @@ func (x *GroupOvertListResponse_Item) String() string {
 func (*GroupOvertListResponse_Item) ProtoMessage() {}
 
 func (x *GroupOvertListResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_group_proto_msgTypes[50]
+	mi := &file_web_v1_group_proto_msgTypes[52]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2695,7 +2783,7 @@ type GroupFakersResponse_Item struct {
 
 func (x *GroupFakersResponse_Item) Reset() {
 	*x = GroupFakersResponse_Item{}
-	mi := &file_web_v1_group_proto_msgTypes[51]
+	mi := &file_web_v1_group_proto_msgTypes[53]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2707,7 +2795,7 @@ func (x *GroupFakersResponse_Item) String() string {
 func (*GroupFakersResponse_Item) ProtoMessage() {}
 
 func (x *GroupFakersResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_group_proto_msgTypes[51]
+	mi := &file_web_v1_group_proto_msgTypes[53]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2764,7 +2852,7 @@ type GroupTotopsResponse_Item struct {
 
 func (x *GroupTotopsResponse_Item) Reset() {
 	*x = GroupTotopsResponse_Item{}
-	mi := &file_web_v1_group_proto_msgTypes[52]
+	mi := &file_web_v1_group_proto_msgTypes[54]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2776,7 +2864,7 @@ func (x *GroupTotopsResponse_Item) String() string {
 func (*GroupTotopsResponse_Item) ProtoMessage() {}
 
 func (x *GroupTotopsResponse_Item) ProtoReflect() protoreflect.Message {
-	mi := &file_web_v1_group_proto_msgTypes[52]
+	mi := &file_web_v1_group_proto_msgTypes[54]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3005,7 +3093,11 @@ const file_web_v1_group_proto_rawDesc = "" +
 	"\x05cover\x18\x02 \x01(\tR\x05cover\x12\x14\n" +
 	"\x05intro\x18\x03 \x01(\tR\x05intro\x12\x10\n" +
 	"\x03btn\x18\x04 \x01(\tR\x03btn\x12\x10\n" +
-	"\x03url\x18\x05 \x01(\tR\x03url2\xb9\x12\n" +
+	"\x03url\x18\x05 \x01(\tR\x03url\"Y\n" +
+	"\x13GroupAdApplyRequest\x12\"\n" +
+	"\bgroup_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\agroupId\x12\x1e\n" +
+	"\x05intro\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x05intro\"\x16\n" +
+	"\x14GroupAdApplyResponse2\x9c\x13\n" +
 	"\x05Group\x12T\n" +
 	"\x04List\x12\x15.web.GroupListRequest\x1a\x16.web.GroupListResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/v1/group/list\x12\\\n" +
 	"\x06Create\x12\x17.web.GroupCreateRequest\x1a\x18.web.GroupCreateResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/group/create\x12\\\n" +
@@ -3031,7 +3123,8 @@ const file_web_v1_group_proto_rawDesc = "" +
 	"SecretCode\x12\x1b.web.GroupSecretCodeRequest\x1a\x1c.web.GroupSecretCodeResponse\"$\x82\xd3\xe4\x93\x02\x1e:\x01*\"\x19/api/v1/group/secret-code\x12q\n" +
 	"\vSecretEnter\x12\x1c.web.GroupSecretEnterRequest\x1a\x1d.web.GroupSecretEnterResponse\"%\x82\xd3\xe4\x93\x02\x1f:\x01*\"\x1a/api/v1/group/secret-enter\x12\\\n" +
 	"\x06Fakers\x12\x17.web.GroupFakersRequest\x1a\x18.web.GroupFakersResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/group/fakers\x12\\\n" +
-	"\x06Totops\x12\x17.web.GroupTotopsRequest\x1a\x18.web.GroupTotopsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/group/totopsB\fZ\n" +
+	"\x06Totops\x12\x17.web.GroupTotopsRequest\x1a\x18.web.GroupTotopsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19:\x01*\"\x14/api/v1/group/totops\x12a\n" +
+	"\aAdApply\x12\x18.web.GroupAdApplyRequest\x1a\x19.web.GroupAdApplyResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*\"\x16/api/v1/group/ad-applyB\fZ\n" +
 	"web/v1;webb\x06proto3"
 
 var (
@@ -3046,7 +3139,7 @@ func file_web_v1_group_proto_rawDescGZIP() []byte {
 	return file_web_v1_group_proto_rawDescData
 }
 
-var file_web_v1_group_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
+var file_web_v1_group_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
 var file_web_v1_group_proto_goTypes = []any{
 	(*GroupListRequest)(nil),              // 0: web.GroupListRequest
 	(*GroupListResponse)(nil),             // 1: web.GroupListResponse
@@ -3094,22 +3187,24 @@ var file_web_v1_group_proto_goTypes = []any{
 	(*GroupFakersResponse)(nil),           // 43: web.GroupFakersResponse
 	(*GroupTotopsRequest)(nil),            // 44: web.GroupTotopsRequest
 	(*GroupTotopsResponse)(nil),           // 45: web.GroupTotopsResponse
-	(*GroupListResponse_Item)(nil),        // 46: web.GroupListResponse.Item
-	(*GroupDetailResponse_Notice)(nil),    // 47: web.GroupDetailResponse.Notice
-	(*GroupMemberListResponse_Item)(nil),  // 48: web.GroupMemberListResponse.Item
-	(*GetInviteFriendsResponse_Item)(nil), // 49: web.GetInviteFriendsResponse.Item
-	(*GroupOvertListResponse_Item)(nil),   // 50: web.GroupOvertListResponse.Item
-	(*GroupFakersResponse_Item)(nil),      // 51: web.GroupFakersResponse.Item
-	(*GroupTotopsResponse_Item)(nil),      // 52: web.GroupTotopsResponse.Item
+	(*GroupAdApplyRequest)(nil),           // 46: web.GroupAdApplyRequest
+	(*GroupAdApplyResponse)(nil),          // 47: web.GroupAdApplyResponse
+	(*GroupListResponse_Item)(nil),        // 48: web.GroupListResponse.Item
+	(*GroupDetailResponse_Notice)(nil),    // 49: web.GroupDetailResponse.Notice
+	(*GroupMemberListResponse_Item)(nil),  // 50: web.GroupMemberListResponse.Item
+	(*GetInviteFriendsResponse_Item)(nil), // 51: web.GetInviteFriendsResponse.Item
+	(*GroupOvertListResponse_Item)(nil),   // 52: web.GroupOvertListResponse.Item
+	(*GroupFakersResponse_Item)(nil),      // 53: web.GroupFakersResponse.Item
+	(*GroupTotopsResponse_Item)(nil),      // 54: web.GroupTotopsResponse.Item
 }
 var file_web_v1_group_proto_depIdxs = []int32{
-	46, // 0: web.GroupListResponse.items:type_name -> web.GroupListResponse.Item
-	47, // 1: web.GroupDetailResponse.notice:type_name -> web.GroupDetailResponse.Notice
-	48, // 2: web.GroupMemberListResponse.items:type_name -> web.GroupMemberListResponse.Item
-	49, // 3: web.GetInviteFriendsResponse.items:type_name -> web.GetInviteFriendsResponse.Item
-	50, // 4: web.GroupOvertListResponse.items:type_name -> web.GroupOvertListResponse.Item
-	51, // 5: web.GroupFakersResponse.items:type_name -> web.GroupFakersResponse.Item
-	52, // 6: web.GroupTotopsResponse.items:type_name -> web.GroupTotopsResponse.Item
+	48, // 0: web.GroupListResponse.items:type_name -> web.GroupListResponse.Item
+	49, // 1: web.GroupDetailResponse.notice:type_name -> web.GroupDetailResponse.Notice
+	50, // 2: web.GroupMemberListResponse.items:type_name -> web.GroupMemberListResponse.Item
+	51, // 3: web.GetInviteFriendsResponse.items:type_name -> web.GetInviteFriendsResponse.Item
+	52, // 4: web.GroupOvertListResponse.items:type_name -> web.GroupOvertListResponse.Item
+	53, // 5: web.GroupFakersResponse.items:type_name -> web.GroupFakersResponse.Item
+	54, // 6: web.GroupTotopsResponse.items:type_name -> web.GroupTotopsResponse.Item
 	0,  // 7: web.Group.List:input_type -> web.GroupListRequest
 	2,  // 8: web.Group.Create:input_type -> web.GroupCreateRequest
 	4,  // 9: web.Group.Detail:input_type -> web.GroupDetailRequest
@@ -3133,31 +3228,33 @@ var file_web_v1_group_proto_depIdxs = []int32{
 	40, // 27: web.Group.SecretEnter:input_type -> web.GroupSecretEnterRequest
 	42, // 28: web.Group.Fakers:input_type -> web.GroupFakersRequest
 	44, // 29: web.Group.Totops:input_type -> web.GroupTotopsRequest
-	1,  // 30: web.Group.List:output_type -> web.GroupListResponse
-	3,  // 31: web.Group.Create:output_type -> web.GroupCreateResponse
-	5,  // 32: web.Group.Detail:output_type -> web.GroupDetailResponse
-	7,  // 33: web.Group.MemberList:output_type -> web.GroupMemberListResponse
-	9,  // 34: web.Group.Dismiss:output_type -> web.GroupDismissResponse
-	11, // 35: web.Group.Invite:output_type -> web.GroupInviteResponse
-	13, // 36: web.Group.GetInviteFriends:output_type -> web.GetInviteFriendsResponse
-	15, // 37: web.Group.Secede:output_type -> web.GroupSecedeResponse
-	17, // 38: web.Group.Setting:output_type -> web.GroupSettingResponse
-	19, // 39: web.Group.RemarkUpdate:output_type -> web.GroupRemarkUpdateResponse
-	21, // 40: web.Group.RemoveMember:output_type -> web.GroupRemoveMemberResponse
-	23, // 41: web.Group.OvertList:output_type -> web.GroupOvertListResponse
-	25, // 42: web.Group.Handover:output_type -> web.GroupHandoverResponse
-	27, // 43: web.Group.AssignAdmin:output_type -> web.GroupAssignAdminResponse
-	29, // 44: web.Group.NoSpeak:output_type -> web.GroupNoSpeakResponse
-	31, // 45: web.Group.Mute:output_type -> web.GroupMuteResponse
-	33, // 46: web.Group.AllowInvite:output_type -> web.GroupAllowInviteResponse
-	35, // 47: web.Group.Overt:output_type -> web.GroupOvertResponse
-	37, // 48: web.Group.Secret:output_type -> web.GroupSecretResponse
-	39, // 49: web.Group.SecretCode:output_type -> web.GroupSecretCodeResponse
-	41, // 50: web.Group.SecretEnter:output_type -> web.GroupSecretEnterResponse
-	43, // 51: web.Group.Fakers:output_type -> web.GroupFakersResponse
-	45, // 52: web.Group.Totops:output_type -> web.GroupTotopsResponse
-	30, // [30:53] is the sub-list for method output_type
-	7,  // [7:30] is the sub-list for method input_type
+	46, // 30: web.Group.AdApply:input_type -> web.GroupAdApplyRequest
+	1,  // 31: web.Group.List:output_type -> web.GroupListResponse
+	3,  // 32: web.Group.Create:output_type -> web.GroupCreateResponse
+	5,  // 33: web.Group.Detail:output_type -> web.GroupDetailResponse
+	7,  // 34: web.Group.MemberList:output_type -> web.GroupMemberListResponse
+	9,  // 35: web.Group.Dismiss:output_type -> web.GroupDismissResponse
+	11, // 36: web.Group.Invite:output_type -> web.GroupInviteResponse
+	13, // 37: web.Group.GetInviteFriends:output_type -> web.GetInviteFriendsResponse
+	15, // 38: web.Group.Secede:output_type -> web.GroupSecedeResponse
+	17, // 39: web.Group.Setting:output_type -> web.GroupSettingResponse
+	19, // 40: web.Group.RemarkUpdate:output_type -> web.GroupRemarkUpdateResponse
+	21, // 41: web.Group.RemoveMember:output_type -> web.GroupRemoveMemberResponse
+	23, // 42: web.Group.OvertList:output_type -> web.GroupOvertListResponse
+	25, // 43: web.Group.Handover:output_type -> web.GroupHandoverResponse
+	27, // 44: web.Group.AssignAdmin:output_type -> web.GroupAssignAdminResponse
+	29, // 45: web.Group.NoSpeak:output_type -> web.GroupNoSpeakResponse
+	31, // 46: web.Group.Mute:output_type -> web.GroupMuteResponse
+	33, // 47: web.Group.AllowInvite:output_type -> web.GroupAllowInviteResponse
+	35, // 48: web.Group.Overt:output_type -> web.GroupOvertResponse
+	37, // 49: web.Group.Secret:output_type -> web.GroupSecretResponse
+	39, // 50: web.Group.SecretCode:output_type -> web.GroupSecretCodeResponse
+	41, // 51: web.Group.SecretEnter:output_type -> web.GroupSecretEnterResponse
+	43, // 52: web.Group.Fakers:output_type -> web.GroupFakersResponse
+	45, // 53: web.Group.Totops:output_type -> web.GroupTotopsResponse
+	47, // 54: web.Group.AdApply:output_type -> web.GroupAdApplyResponse
+	31, // [31:55] is the sub-list for method output_type
+	7,  // [7:31] is the sub-list for method input_type
 	7,  // [7:7] is the sub-list for extension type_name
 	7,  // [7:7] is the sub-list for extension extendee
 	0,  // [0:7] is the sub-list for field type_name
@@ -3174,7 +3271,7 @@ func file_web_v1_group_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_web_v1_group_proto_rawDesc), len(file_web_v1_group_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   53,
+			NumMessages:   55,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

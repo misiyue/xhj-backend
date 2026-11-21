@@ -192,6 +192,14 @@ service Group {
       body: "*"
     };
   }
+
+  // 群投放申请（仅群创建人）
+  rpc AdApply(GroupAdApplyRequest) returns (GroupAdApplyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/ad-apply"
+      body: "*"
+    };
+  }
 }
 
 // 群列表接口请求参数
@@ -488,3 +496,10 @@ message GroupTotopsResponse {
   }
   repeated Item items = 1;
 }
+
+message GroupAdApplyRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  string intro = 2 [(buf.validate.field).string = {max_len: 255}];
+}
+
+message GroupAdApplyResponse {}

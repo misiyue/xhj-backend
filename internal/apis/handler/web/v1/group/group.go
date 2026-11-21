@@ -34,6 +34,7 @@ type Group struct {
 	GroupNoticeRepo    *repo.GroupNotice
 	GroupFakerRepo     *repo.GroupFaker
 	GroupTotopRepo     *repo.GroupTotop
+	GroupAdApplyRepo   *repo.GroupAdApply
 	TalkSessionRepo    *repo.TalkSession
 	GroupService       service.IGroupService
 	GroupMemberService service.IGroupMemberService

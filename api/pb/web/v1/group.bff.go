@@ -58,6 +58,8 @@ type IGroupHandler interface {
 	Fakers(ctx context.Context, in *GroupFakersRequest) (*GroupFakersResponse, error)
 	// 群置顶推广列表（group_totop，按 sort 倒序）
 	Totops(ctx context.Context, in *GroupTotopsRequest) (*GroupTotopsResponse, error)
+	// 群投放申请（仅群创建人）
+	AdApply(ctx context.Context, in *GroupAdApplyRequest) (*GroupAdApplyResponse, error)
 }
 
 // RegisterGroupHandler 注册服务路由处理器
@@ -278,6 +280,15 @@ func RegisterGroupHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.Totops(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/group/ad-apply", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in GroupAdApplyRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.AdApply(ctx.Request.Context(), &in)
 	}))
 
 }
