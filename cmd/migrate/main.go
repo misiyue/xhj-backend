@@ -396,6 +396,8 @@ type NewGroup struct {
 	IsMute        int       `gorm:"column:is_mute;type:tinyint(4)"`
 	IsAllowInvite int       `gorm:"column:is_allow_invite;type:tinyint(4);default:1"`
 	ForceStatus   int       `gorm:"column:force_status;type:tinyint(4);default:0"`
+	IsSecret      int       `gorm:"column:is_secret;type:tinyint(4);default:0"`
+	SecretCode    string    `gorm:"column:secret_code;type:varchar(8)"`
 	CreatedAt     time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP"`
 	UpdatedAt     time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`
 }

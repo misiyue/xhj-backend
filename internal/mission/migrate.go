@@ -186,6 +186,20 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 				logger.Warnf("add group.force_status: %v", err)
 			}
 		}
+		if !app.DB.Migrator().HasColumn(&model.Group{}, "is_secret") {
+			if err := app.DB.Exec(
+				"ALTER TABLE `group` ADD COLUMN `is_secret` tinyint(4) NULL DEFAULT 0 COMMENT '开启进群密码：0-否，1-是'",
+			).Error; err != nil {
+				logger.Warnf("add group.is_secret: %v", err)
+			}
+		}
+		if !app.DB.Migrator().HasColumn(&model.Group{}, "secret_code") {
+			if err := app.DB.Exec(
+				"ALTER TABLE `group` ADD COLUMN `secret_code` varchar(8) NULL COMMENT '入群密码'",
+			).Error; err != nil {
+				logger.Warnf("add group.secret_code: %v", err)
+			}
+		}
 		if err := app.DB.Exec(
 			"ALTER TABLE `group` " +
 				"MODIFY COLUMN `is_allow_invite` tinyint(4) NULL DEFAULT 1 COMMENT '群内是否允许成员互加好友', " +

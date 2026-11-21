@@ -235,6 +235,8 @@ CREATE TABLE IF NOT EXISTS `group`
     `is_mute`         tinyint(4)            DEFAULT NULL COMMENT '全员禁言[1:是;2:否]：仅限制普通成员，群主/管理员可发言',
     `is_allow_invite` tinyint(4)            DEFAULT '1' COMMENT '群内是否允许成员互加好友',
     `force_status`    tinyint(4)            DEFAULT '0' COMMENT '强制禁言：0无 1所有人不可发言(含群主/管理员)；全员禁言用 is_mute',
+    `is_secret`       tinyint(4)            DEFAULT '0' COMMENT '开启进群密码：0-否，1-是',
+    `secret_code`     varchar(8)            DEFAULT NULL COMMENT '入群密码',
     `created_at`      datetime              DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`      datetime              DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`) USING BTREE,

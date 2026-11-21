@@ -13,6 +13,10 @@ const (
 	// ForceStatus 强制状态
 	GroupForceStatusNone = 0 // 无
 	GroupForceStatusMute = 1 // 强制禁言：所有人（含群主/管理员）不可发言
+
+	// 进群密码开关：0-否，1-是
+	GroupIsSecretNo  = 0
+	GroupIsSecretYes = 1
 )
 
 type Group struct {
@@ -29,13 +33,20 @@ type Group struct {
 	// 群内是否允许成员互加好友 [1:允许;2:不允许;] 与接口 GroupDetailResponse.is_allow_invite 一致
 	IsAllowInvite int `gorm:"column:is_allow_invite;type:tinyint(4);default:1" json:"is_allow_invite"`
 	// 强制禁言：0-无，1-所有人不可发言（含群主/管理员）；与 is_mute 全员禁言区分
-	ForceStatus int       `gorm:"column:force_status;type:tinyint(4);default:0" json:"force_status"`
+	ForceStatus int    `gorm:"column:force_status;type:tinyint(4);default:0" json:"force_status"`
+	IsSecret    int    `gorm:"column:is_secret;type:tinyint(4);default:0" json:"is_secret"`     // 开启进群密码：0-否，1-是
+	SecretCode  string `gorm:"column:secret_code;type:varchar(8)" json:"secret_code"`          // 入群密码
 	CreatedAt   time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP;index:idx_group_overt_dismiss_created,priority:3" json:"created_at"` // 创建时间
 	UpdatedAt   time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" json:"updated_at"`                     // 更新时间
 }
 
 func (Group) TableName() string {
 	return "group"
+}
+
+// SecretEnabled 是否开启进群密码
+func (g *Group) SecretEnabled() bool {
+	return g != nil && g.IsSecret == GroupIsSecretYes
 }
 
 type GroupItem struct {

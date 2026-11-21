@@ -162,13 +162,13 @@ func (u *Users) CountByInviteUserId(ctx context.Context, inviterId int) (int64, 
 	return n, err
 }
 
-// FindByInviteCode 按 users.invite_code 查邀请人
+// FindByInviteCode 按 users.invite_code 查邀请人（大小写不敏感）
 func (u *Users) FindByInviteCode(ctx context.Context, code string) (*model.Users, error) {
-	code = strings.TrimSpace(strings.ToLower(code))
+	code = strings.TrimSpace(code)
 	if code == "" {
 		return nil, nil
 	}
-	return u.Repo.FindByWhere(ctx, "invite_code = ?", code)
+	return u.Repo.FindByWhere(ctx, "LOWER(invite_code) = LOWER(?)", code)
 }
 
 // EnsureInviteCode 返回用户邀请码；为空则生成并写入（唯一）

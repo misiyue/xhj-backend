@@ -158,6 +158,7 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 		IsMute:        int32(groupInfo.IsMute),
 		IsOvert:       int32(groupInfo.IsOvert),
 		IsAllowInvite: isAllowInvite,
+		IsSecret:      int32(groupInfo.IsSecret),
 		VisitCard:     g.GroupMemberRepo.GetMemberRemark(ctx, int(in.GroupId), uid),
 		Notice: &web.GroupDetailResponse_Notice{
 			Content:        "",
@@ -165,6 +166,9 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 			UpdatedAt:      "",
 			ModifyUserName: "",
 		},
+	}
+	if g.GroupMemberRepo.IsLeader(ctx, int(in.GroupId), uid) {
+		resp.SecretCode = groupInfo.SecretCode
 	}
 
 	notice, err := g.GroupNoticeRepo.GetLatestNotice(ctx, int(in.GroupId))
@@ -348,6 +352,9 @@ func (g Group) Invite(ctx context.Context, in *web.GroupInviteRequest) (*web.Gro
 
 	if group != nil && group.IsDismiss == model.Yes {
 		return nil, entity.ErrGroupDismissed
+	}
+	if group != nil && group.SecretEnabled() {
+		return nil, errorx.New(400, "该群已开启密码验证")
 	}
 
 	count, err := g.GroupMemberRepo.FindCount(ctx, "group_id = ? and is_quit = ?", in.GroupId, model.No)

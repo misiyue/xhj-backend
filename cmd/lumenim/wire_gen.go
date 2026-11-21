@@ -114,6 +114,10 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	iAesUtil := provider.NewAesUtil(c)
 	captchaStorage := cache.NewCaptchaStorage(client)
 	captcha := provider.NewBase64Captcha(captchaStorage)
+	inviteCodeRepo := repo.NewInviteCode(db)
+	inviteCodeService := &service.InviteCodeService{
+		InviteCodeRepo: inviteCodeRepo,
+	}
 	auth := &v1.Auth{
 		Config:              c,
 		Redis:               client,
@@ -123,6 +127,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		RobotRepo:           robot,
 		OAuthUsersRepo:      oAuthUsers,
 		UsersRepo:           users,
+		InviteCodeService:   inviteCodeService,
 		SmsService:          smsService,
 		EmailService:        emailService,
 		UserService:         userService,

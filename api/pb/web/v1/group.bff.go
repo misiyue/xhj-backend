@@ -44,13 +44,19 @@ type IGroupHandler interface {
 	NoSpeak(ctx context.Context, in *GroupNoSpeakRequest) (*GroupNoSpeakResponse, error)
 	// 群禁言接口
 	Mute(ctx context.Context, in *GroupMuteRequest) (*GroupMuteResponse, error)
-	// 是否允许群内成员互加好友（群主/管理员）
+	// 群内是否允许成员互加好友（群主/管理员）
 	AllowInvite(ctx context.Context, in *GroupAllowInviteRequest) (*GroupAllowInviteResponse, error)
 	// 群公开修改接口
 	Overt(ctx context.Context, in *GroupOvertRequest) (*GroupOvertResponse, error)
-	// 群马甲用户列表
+	// 开启/关闭进群密码（群主/管理员）
+	Secret(ctx context.Context, in *GroupSecretRequest) (*GroupSecretResponse, error)
+	// 设置入群密码（群主/管理员）
+	SecretCode(ctx context.Context, in *GroupSecretCodeRequest) (*GroupSecretCodeResponse, error)
+	// 密码入群（群外用户）
+	SecretEnter(ctx context.Context, in *GroupSecretEnterRequest) (*GroupSecretEnterResponse, error)
+	// 群马甲用户列表（group_faker 关联的 user_faker 资料）
 	Fakers(ctx context.Context, in *GroupFakersRequest) (*GroupFakersResponse, error)
-	// 群置顶推广列表
+	// 群置顶推广列表（group_totop，按 sort 倒序）
 	Totops(ctx context.Context, in *GroupTotopsRequest) (*GroupTotopsResponse, error)
 }
 
@@ -227,6 +233,33 @@ func RegisterGroupHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.Overt(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/group/secret", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in GroupSecretRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.Secret(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/group/secret-code", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in GroupSecretCodeRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.SecretCode(ctx.Request.Context(), &in)
+	}))
+
+	r.POST("/api/v1/group/secret-enter", interceptor.Do(func(ctx *gin.Context) (any, error) {
+		var in GroupSecretEnterRequest
+		if err := interceptor.ShouldProto(ctx, &in); err != nil {
+			return nil, err
+		}
+
+		return handler.SecretEnter(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/group/fakers", interceptor.Do(func(ctx *gin.Context) (any, error) {

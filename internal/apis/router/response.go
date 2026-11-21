@@ -1,6 +1,8 @@
 package router
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"slices"
@@ -20,29 +22,32 @@ var ProtoJson = protojson.MarshalOptions{
 type Interceptor struct{}
 
 func (i *Interceptor) ShouldProto(ctx *gin.Context, in any) error {
-	if err := ctx.ShouldBind(in); err != nil {
-		// For empty proto messages (like AuthRefreshTokenRequest),
-		// EOF or empty body errors are acceptable
-		if err.Error() == "EOF" || err.Error() == "unexpected end of JSON input" {
-			// Check if this is a proto message with no fields
-			if v, ok := in.(proto.Message); ok {
-				// If it's an empty proto message, we can skip the bind error
-				// and proceed to validation
-				if err := protovalidate.Validate(v); err != nil {
-					return errorx.New(400, err.Error())
+	if v, ok := in.(proto.Message); ok {
+		body, err := ctx.GetRawData()
+		if err != nil {
+			return errorx.New(400, err.Error())
+		}
+		if len(bytes.TrimSpace(body)) > 0 {
+			// protojson 同时接受 invite_code / inviteCode，避免 encoding/json 只认 json tag 导致邀请码绑不上
+			uerr := protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(body, v)
+			if uerr != nil {
+				if jerr := json.Unmarshal(body, in); jerr != nil {
+					return errorx.New(400, uerr.Error())
 				}
-				return nil
 			}
 		}
-		return errorx.New(400, err.Error())
-	}
-
-	if v, ok := in.(proto.Message); ok {
 		if err := protovalidate.Validate(v); err != nil {
 			return errorx.New(400, err.Error())
 		}
+		return nil
 	}
 
+	if err := ctx.ShouldBind(in); err != nil {
+		if err.Error() == "EOF" || err.Error() == "unexpected end of JSON input" {
+			return nil
+		}
+		return errorx.New(400, err.Error())
+	}
 	return nil
 }
 

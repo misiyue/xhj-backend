@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gzydong/go-chat/internal/repository/model"
@@ -49,7 +50,7 @@ func (i *InviteCode) Create(ctx context.Context, userId int, expireDays int, max
 func (i *InviteCode) FindByCode(ctx context.Context, code string) (*model.InviteCode, error) {
 	var inviteCode model.InviteCode
 	err := i.db.WithContext(ctx).
-		Where("code = ?", code).
+		Where("LOWER(code) = LOWER(?)", strings.TrimSpace(code)).
 		First(&inviteCode).Error
 	if err != nil {
 		return nil, err

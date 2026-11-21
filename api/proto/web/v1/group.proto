@@ -153,6 +153,30 @@ service Group {
     };
   }
 
+  // 开启/关闭进群密码（群主/管理员）
+  rpc Secret(GroupSecretRequest) returns (GroupSecretResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/secret"
+      body: "*"
+    };
+  }
+
+  // 设置入群密码（群主/管理员）
+  rpc SecretCode(GroupSecretCodeRequest) returns (GroupSecretCodeResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/secret-code"
+      body: "*"
+    };
+  }
+
+  // 密码入群（群外用户）
+  rpc SecretEnter(GroupSecretEnterRequest) returns (GroupSecretEnterResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/secret-enter"
+      body: "*"
+    };
+  }
+
   // 群马甲用户列表（group_faker 关联的 user_faker 资料）
   rpc Fakers(GroupFakersRequest) returns (GroupFakersResponse) {
     option (google.api.http) = {
@@ -218,6 +242,10 @@ message GroupDetailResponse{
   Notice notice = 11;
   // 是否允许群内互加好友：1 允许 2 不允许
   int32 is_allow_invite = 12;
+  // 是否开启进群密码：0 否 1 是
+  int32 is_secret = 13;
+  // 入群密码（仅群主/管理员返回）
+  string secret_code = 14;
 
   message Notice{
     string content = 1;
@@ -404,6 +432,28 @@ message GroupOvertRequest{
 
 // 群公开修改接口响应参数
 message GroupOvertResponse{}
+
+message GroupSecretRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  // 0:关闭 1:开启
+  int32 is_secret = 2 [(buf.validate.field).int32 = {in:[0, 1]}];
+}
+
+message GroupSecretResponse {}
+
+message GroupSecretCodeRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  string secret_code = 2 [(buf.validate.field).string = {min_len: 1, max_len: 8}];
+}
+
+message GroupSecretCodeResponse {}
+
+message GroupSecretEnterRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  string secret_code = 2;
+}
+
+message GroupSecretEnterResponse {}
 
 // 群马甲用户列表请求
 message GroupFakersRequest {
