@@ -24,50 +24,27 @@ func (g Group) Secret(ctx context.Context, in *web.GroupSecretRequest) (*web.Gro
 	}
 
 	isSecret := int(in.GetIsSecret())
-	if isSecret == model.GroupIsSecretYes {
-		var secretCode string
-		if err := g.GroupRepo.Model(ctx).
-			Select("IFNULL(secret_code, '')").
-			Where("id = ?", group.Id).
-			Scan(&secretCode).Error; err != nil {
-			return nil, err
-		}
-		if strings.TrimSpace(secretCode) == "" {
-			return nil, errorx.New(400, "请先设置入群密码")
-		}
+	code := strings.TrimSpace(in.GetSecretCode())
+	if utf8.RuneCountInString(code) > 8 {
+		return nil, errorx.New(400, "入群密码长度为 1-8 个字符")
+	}
+	if isSecret == model.GroupIsSecretYes && code == "" {
+		return nil, errorx.New(400, "入群密码不能为空")
 	}
 
-	_, err = g.GroupRepo.UpdateByWhere(ctx, map[string]any{
+	data := map[string]any{
 		"is_secret":  isSecret,
 		"updated_at": time.Now(),
-	}, "id = ?", group.Id)
+	}
+	if isSecret == model.GroupIsSecretYes || code != "" {
+		data["secret_code"] = code
+	}
+
+	_, err = g.GroupRepo.UpdateByWhere(ctx, data, "id = ?", group.Id)
 	if err != nil {
 		return nil, err
 	}
 	return &web.GroupSecretResponse{}, nil
-}
-
-// SecretCode 设置入群密码（仅群主/管理员）
-func (g Group) SecretCode(ctx context.Context, in *web.GroupSecretCodeRequest) (*web.GroupSecretCodeResponse, error) {
-	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
-	group, err := g.loadManageableGroup(ctx, int(in.GetGroupId()), uid)
-	if err != nil {
-		return nil, err
-	}
-
-	code := strings.TrimSpace(in.GetSecretCode())
-	if code == "" || utf8.RuneCountInString(code) > 8 {
-		return nil, errorx.New(400, "入群密码长度为 1-8 个字符")
-	}
-
-	_, err = g.GroupRepo.UpdateByWhere(ctx, map[string]any{
-		"secret_code": code,
-		"updated_at":  time.Now(),
-	}, "id = ?", group.Id)
-	if err != nil {
-		return nil, err
-	}
-	return &web.GroupSecretCodeResponse{}, nil
 }
 
 // SecretEnter 群外用户凭密码加入群聊

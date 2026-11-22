@@ -50,8 +50,6 @@ type IGroupHandler interface {
 	Overt(ctx context.Context, in *GroupOvertRequest) (*GroupOvertResponse, error)
 	// 开启/关闭进群密码（群主/管理员）
 	Secret(ctx context.Context, in *GroupSecretRequest) (*GroupSecretResponse, error)
-	// 设置入群密码（群主/管理员）
-	SecretCode(ctx context.Context, in *GroupSecretCodeRequest) (*GroupSecretCodeResponse, error)
 	// 密码入群（群外用户）
 	SecretEnter(ctx context.Context, in *GroupSecretEnterRequest) (*GroupSecretEnterResponse, error)
 	// 群马甲用户列表（group_faker 关联的 user_faker 资料）
@@ -244,15 +242,6 @@ func RegisterGroupHandler(r gin.IRoutes, interceptor interface {
 		}
 
 		return handler.Secret(ctx.Request.Context(), &in)
-	}))
-
-	r.POST("/api/v1/group/secret-code", interceptor.Do(func(ctx *gin.Context) (any, error) {
-		var in GroupSecretCodeRequest
-		if err := interceptor.ShouldProto(ctx, &in); err != nil {
-			return nil, err
-		}
-
-		return handler.SecretCode(ctx.Request.Context(), &in)
 	}))
 
 	r.POST("/api/v1/group/secret-enter", interceptor.Do(func(ctx *gin.Context) (any, error) {

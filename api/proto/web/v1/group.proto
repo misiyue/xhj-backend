@@ -161,14 +161,6 @@ service Group {
     };
   }
 
-  // 设置入群密码（群主/管理员）
-  rpc SecretCode(GroupSecretCodeRequest) returns (GroupSecretCodeResponse) {
-    option (google.api.http) = {
-      post: "/api/v1/group/secret-code"
-      body: "*"
-    };
-  }
-
   // 密码入群（群外用户）
   rpc SecretEnter(GroupSecretEnterRequest) returns (GroupSecretEnterResponse) {
     option (google.api.http) = {
@@ -447,16 +439,10 @@ message GroupSecretRequest {
   int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
   // 0:关闭 1:开启
   int32 is_secret = 2 [(buf.validate.field).int32 = {in:[0, 1]}];
+  string secret_code = 3 [(buf.validate.field).string = {max_len: 8}];
 }
 
 message GroupSecretResponse {}
-
-message GroupSecretCodeRequest {
-  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
-  string secret_code = 2 [(buf.validate.field).string = {min_len: 1, max_len: 8}];
-}
-
-message GroupSecretCodeResponse {}
 
 message GroupSecretEnterRequest {
   int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
