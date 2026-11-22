@@ -19,6 +19,7 @@ service Banner {
 message BannerAdApplyRequest {
   string banner = 1 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
   string title = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  string url = 3 [(buf.validate.field).string = {max_len: 255}];
 }
 
 message BannerAdApplyResponse {}

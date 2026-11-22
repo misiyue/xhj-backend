@@ -27,6 +27,7 @@ type BannerAdApplyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Banner        string                 `protobuf:"bytes,1,opt,name=banner,proto3" json:"banner,omitempty"`
 	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	Url           string                 `protobuf:"bytes,3,opt,name=url,proto3" json:"url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -75,6 +76,13 @@ func (x *BannerAdApplyRequest) GetTitle() string {
 	return ""
 }
 
+func (x *BannerAdApplyRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
 type BannerAdApplyResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -115,12 +123,13 @@ var File_web_v1_banner_proto protoreflect.FileDescriptor
 
 const file_web_v1_banner_proto_rawDesc = "" +
 	"\n" +
-	"\x13web/v1/banner.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\"\\\n" +
+	"\x13web/v1/banner.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\"x\n" +
 	"\x14BannerAdApplyRequest\x12\"\n" +
 	"\x06banner\x18\x01 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x06banner\x12 \n" +
 	"\x05title\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x05title\"\x17\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xff\x01R\x05title\x12\x1a\n" +
+	"\x03url\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xff\x01R\x03url\"\x17\n" +
 	"\x15BannerAdApplyResponse2n\n" +
 	"\x06Banner\x12d\n" +
 	"\aAdApply\x12\x19.web.BannerAdApplyRequest\x1a\x1a.web.BannerAdApplyResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/v1/banner/ad-applyB\fZ\n" +

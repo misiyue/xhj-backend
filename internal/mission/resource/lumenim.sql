@@ -282,6 +282,7 @@ CREATE TABLE IF NOT EXISTS `banner_ad_apply`
     `id`         int(11)      NOT NULL AUTO_INCREMENT,
     `user_id`    int(11)               DEFAULT NULL COMMENT '用户id',
     `banner`     varchar(255)          DEFAULT NULL COMMENT '轮播图',
+    `url`        varchar(255)          DEFAULT NULL COMMENT '跳转链接',
     `title`      varchar(255)          DEFAULT NULL COMMENT '广告名称',
     `status`     tinyint(4)            DEFAULT '0' COMMENT '状态：0-待审核，1-通过，-1-拒绝',
     `deal_time`  datetime              DEFAULT NULL COMMENT '处理时间',

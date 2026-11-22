@@ -31,10 +31,11 @@ func (b *Banner) AdApply(ctx context.Context, in *web.BannerAdApplyRequest) (*we
 
 	banner := strings.TrimSpace(in.GetBanner())
 	title := strings.TrimSpace(in.GetTitle())
+	jumpURL := strings.TrimSpace(in.GetUrl())
 	if banner == "" || title == "" {
 		return nil, entity.ErrInvalidParams
 	}
-	if utf8.RuneCountInString(banner) > 255 || utf8.RuneCountInString(title) > 255 {
+	if utf8.RuneCountInString(banner) > 255 || utf8.RuneCountInString(title) > 255 || utf8.RuneCountInString(jumpURL) > 255 {
 		return nil, errorx.New(400, "参数长度超出限制")
 	}
 
@@ -49,6 +50,7 @@ func (b *Banner) AdApply(ctx context.Context, in *web.BannerAdApplyRequest) (*we
 	if err := b.BannerAdApplyRepo.Create(ctx, &model.BannerAdApply{
 		UserId: uid,
 		Banner: banner,
+		Url:    jumpURL,
 		Title:  title,
 		Status: model.BannerAdApplyStatusWait,
 	}); err != nil {

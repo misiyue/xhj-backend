@@ -12,6 +12,7 @@ type BannerAdApply struct {
 	Id        int        `gorm:"column:id;primaryKey;autoIncrement;type:int(11)" json:"id"`
 	UserId    int        `gorm:"column:user_id;type:int(11)" json:"user_id"`
 	Banner    string     `gorm:"column:banner;type:varchar(255)" json:"banner"`
+	Url       string     `gorm:"column:url;type:varchar(255)" json:"url"`
 	Title     string     `gorm:"column:title;type:varchar(255)" json:"title"`
 	Status    int        `gorm:"column:status;type:tinyint(4);default:0" json:"status"`
 	DealTime  *time.Time `gorm:"column:deal_time;type:datetime" json:"deal_time"`

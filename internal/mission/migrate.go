@@ -213,6 +213,14 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		}
 	}
 
+	if app.DB.Migrator().HasTable("banner_ad_apply") && !app.DB.Migrator().HasColumn(&model.BannerAdApply{}, "url") {
+		if err := app.DB.Exec(
+			"ALTER TABLE `banner_ad_apply` ADD COLUMN `url` varchar(255) NULL DEFAULT NULL COMMENT '跳转链接' AFTER `banner`",
+		).Error; err != nil {
+			logger.Warnf("add banner_ad_apply.url: %v", err)
+		}
+	}
+
 	logger.Infof("数据库表结构迁移成功")
 	return nil
 }
