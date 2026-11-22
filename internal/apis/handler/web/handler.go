@@ -36,6 +36,7 @@ type V1 struct {
 	Message      *talk.Publish
 	Invite       *v1.Invite
 	Notice       *v1.Notice
+	Banner       *v1.Banner
 	KYC          *v1.KYC
 	Wallet       *v1.Wallet
 	GroupRobot   *v1.GroupRobot

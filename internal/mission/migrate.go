@@ -40,6 +40,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.Group{},
 		&model.GroupApply{},
 		&model.GroupAdApply{},
+		&model.BannerAdApply{},
 		&model.GroupMember{},
 		&model.GroupNotice{},
 		&model.GroupVote{},

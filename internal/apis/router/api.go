@@ -129,6 +129,14 @@ func RegisterWebRoute(conf *config.Config, router *gin.Engine, handler *web.Hand
 
 	web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
 	web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
+	if handler.V1.Banner == nil && handler.UserRepo != nil {
+		handler.V1.Banner = &v1.Banner{BannerAdApplyRepo: repo.NewBannerAdApply(handler.UserRepo.Db)}
+	} else if handler.V1.Banner != nil && handler.V1.Banner.BannerAdApplyRepo == nil && handler.UserRepo != nil {
+		handler.V1.Banner.BannerAdApplyRepo = repo.NewBannerAdApply(handler.UserRepo.Db)
+	}
+	if handler.V1.Banner != nil {
+		web2.RegisterBannerHandler(api, resp, handler.V1.Banner)
+	}
 
 	registerCustomApiRouter(resp, router, api, handler)
 }

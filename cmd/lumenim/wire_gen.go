@@ -500,6 +500,10 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	wallet := &v1.Wallet{
 		WalletService: walletService,
 	}
+	bannerAdApply := repo.NewBannerAdApply(db)
+	bannerHandler := &v1.Banner{
+		BannerAdApplyRepo: bannerAdApply,
+	}
 	groupRobot := repo.NewGroupRobot(db)
 	groupRobotService := &service.GroupRobotService{
 		GroupRobotRepo:  groupRobot,
@@ -539,6 +543,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		KYC:          kyc,
 		Wallet:       wallet,
 		GroupRobot:   v1GroupRobot,
+		Banner:       bannerHandler,
 	}
 	webHandler := &web.Handler{
 		V1:       webV1,

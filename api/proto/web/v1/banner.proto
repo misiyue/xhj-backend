@@ -1,0 +1,24 @@
+syntax = "proto3";
+package web;
+
+option go_package = "web/v1;web";
+
+import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
+
+service Banner {
+  // 轮播广告投放申请
+  rpc AdApply(BannerAdApplyRequest) returns (BannerAdApplyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/banner/ad-apply"
+      body: "*"
+    };
+  }
+}
+
+message BannerAdApplyRequest {
+  string banner = 1 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+  string title = 2 [(buf.validate.field).string = {min_len: 1, max_len: 255}];
+}
+
+message BannerAdApplyResponse {}
