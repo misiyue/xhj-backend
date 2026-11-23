@@ -267,7 +267,9 @@ type GroupDetailResponse struct {
 	// 是否开启进群密码：0 否 1 是
 	IsSecret int32 `protobuf:"varint,13,opt,name=is_secret,json=isSecret,proto3" json:"is_secret,omitempty"`
 	// 入群密码（仅群主/管理员返回）
-	SecretCode    string `protobuf:"bytes,14,opt,name=secret_code,json=secretCode,proto3" json:"secret_code,omitempty"`
+	SecretCode string `protobuf:"bytes,14,opt,name=secret_code,json=secretCode,proto3" json:"secret_code,omitempty"`
+	// 是否群成员：0 否 1 是
+	IsMember      int32 `protobuf:"varint,15,opt,name=is_member,json=isMember,proto3" json:"is_member,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -398,6 +400,13 @@ func (x *GroupDetailResponse) GetSecretCode() string {
 		return x.SecretCode
 	}
 	return ""
+}
+
+func (x *GroupDetailResponse) GetIsMember() int32 {
+	if x != nil {
+		return x.IsMember
+	}
+	return 0
 }
 
 // 群成员列表接口请求参数
@@ -2859,7 +2868,7 @@ const file_web_v1_group_proto_rawDesc = "" +
 	"\x13GroupCreateResponse\x12\x1f\n" +
 	"\bgroup_id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\agroupId\"8\n" +
 	"\x12GroupDetailRequest\x12\"\n" +
-	"\bgroup_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\agroupId\"\x99\x05\n" +
+	"\bgroup_id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\agroupId\"\xb6\x05\n" +
 	"\x13GroupDetailResponse\x12\x1f\n" +
 	"\bgroup_id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\agroupId\x12#\n" +
 	"\n" +
@@ -2881,7 +2890,8 @@ const file_web_v1_group_proto_rawDesc = "" +
 	"\x0fis_allow_invite\x18\f \x01(\x05R\risAllowInvite\x12\x1b\n" +
 	"\tis_secret\x18\r \x01(\x05R\bisSecret\x12\x1f\n" +
 	"\vsecret_code\x18\x0e \x01(\tR\n" +
-	"secretCode\x1a\x8a\x01\n" +
+	"secretCode\x12\x1b\n" +
+	"\tis_member\x18\x0f \x01(\x05R\bisMember\x1a\x8a\x01\n" +
 	"\x06Notice\x12\x18\n" +
 	"\acontent\x18\x01 \x01(\tR\acontent\x12\x1d\n" +
 	"\n" +

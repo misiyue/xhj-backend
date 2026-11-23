@@ -249,6 +249,9 @@ message GroupDetailResponse{
   // 入群密码（仅群主/管理员返回）
   string secret_code = 14;
 
+  // 是否群成员：0 否 1 是
+  int32 is_member = 15;
+
   message Notice{
     string content = 1;
     string created_at = 2;

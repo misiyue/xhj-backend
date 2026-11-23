@@ -149,6 +149,10 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 	if isAllowInvite == 0 {
 		isAllowInvite = 1 // 库中无该列或旧数据时默认允许互加
 	}
+	isMember := 0
+	if g.GroupMemberRepo.IsMember(ctx, int(in.GroupId), uid, false) {
+		isMember = 1
+	}
 	resp := &web.GroupDetailResponse{
 		GroupId:       int32(groupInfo.Id),
 		GroupName:     groupInfo.Name,
@@ -161,6 +165,7 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 		IsOvert:       int32(groupInfo.IsOvert),
 		IsAllowInvite: isAllowInvite,
 		IsSecret:      int32(groupInfo.IsSecret),
+		IsMember:      int32(isMember),
 		VisitCard:     g.GroupMemberRepo.GetMemberRemark(ctx, int(in.GroupId), uid),
 		Notice: &web.GroupDetailResponse_Notice{
 			Content:        "",

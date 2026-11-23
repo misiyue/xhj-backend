@@ -452,7 +452,7 @@ type CommonExploreListRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// 位置筛选，多个用英文逗号分隔，如 index,tab；空表示不限
 	Positions string `protobuf:"bytes,1,opt,name=positions,proto3" json:"positions,omitempty"`
-	// 开放端筛选：h5 / pc / app；不传则不限
+	// 开放端筛选：h5 / pc / app；不传或空时默认 app
 	End           string `protobuf:"bytes,2,opt,name=end,proto3" json:"end,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -32,7 +32,7 @@ type IUserHandler interface {
 	UnreadSummary(ctx context.Context, in *UserUnreadSummaryRequest) (*UserUnreadSummaryResponse, error)
 	// 用户指令列表（分页，按 id 倒序）
 	UserCmdList(ctx context.Context, in *UserCmdListRequest) (*UserCmdListResponse, error)
-	// 用户指令保存（id=0 新增，id>0 编辑）
+	// 用户指令保存（id=0 新增，id&gt;0 编辑）
 	UserCmdSave(ctx context.Context, in *UserCmdSaveRequest) (*UserCmdSaveResponse, error)
 	// 删除用户指令（仅本人）
 	UserCmdDel(ctx context.Context, in *UserCmdDelRequest) (*UserCmdDelResponse, error)

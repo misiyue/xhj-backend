@@ -635,11 +635,13 @@ func (*UserMobileUpdateResponse) Descriptor() ([]byte, []int) {
 
 // 用户邮箱更新接口请求参数
 type UserEmailUpdateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
-	Password      string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
-	Code          string                 `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
-	EmailCode     string                 `protobuf:"bytes,4,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Email    string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	Password string                 `protobuf:"bytes,2,opt,name=password,proto3" json:"password,omitempty"`
+	// 验证码（与 email_code 二选一，兼容旧字段名 code）
+	Code string `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
+	// 验证码（前端常用字段名，与 username-update 的 email_code 一致）
+	EmailCode     string `protobuf:"bytes,4,opt,name=email_code,json=emailCode,proto3" json:"email_code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -5578,11 +5580,13 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\x06mobile\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06mobile\x12#\n" +
 	"\bpassword\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bpassword\x12#\n" +
 	"\bsms_code\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x98\x01\x06R\asmsCode\"\x1a\n" +
-	"\x18UserMobileUpdateResponse\"z\n" +
+	"\x18UserMobileUpdateResponse\"\x8f\x01\n" +
 	"\x16UserEmailUpdateRequest\x12\x1d\n" +
 	"\x05email\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x05email\x12#\n" +
-	"\bpassword\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bpassword\x12\x1c\n" +
-	"\x04code\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x98\x01\x06R\x04code\"\x19\n" +
+	"\bpassword\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\bpassword\x12\x12\n" +
+	"\x04code\x18\x03 \x01(\tR\x04code\x12\x1d\n" +
+	"\n" +
+	"email_code\x18\x04 \x01(\tR\temailCode\"\x19\n" +
 	"\x17UserEmailUpdateResponse\"\x81\x01\n" +
 	"\x19UserUsernameUpdateRequest\x12)\n" +
 	"\busername\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x06\x18\x14R\busername\x12\x1a\n" +
