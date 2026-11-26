@@ -549,6 +549,7 @@ CREATE TABLE `users` (
  `birthday` varchar(10) NOT NULL DEFAULT '' COMMENT '生日',
  `status` int NOT NULL DEFAULT '1' COMMENT '用户状态[1:正常;2:停用;3:注销]',
  `is_robot` tinyint unsigned NOT NULL DEFAULT '2' COMMENT '是否机器人[1:是;2:否;]',
+ `level` tinyint(4) DEFAULT '0' COMMENT '等级：0-V0，1-PRO',
  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
  PRIMARY KEY (`id`) USING BTREE,

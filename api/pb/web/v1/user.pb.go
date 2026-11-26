@@ -88,8 +88,10 @@ type UserDetailResponse struct {
 	UnUpdateAt string `protobuf:"bytes,16,opt,name=un_update_at,json=unUpdateAt,proto3" json:"un_update_at,omitempty"`
 	// 是否可修改 username：0-否，1-是（3 个月可改一次）
 	UnUpdateEnable int32 `protobuf:"varint,17,opt,name=un_update_enable,json=unUpdateEnable,proto3" json:"un_update_enable,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// 等级：0-V0，1-PRO
+	Level         int32 `protobuf:"varint,18,opt,name=level,proto3" json:"level,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UserDetailResponse) Reset() {
@@ -237,6 +239,13 @@ func (x *UserDetailResponse) GetUnUpdateAt() string {
 func (x *UserDetailResponse) GetUnUpdateEnable() int32 {
 	if x != nil {
 		return x.UnUpdateEnable
+	}
+	return 0
+}
+
+func (x *UserDetailResponse) GetLevel() int32 {
+	if x != nil {
+		return x.Level
 	}
 	return 0
 }
@@ -5514,7 +5523,7 @@ var File_web_v1_user_proto protoreflect.FileDescriptor
 const file_web_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"\x11web/v1/user.proto\x12\x03web\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\"\x13\n" +
-	"\x11UserDetailRequest\"\xbf\x04\n" +
+	"\x11UserDetailRequest\"\xdb\x04\n" +
 	"\x12UserDetailResponse\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x1d\n" +
 	"\auser_id\x18\t \x01(\x05B\x04\xe2A\x01\x02R\x06userId\x12 \n" +
@@ -5535,7 +5544,8 @@ const file_web_v1_user_proto_rawDesc = "" +
 	"\fis_subscribe\x18\x0f \x01(\x05B\x04\xe2A\x01\x02R\visSubscribe\x12 \n" +
 	"\fun_update_at\x18\x10 \x01(\tR\n" +
 	"unUpdateAt\x12.\n" +
-	"\x10un_update_enable\x18\x11 \x01(\x05B\x04\xe2A\x01\x02R\x0eunUpdateEnable\"\x14\n" +
+	"\x10un_update_enable\x18\x11 \x01(\x05B\x04\xe2A\x01\x02R\x0eunUpdateEnable\x12\x1a\n" +
+	"\x05level\x18\x12 \x01(\x05B\x04\xe2A\x01\x02R\x05level\"\x14\n" +
 	"\x12UserSettingRequest\"\xa4\x06\n" +
 	"\x13UserSettingResponse\x12D\n" +
 	"\tuser_info\x18\x01 \x01(\v2!.web.UserSettingResponse.UserInfoB\x04\xe2A\x01\x02R\buserInfo\x12C\n" +

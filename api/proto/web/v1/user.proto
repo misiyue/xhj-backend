@@ -351,6 +351,8 @@ message UserDetailResponse{
   string un_update_at = 16;
   // 是否可修改 username：0-否，1-是（3 个月可改一次）
   int32 un_update_enable = 17 [(google.api.field_behavior) = REQUIRED];
+  // 等级：0-V0，1-PRO
+  int32 level = 18 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 用户配置信息请求参数

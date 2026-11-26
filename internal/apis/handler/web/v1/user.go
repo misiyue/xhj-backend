@@ -108,6 +108,7 @@ func (u *User) Detail(ctx context.Context, _ *web.UserDetailRequest) (*web.UserD
 			return timeutil.FormatDatetime(*user.UnUpdateAt)
 		}(),
 		UnUpdateEnable: usernameUpdateEnable(user.UnUpdateAt),
+		Level:          int32(user.Level),
 	}, nil
 }
 
