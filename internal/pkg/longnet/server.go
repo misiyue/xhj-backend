@@ -134,8 +134,10 @@ func (s *Server) initTcpServer() {
 
 func (s *Server) initProcess() {
 	for _, v := range s.process {
+		p := v
 		s.eg.Go(func() error {
-			return v.Start(s.ctx, s)
+			logger.Infof("comet process start: %T", p)
+			return p.Start(s.ctx, s)
 		})
 	}
 }

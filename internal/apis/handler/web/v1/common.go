@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/config"
@@ -19,6 +20,7 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -40,6 +42,7 @@ type Common struct {
 	UserService         service.IUserService
 	EmailClient         *email.Client
 	TemplateService     service.ITemplateService
+	Redis               *redis.Client
 }
 
 // SendSms 发送短信验证码接口
@@ -515,4 +518,61 @@ func (c *Common) AppDictGet(ctx context.Context, in *web.CommonAppDictGetRequest
 		})
 	}
 	return out, nil
+}
+
+type cometServerInfo struct {
+	StartAt         string `json:"start_at"`
+	ActiveAt        string `json:"active_at"`
+	CurrConnNum     int32  `json:"curr_conn_num"`
+	CurrConnUserNum int32  `json:"curr_conn_user_num"`
+}
+
+// OnlineStats 查询 Comet WebSocket 在线连接/用户数（读 Redis im:server_infos）
+func (c *Common) OnlineStats(ctx context.Context) (map[string]any, error) {
+	if c.Redis == nil {
+		return nil, errorx.New(500, "Redis 未注入")
+	}
+
+	raw, err := c.Redis.HGetAll(ctx, cache.ServerInfoKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	servers := make([]map[string]any, 0, len(raw))
+	var connNum, userNum int32
+	alive := 0
+	for sid, val := range raw {
+		var info cometServerInfo
+		_ = json.Unmarshal([]byte(val), &info)
+		activeAt, parseErr := time.ParseInLocation(time.DateTime, info.ActiveAt, time.Local)
+		aliveNode := parseErr == nil && now.Sub(activeAt) <= time.Duration(cache.ServerInfoAliveSec)*time.Second
+		servers = append(servers, map[string]any{
+			"server_id":          sid,
+			"start_at":           info.StartAt,
+			"active_at":          info.ActiveAt,
+			"curr_conn_num":      info.CurrConnNum,
+			"curr_conn_user_num": info.CurrConnUserNum,
+			"alive":              aliveNode,
+		})
+		if aliveNode {
+			alive++
+			connNum += info.CurrConnNum
+			userNum += info.CurrConnUserNum
+		}
+	}
+
+	hint := ""
+	if len(raw) == 0 {
+		hint = "im:server_infos 为空：未启动 lumenim comet，或 comet 与 API 不是同一 Redis/db。请看 comet 日志是否有 heartbeat HSET failed"
+	}
+
+	return map[string]any{
+		"server_count": len(raw),
+		"alive_count":  alive,
+		"conn_num":     connNum,
+		"user_num":     userNum,
+		"servers":      servers,
+		"hint":         hint,
+	}, nil
 }

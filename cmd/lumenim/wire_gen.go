@@ -88,6 +88,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		UserService:         userService,
 		EmailClient:         emailClient,
 		TemplateService:     templateService,
+		Redis:               client,
 	}
 	registerLimiter := cache.NewRegisterLimiter(client)
 	jwtTokenStorage := cache.NewJwtTokenStorage(client)
@@ -694,6 +695,7 @@ func NewCometInjector(c *config.Config) *comet.Provider {
 	}
 	heartbeat := &comet.Heartbeat{
 		ServerStorage: serverStorage,
+		UserClient:    userClient,
 		Redis:         client,
 	}
 	userJwtAuthorize := provider.NewWebUserJwtAuthorize(c)

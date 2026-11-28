@@ -221,6 +221,14 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		}
 	}
 
+	if app.DB.Migrator().HasTable("users") && !app.DB.Migrator().HasColumn(&model.Users{}, "level_pro_at") {
+		if err := app.DB.Exec(
+			"ALTER TABLE `users` ADD COLUMN `level_pro_at` datetime NULL COMMENT '升级pro会员时间' AFTER `level`",
+		).Error; err != nil {
+			logger.Warnf("add users.level_pro_at: %v", err)
+		}
+	}
+
 	if app.DB.Migrator().HasTable("banner_ad_apply") && !app.DB.Migrator().HasColumn(&model.BannerAdApply{}, "url") {
 		if err := app.DB.Exec(
 			"ALTER TABLE `banner_ad_apply` ADD COLUMN `url` varchar(255) NULL DEFAULT NULL COMMENT '跳转链接' AFTER `banner`",

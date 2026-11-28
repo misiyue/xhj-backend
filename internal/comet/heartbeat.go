@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
+	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/pkg/longnet"
 	"github.com/gzydong/go-chat/internal/repository/cache"
 	"github.com/redis/go-redis/v9"
@@ -12,7 +13,9 @@ import (
 
 type Heartbeat struct {
 	ServerStorage *cache.ServerStorage
+	UserClient    *cache.UserClient
 	Redis         *redis.Client
+	startAt       string
 }
 
 type ServerInfo struct {
@@ -29,34 +32,71 @@ func (h *Heartbeat) Start(ctx context.Context, serv longnet.IServer) error {
 	timer := time.NewTicker(5 * time.Second)
 	defer timer.Stop()
 
-	h.save(ctx, serv)
+	h.startAt = time.Now().Format(time.DateTime)
+	logger.Infof("comet heartbeat started, server_id=%s", serv.ServerId())
+	h.save(serv)
 
 	for {
 		select {
 		case <-ctx.Done():
-			h.Redis.HDel(context.Background(), "im:server_infos", serv.ServerId())
+			bg := context.Background()
+			if err := h.Redis.HDel(bg, cache.ServerInfoKey, serv.ServerId()).Err(); err != nil {
+				logger.Errorf("comet heartbeat HDel %s: %v", cache.ServerInfoKey, err)
+			}
+			if h.ServerStorage != nil {
+				_ = h.ServerStorage.Del(bg, serv.ServerId())
+			}
 			return nil
 		case <-timer.C:
-			h.save(ctx, serv)
+			h.save(serv)
 		}
 	}
 }
 
-func (h *Heartbeat) save(ctx context.Context, serv longnet.IServer) {
+func (h *Heartbeat) save(serv longnet.IServer) {
+	if h == nil || h.Redis == nil {
+		logger.Errorf("comet heartbeat skipped: redis is nil")
+		return
+	}
+
+	bg := context.Background()
+	sm := serv.SessionManager()
+	if sm == nil {
+		logger.Errorf("comet heartbeat skipped: session manager is nil")
+		return
+	}
+
+	h.refreshClients(bg, serv, sm)
+
 	info := &ServerInfo{
-		StartAt: time.Now().Format(time.DateTime),
+		StartAt:         h.startAt,
+		ActiveAt:        time.Now().Format(time.DateTime),
+		CurrConnNum:     sm.GetSessionNum(),
+		CurrConnUserNum: sm.GetSessionUserNum(),
 	}
 
-	value := h.Redis.HGet(ctx, "im:server_infos", serv.ServerId()).Val()
-	if value != "" {
-		_ = jsonutil.Unmarshal(value, info)
+	if err := h.Redis.HSet(bg, cache.ServerInfoKey, serv.ServerId(), jsonutil.Encode(info)).Err(); err != nil {
+		logger.Errorf("comet heartbeat HSET %s failed: %v", cache.ServerInfoKey, err)
+		return
 	}
+	if h.ServerStorage != nil {
+		if err := h.ServerStorage.Set(bg, serv.ServerId(), time.Now().Unix()); err != nil {
+			logger.Errorf("comet heartbeat server_ids failed: %v", err)
+		}
+	}
+}
 
-	info.ActiveAt = time.Now().Format(time.DateTime)
-	info.CurrConnNum = serv.SessionManager().GetSessionNum()
-	info.CurrConnUserNum = serv.SessionManager().GetSessionUserNum()
-	info.SendMessageNum = 0
-	info.RecvMessageNum = 0
-
-	h.Redis.HSet(ctx, "im:server_infos", serv.ServerId(), jsonutil.Encode(info))
+func (h *Heartbeat) refreshClients(ctx context.Context, serv longnet.IServer, sm longnet.ISessionManager) {
+	if h.UserClient == nil {
+		return
+	}
+	sid := serv.ServerId()
+	for sess := range sm.Iterator() {
+		if sess == nil || sess.UserId() <= 0 {
+			continue
+		}
+		if err := h.UserClient.Bind(ctx, sid, sess.ConnId(), sess.UserId()); err != nil {
+			logger.Errorf("comet heartbeat bind uid=%d: %v", sess.UserId(), err)
+		}
+	}
 }

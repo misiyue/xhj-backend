@@ -358,6 +358,10 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 		handler.V1.User.MerchantOrderHmpayNotify(c)
 	})
 
+	api.GET("/api/v1/common/online-stats", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Common.OnlineStats(c.Request.Context())
+	}))
+
 	router.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
 		in := &web2.CommonAppVersionLatestRequest{
 			Platform: strings.ToLower(strings.TrimSpace(c.Query("platform"))),

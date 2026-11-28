@@ -42,9 +42,11 @@ func (h *Handler) OnMessage(smg longnet.ISessionManager, c longnet.ISession, mes
 	}
 
 	switch event {
-	case "ping":
+	case "ping", "pong":
 		_ = h.UserClient.Bind(context.Background(), server.ID(), c.ConnId(), c.UserId())
-		_ = c.Write([]byte(`{"event":"pong"}`))
+		if event == "ping" {
+			_ = c.Write([]byte(`{"event":"pong"}`))
+		}
 
 	case "im.message.keyboard":
 		_ = h.PushMessage.Push(context.Background(), entity.ImTopicChat, &entity.SubscribeMessage{
