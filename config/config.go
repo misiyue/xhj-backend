@@ -20,6 +20,7 @@ type Config struct {
 	Server     *Server     `json:"server" yaml:"server"`
 	Nsq        *Nsq        `json:"nsq" yaml:"nsq"`
 	OAuth      *OAuth      `json:"oauth" yaml:"oauth"`
+	Yunxin     *Yunxin     `json:"yunxin" yaml:"yunxin"`
 	Trtc       *Trtc       `json:"trtc" yaml:"trtc"`
 	Wallet     *Wallet     `json:"wallet" yaml:"wallet"`
 	Marzban    *Marzban    `json:"marzban" yaml:"marzban"`
@@ -37,6 +38,16 @@ type Server struct {
 	ReservePercent int    `json:"reserve_percent" yaml:"reserve_percent"` // 为其他服务预留的资源百分比（0-100），默认35
 }
 
+type Yunxin struct {
+	Enabled   bool   `json:"enabled" yaml:"enabled"`
+	AppKey    string `json:"app_key" yaml:"app_key"`
+	AppSecret string `json:"app_secret" yaml:"app_secret"`
+	// ServerAPIBaseURL is primarily useful for private deployments and tests.
+	// Leave empty to use the public Yunxin NIM server API.
+	ServerAPIBaseURL string `json:"server_api_base_url" yaml:"server_api_base_url"`
+}
+
+// Trtc is retained for legacy configuration compatibility. New calls use Yunxin.
 type Trtc struct {
 	SdkAppId  int    `json:"sdk_app_id" yaml:"sdk_app_id"`
 	SecretKey string `json:"secret_key" yaml:"secret_key"`

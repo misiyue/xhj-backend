@@ -8,6 +8,7 @@ import (
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/logic"
+	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
@@ -52,6 +53,20 @@ type Apply struct {
 //	@Security		Bearer
 func (a Apply) Create(ctx context.Context, in *web.GroupApplyCreateRequest) (*web.GroupApplyCreateResponse, error) {
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+
+	group, err := a.GroupRepo.FindById(ctx, int(in.GroupId))
+	if err != nil {
+		return nil, err
+	}
+	if group == nil || group.Id == 0 {
+		return nil, entity.ErrGroupNotExist
+	}
+	if group.IsDismiss == model.Yes {
+		return nil, entity.ErrGroupDismissed
+	}
+	if group.SecretEnabled() {
+		return nil, errorx.New(400, "该群已开启密码验证")
+	}
 
 	apply, err := a.GroupApplyRepo.FindByWhere(ctx, "group_id = ? and user_id = ? and status = ?", in.GroupId, uid, model.GroupApplyStatusWait)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -216,6 +231,10 @@ func (a Apply) Agree(ctx context.Context, in *web.GroupApplyAgreeRequest) (*web.
 		return nil, err
 	}
 
+	if a.GroupApplyStorage != nil {
+		a.GroupApplyStorage.Decr(ctx, uid)
+	}
+
 	return &web.GroupApplyAgreeResponse{}, nil
 }
 
@@ -259,6 +278,10 @@ func (a Apply) Decline(ctx context.Context, in *web.GroupApplyDeclineRequest) (*
 	_, err = a.GroupApplyRepo.UpdateByWhere(ctx, data, "id = ?", in.ApplyId)
 	if err != nil {
 		return nil, err
+	}
+
+	if a.GroupApplyStorage != nil {
+		a.GroupApplyStorage.Decr(ctx, uid)
 	}
 
 	return &web.GroupApplyDeclineResponse{}, nil

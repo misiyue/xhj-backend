@@ -15,8 +15,14 @@ const (
 	// ServerKeyExpire 过期的运行服务
 	ServerKeyExpire = "server_ids_expire"
 
+	// ServerInfoKey Comet 心跳写入的在线统计（field=serverId, value=JSON）
+	ServerInfoKey = "im:server_infos"
+
 	// ServerOverTime 运行检测超时时间（单位秒）
 	ServerOverTime = 50
+
+	// ServerInfoAliveSec 心跳超过该秒数视为节点已下线
+	ServerInfoAliveSec = 20
 )
 
 type ServerStorage struct {

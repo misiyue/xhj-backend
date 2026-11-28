@@ -84,6 +84,24 @@ func (h *Handler) onConsumeTalkGroupMessage(ctx context.Context, in entity.SubEv
 		return
 	}
 
+	// 指定投递目标时，仅推送给这些用户（用于仅本人可见的系统提示）
+	if len(in.TargetUserIds) > 0 {
+		allow := make(map[int]struct{}, len(in.TargetUserIds))
+		for _, uid := range in.TargetUserIds {
+			allow[uid] = struct{}{}
+		}
+		filtered := make([]int, 0, len(in.TargetUserIds))
+		for _, memberId := range memberIds {
+			if _, ok := allow[memberId]; ok {
+				filtered = append(filtered, memberId)
+			}
+		}
+		memberIds = filtered
+	}
+	if len(memberIds) == 0 {
+		return
+	}
+
 	var clientIds []int64
 	for _, memberId := range memberIds {
 		ids := h.serv.SessionManager().GetConnIds(int64(memberId))

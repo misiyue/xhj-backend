@@ -191,29 +191,45 @@ type FreezeAccountData struct {
 
 // --- API methods ---
 
-func (c *Client) doPost(path string, params url.Values) ([]byte, error) {
+func (c *Client) doPost(path string, params url.Values) (body []byte, status int, err error) {
 	reqURL := c.BaseURL + path
 	resp, err := c.HTTPClient.Post(reqURL, "application/x-www-form-urlencoded", strings.NewReader(params.Encode()))
 	if err != nil {
-		return nil, fmt.Errorf("wallet api request failed: %w", err)
+		return nil, 0, fmt.Errorf("wallet api request failed: %w", err)
 	}
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+	body, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("wallet api read body failed: %w", err)
+		return nil, resp.StatusCode, fmt.Errorf("wallet api read body failed: %w", err)
 	}
-	return body, nil
+	return body, resp.StatusCode, nil
+}
+
+func truncateBody(b []byte, n int) string {
+	s := strings.TrimSpace(string(b))
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", "")
+	if len(s) > n {
+		return s[:n] + "..."
+	}
+	return s
 }
 
 // post sends a POST request with form-encoded body and decodes the JSON response.
 func (c *Client) post(path string, params url.Values) (*apiResponse, error) {
-	body, err := c.doPost(path, params)
+	body, status, err := c.doPost(path, params)
 	if err != nil {
 		return nil, err
 	}
 	var baseResp apiResponse
 	if err := json.Unmarshal(body, &baseResp); err != nil {
-		return nil, fmt.Errorf("wallet api decode response failed: %w", err)
+		snippet := truncateBody(body, 180)
+		reqURL := c.BaseURL + path
+		// 常见于 base_url 配错、网关 404/502 返回 HTML（以 < 开头）
+		if len(body) > 0 && (body[0] == '<' || status >= 400) {
+			return nil, fmt.Errorf("wallet api non-json response (check wallet.base_url): status=%d url=%s body=%q", status, reqURL, snippet)
+		}
+		return nil, fmt.Errorf("wallet api decode response failed: status=%d url=%s body=%q: %w", status, reqURL, snippet, err)
 	}
 	if baseResp.Code != 1 {
 		return &baseResp, fmt.Errorf("wallet api error: %s", baseResp.Msg)

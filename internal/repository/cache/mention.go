@@ -18,8 +18,12 @@ func NewMentionStorage(rds *redis.Client) *MentionStorage {
 	return &MentionStorage{rds}
 }
 
-// mentionExpireAt @提及消息过期时间 - 7天
-const mentionExpireAt = 7 * 24 * time.Hour
+const (
+	// mentionExpireAt @提及消息过期时间 - 7天
+	mentionExpireAt = 7 * 24 * time.Hour
+	// mentionMaxMembers 单用户单群最多保留的未读 @ 条数，超出按 score 淘汰最旧
+	mentionMaxMembers = 200
+)
 
 // AddMention 添加一条@提及消息记录
 // @params uid     被@的用户ID
@@ -32,6 +36,8 @@ func (m *MentionStorage) AddMention(ctx context.Context, uid, groupId int, msgId
 
 	pipe := m.redis.Pipeline()
 	pipe.ZAdd(ctx, key, redis.Z{Score: score, Member: msgId})
+	// 只保留最新 mentionMaxMembers 条，防止 @全体 / 高频 @ 撑爆 ZSET
+	pipe.ZRemRangeByRank(ctx, key, 0, -int64(mentionMaxMembers)-1)
 	pipe.Expire(ctx, key, mentionExpireAt)
 	_, err := pipe.Exec(ctx)
 	return err

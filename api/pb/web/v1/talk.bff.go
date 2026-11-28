@@ -26,7 +26,7 @@ type ITalkHandler interface {
 	SessionList(ctx context.Context, in *TalkSessionListRequest) (*TalkSessionListResponse, error)
 	// 会话未读数清除接口
 	SessionClearUnreadNum(ctx context.Context, in *TalkSessionClearUnreadNumRequest) (*TalkSessionClearUnreadNumResponse, error)
-	// 设置私聊消息保留天数
+	// 设置会话消息保留天数（私聊按 session_id 同步双方；群聊仅更新当前用户该群会话）
 	SessionSetRetainDays(ctx context.Context, in *TalkSessionSetRetainDaysRequest) (*TalkSessionSetRetainDaysResponse, error)
 }
 

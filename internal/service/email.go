@@ -16,6 +16,8 @@ var _ IEmailService = (*EmailService)(nil)
 type IEmailService interface {
 	// Verify 验证邮箱验证码
 	Verify(ctx context.Context, channel string, email string, code string) bool
+	// VerifyAny 在多个 channel 中验证，返回命中的 channel
+	VerifyAny(ctx context.Context, channels []string, email string, code string) (string, bool)
 	// Delete 删除邮箱验证码记录
 	Delete(ctx context.Context, channel string, email string)
 	// Send 发送邮箱验证码
@@ -30,6 +32,11 @@ type EmailService struct {
 // Verify 验证邮箱验证码是否正确
 func (e *EmailService) Verify(ctx context.Context, channel string, email string, code string) bool {
 	return e.Storage.Verify(ctx, channel, email, code)
+}
+
+// VerifyAny 在多个 channel 中验证邮箱验证码
+func (e *EmailService) VerifyAny(ctx context.Context, channels []string, email string, code string) (string, bool) {
+	return e.Storage.VerifyAny(ctx, channels, email, code)
 }
 
 // Delete 删除邮箱验证码记录

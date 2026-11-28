@@ -45,8 +45,8 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		panic(fmt.Errorf("database error :%v", db.Error))
 	}
 
-	// 自动迁移数据库表
-	err = db.AutoMigrate(
+	// 自动迁移数据库表（逐表迁移，便于定位失败表）
+	models := []any{
 		&model.InviteCode{},
 		&model.OAuthUser{},
 		&model.SysMenu{},
@@ -59,9 +59,22 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 		&model.AppVersion{},
 		&model.AppExplore{},
 		&model.AppModule{},
-	)
-	if err != nil {
-		panic(fmt.Errorf("database error :%v", err))
+		&model.UserReport{},
+		&model.MarzbanCheckin{},
+		&model.MarzbanCheckinState{},
+	}
+	for _, m := range models {
+		if needAppDatetimeDefaults(m) {
+			table := m.(interface{ TableName() string }).TableName()
+			preFixAppTableNullTimestamps(db, table)
+		}
+		if err := db.AutoMigrate(m); err != nil {
+			panic(fmt.Errorf("database auto migrate %T error: %w", m, err))
+		}
+		if needAppDatetimeDefaults(m) {
+			table := m.(interface{ TableName() string }).TableName()
+			ensureAppDatetimeDefaults(db, table)
+		}
 	}
 
 	sqlDB, _ := db.DB()
@@ -71,4 +84,38 @@ func NewMySQLClient(conf *config.Config) *gorm.DB {
 	sqlDB.SetConnMaxLifetime(time.Duration(conf.MySQL.ConnMaxLifetime) * time.Second)
 
 	return db
+}
+
+func needAppDatetimeDefaults(m any) bool {
+	switch m.(type) {
+	case *model.AppExplore, *model.AppModule, *model.AppVersion, *model.UserReport:
+		return true
+	default:
+		return false
+	}
+}
+
+// preFixAppTableNullTimestamps 迁移前补齐空时间，避免 NOT NULL + DEFAULT 变更失败
+func preFixAppTableNullTimestamps(db *gorm.DB, table string) {
+	if table == "" || !db.Migrator().HasTable(table) {
+		return
+	}
+	_ = db.Exec(fmt.Sprintf("UPDATE `%s` SET `created_at` = NOW() WHERE `created_at` IS NULL", table)).Error
+	_ = db.Exec(fmt.Sprintf("UPDATE `%s` SET `updated_at` = NOW() WHERE `updated_at` IS NULL", table)).Error
+}
+
+// ensureAppDatetimeDefaults 确保 app 表时间列具备数据库级 DEFAULT（GORM 对已存在列不一定补全默认值）
+func ensureAppDatetimeDefaults(db *gorm.DB, table string) {
+	if table == "" || !db.Migrator().HasTable(table) {
+		return
+	}
+	err := db.Exec(fmt.Sprintf(
+		"ALTER TABLE `%s` "+
+			"MODIFY COLUMN `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', "+
+			"MODIFY COLUMN `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'",
+		table,
+	)).Error
+	if err != nil {
+		logger2.Warnf("ensure datetime defaults on %s: %v", table, err)
+	}
 }

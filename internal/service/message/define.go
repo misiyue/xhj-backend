@@ -166,8 +166,9 @@ type CreateMixedMessage struct {
 }
 
 type CreateMixedMessageItem struct {
-	Type    int    `json:"type"`    // 消息类型
-	Content string `json:"content"` // 消息内容
+	Type    int    `json:"type"`    // 消息类型（与单条消息 msg_type 一致）
+	Content string `json:"content"` // 文本可为纯文本或 TalkRecordExtraText JSON；其它类型为对应 extra JSON（图片可为 URL）
+	Link    string `json:"link"`    // 可选，图片跳转等
 }
 
 type CreateRTCCallMessage struct {
@@ -178,13 +179,7 @@ type CreateRTCCallMessage struct {
 	Type       int    `json:"type"`        // 通话类型 1:语音 2:视频
 	Status     int    `json:"status"`      // 通话状态 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
 	Duration   int    `json:"duration"`    // 通话时长
-}
-
-// SendRTCCallInvite 音视频通话邀请（仅离线 VoIP 唤醒，不写消息、不推 WebSocket）
-type SendRTCCallInvite struct {
-	TalkMode   int `json:"talk_mode"`
-	FromId     int `json:"from_id"`
-	ReceiverId int `json:"receiver_id"`
+	CallId     string `json:"call_id"`     // 云信 CallKit 通话 ID
 }
 
 type CreateRedEnvelopeMessage struct {
@@ -209,3 +204,18 @@ type CreateTransferMessage struct {
 	Remark     string  `json:"remark"`      // 转账备注
 }
 
+type CreateCmdMessageBtn struct {
+	Text string `json:"text"`
+	Url  string `json:"url"`
+}
+
+type CreateCmdMessage struct {
+	MsgId      string                `json:"msg_id"`
+	TalkMode   int                   `json:"talk_mode"`
+	FromId     int                   `json:"from_id"`
+	ReceiverId int                   `json:"receiver_id"`
+	QuoteId    string                `json:"quote_id"`
+	File       string                `json:"file"`
+	Intro      string                `json:"intro"`
+	Btns       []CreateCmdMessageBtn `json:"btns"`
+}

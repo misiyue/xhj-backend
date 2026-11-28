@@ -382,8 +382,11 @@ func (*NoticeClearUnreadResponse) Descriptor() ([]byte, []int) {
 }
 
 type NoticeArticleGetRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// 文章 ID；未传 code 时必填
+	Id int32 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	// 唯一编码；有值时优先按 code 查询
+	Code          string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -423,6 +426,13 @@ func (x *NoticeArticleGetRequest) GetId() int32 {
 		return x.Id
 	}
 	return 0
+}
+
+func (x *NoticeArticleGetRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
 }
 
 type NoticeArticleGetResponse struct {
@@ -536,9 +546,10 @@ const file_web_v1_notice_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\"\x1a\n" +
 	"\x18NoticeClearUnreadRequest\"\x1b\n" +
-	"\x19NoticeClearUnreadResponse\"2\n" +
-	"\x17NoticeArticleGetRequest\x12\x17\n" +
-	"\x02id\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x02id\"\xb6\x01\n" +
+	"\x19NoticeClearUnreadResponse\"=\n" +
+	"\x17NoticeArticleGetRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\"\xb6\x01\n" +
 	"\x18NoticeArticleGetResponse\x12\x14\n" +
 	"\x02id\x18\x01 \x01(\x05B\x04\xe2A\x01\x02R\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x18\n" +

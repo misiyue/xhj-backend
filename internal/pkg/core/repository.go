@@ -111,7 +111,8 @@ func (r *Repo[T]) FindByWhere(ctx context.Context, where string, args ...any) (*
 	err := r.Db.WithContext(ctx).Where(where, args...).First(&item).Error
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return item, nil
+		// 必须返回 nil：GORM 在未命中时可能已分配空对象，非 nil 会让调用方误判为查到记录
+		return nil, nil
 	}
 
 	if err != nil {

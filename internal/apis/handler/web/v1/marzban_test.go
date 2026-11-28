@@ -14,6 +14,7 @@ import (
 type marzbanServiceStub struct {
 	createdID int
 	queriedID int
+	checkinID int
 }
 
 func (s *marzbanServiceStub) CreateByID(_ context.Context, id int, dataLimit int64, _ int) (*service.MarzbanUserInfo, error) {
@@ -29,6 +30,41 @@ func (s *marzbanServiceStub) CreateByID(_ context.Context, id int, dataLimit int
 func (s *marzbanServiceStub) GetByID(_ context.Context, id int) (*service.MarzbanUserInfo, error) {
 	s.queriedID = id
 	return &service.MarzbanUserInfo{ID: id, Username: "xhj_0"}, nil
+}
+
+func (s *marzbanServiceStub) Checkin(_ context.Context, id int) (*service.MarzbanUserInfo, error) {
+	s.checkinID = id
+	return &service.MarzbanUserInfo{ID: id, Username: "xhj_0"}, nil
+}
+
+func (s *marzbanServiceStub) CheckinStatus(_ context.Context, id int) (bool, string, error) {
+	s.queriedID = id
+	return false, "", nil
+}
+
+func TestMarzbanCheckinUsesRequestUserWithoutLogin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	stub := &marzbanServiceStub{}
+	handler := &Marzban{MarzbanService: stub}
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = httptest.NewRequest("POST", "/api/v1/marzban/check-in", strings.NewReader(`{"id": 42}`))
+	ctx.Request.Header.Set("Content-Type", "application/json")
+	response, err := handler.Checkin(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 42, stub.checkinID)
+	require.Equal(t, 42, response.ID)
+}
+
+func TestMarzbanCheckinStatusUsesQueryUserWithoutLogin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	stub := &marzbanServiceStub{}
+	handler := &Marzban{MarzbanService: stub}
+	ctx, _ := gin.CreateTestContext(httptest.NewRecorder())
+	ctx.Request = httptest.NewRequest("GET", "/api/v1/marzban/check-in?id=42", nil)
+
+	_, err := handler.CheckinStatus(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 42, stub.queriedID)
 }
 
 func TestCreateMarzbanUserAllowsZeroIDWithoutLogin(t *testing.T) {

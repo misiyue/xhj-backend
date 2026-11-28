@@ -90,11 +90,11 @@ func (s *SetShards) Del(uid int64, sid int64) {
 }
 
 func (s *SetShards) GetUserNum() int32 {
-
 	num := 0
 	for _, shard := range s.shards {
+		shard.mu.RLock()
 		num += len(shard.items)
+		shard.mu.RUnlock()
 	}
-
 	return int32(num)
 }

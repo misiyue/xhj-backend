@@ -31,35 +31,39 @@ var usernamePattern = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_-]{5,19}$`)
 var _ web.IUserHandler = (*User)(nil)
 
 type User struct {
-	Config              *config.Config
-	Redis               *redis.Client
-	UsersRepo           *repo.Users
-	WalletUserRepo      *repo.WalletUser
-	MerchantRepo        *repo.Merchant
-	MerchantTaskRepo    *repo.MerchantTask
-	MerchantPaytypeRepo   *repo.MerchantPaytype
-	MerchantPaymentRepo   *repo.MerchantPayment
-	MerchantOrderRepo     *repo.MerchantOrder
+	Config                  *config.Config
+	Redis                   *redis.Client
+	UsersRepo               *repo.Users
+	WalletUserRepo          *repo.WalletUser
+	MerchantRepo            *repo.Merchant
+	MerchantTaskRepo        *repo.MerchantTask
+	MerchantPaytypeRepo     *repo.MerchantPaytype
+	MerchantPaymentRepo     *repo.MerchantPayment
+	MerchantOrderRepo       *repo.MerchantOrder
 	MerchantOrderErrLogRepo *repo.MerchantOrderErrLog
-	MerchantHdOrderRepo *repo.MerchantHdOrder
-	MerchantHmOrderRepo *repo.MerchantHmOrder
-	MerchantSessionRepo *repo.MerchantSession
-	MerchantMessageRepo *repo.MerchantMessage
-	PushMessage         *logic.PushMessage
-	MessageStorage      *cache.MessageStorage
-	UnreadStorage       *cache.UnreadStorage
-	UserClient          *cache.UserClient
-	NoticeTemplateRepo  *repo.NoticeTemplate
-	SysNotice           *logic.SysNotice
-	TalkSessionService  service.ITalkSessionService
-	ContactApplyService service.IContactApplyService
-	GroupApplyStorage   *cache.GroupApplyStorage
-	NoticeLetterRepo    *repo.NoticeLetter
-	OrganizeRepo        *repo.Organize
-	UserService         service.IUserService
-	SmsService          service.ISmsService
-	EmailService        service.IEmailService
-	Rsa                 rsautil.IRsa
+	MerchantHdOrderRepo     *repo.MerchantHdOrder
+	MerchantHmOrderRepo     *repo.MerchantHmOrder
+	MerchantSessionRepo     *repo.MerchantSession
+	MerchantMessageRepo     *repo.MerchantMessage
+	PushMessage             *logic.PushMessage
+	MessageStorage          *cache.MessageStorage
+	UnreadStorage           *cache.UnreadStorage
+	UserClient              *cache.UserClient
+	NoticeTemplateRepo      *repo.NoticeTemplate
+	SysNotice               *logic.SysNotice
+	TalkSessionService      service.ITalkSessionService
+	ContactApplyService     service.IContactApplyService
+	GroupApplyStorage       *cache.GroupApplyStorage
+	NoticeLetterRepo        *repo.NoticeLetter
+	UserCmdRepo             *repo.UserCmd
+	OrganizeRepo            *repo.Organize
+	ContactRepo             *repo.Contact
+	GroupMemberRepo         *repo.GroupMember
+	UserReportRepo          *repo.UserReport
+	UserService             service.IUserService
+	SmsService              service.ISmsService
+	EmailService            service.IEmailService
+	Rsa                     rsautil.IRsa
 }
 
 // Detail 获取登录用户详情接口
@@ -104,6 +108,7 @@ func (u *User) Detail(ctx context.Context, _ *web.UserDetailRequest) (*web.UserD
 			return timeutil.FormatDatetime(*user.UnUpdateAt)
 		}(),
 		UnUpdateEnable: usernameUpdateEnable(user.UnUpdateAt),
+		Level:          int32(user.Level),
 	}, nil
 }
 
@@ -293,9 +298,18 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 	session, _ := middleware.FormContext[entity.WebClaims](ctx)
 	uid := session.UserId
 
-	newEmail := strings.TrimSpace(req.Email)
+	newEmail := strings.ToLower(strings.TrimSpace(req.Email))
+	// 兼容前端传 code 或 email_code
+	code := strings.TrimSpace(req.GetCode())
+	if code == "" {
+		code = strings.TrimSpace(req.GetEmailCode())
+	}
+	if len(code) != 6 {
+		return nil, errorx.New(400, "请填写6位邮箱验证码")
+	}
+
 	user, _ := u.UsersRepo.FindById(ctx, uid)
-	if user.Email == newEmail {
+	if strings.ToLower(strings.TrimSpace(user.Email)) == newEmail {
 		return nil, errorx.New(400, "邮箱与原邮箱一致无需修改")
 	}
 
@@ -312,7 +326,8 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 		return nil, entity.ErrPermissionDenied
 	}
 
-	if !u.EmailService.Verify(ctx, entity.EmailVerifyChannel, newEmail, req.Code) {
+	usedChannel, ok := u.EmailService.VerifyAny(ctx, entity.EmailChangeVerifyChannels(), newEmail, code)
+	if !ok {
 		return nil, errorx.New(400, "邮箱验证码错误")
 	}
 
@@ -329,7 +344,7 @@ func (u *User) EmailUpdate(ctx context.Context, req *web.UserEmailUpdateRequest)
 		return nil, err
 	}
 
-	u.EmailService.Delete(ctx, entity.EmailVerifyChannel, newEmail)
+	u.EmailService.Delete(ctx, usedChannel, newEmail)
 
 	_ = u.UsersRepo.ClearTableCache(ctx, user.Id)
 	return &web.UserEmailUpdateResponse{}, nil

@@ -32,3 +32,13 @@ func (r *AppNews) ListPublished(ctx context.Context, page, pageSize int, categor
 func (r *AppNews) FindPublishedById(ctx context.Context, id int) (*model.AppNews, error) {
 	return r.Repo.FindByWhere(ctx, "id = ? AND status = ?", id, model.AppNewsStatusPublished)
 }
+
+// IncrPvByIds 批量增加已发布资讯 pv（不写 app_news_view）
+func (r *AppNews) IncrPvByIds(ctx context.Context, ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return r.Db.WithContext(ctx).Model(&model.AppNews{}).
+		Where("id IN ? AND status = ?", ids, model.AppNewsStatusPublished).
+		Update("pv", gorm.Expr("IFNULL(pv,0) + 1")).Error
+}

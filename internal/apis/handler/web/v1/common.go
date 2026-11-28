@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/config"
@@ -19,6 +20,7 @@ import (
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -40,6 +42,7 @@ type Common struct {
 	UserService         service.IUserService
 	EmailClient         *email.Client
 	TemplateService     service.ITemplateService
+	Redis               *redis.Client
 }
 
 // SendSms 发送短信验证码接口
@@ -101,14 +104,11 @@ func (c *Common) SendSms(ctx context.Context, in *web.CommonSendSmsRequest) (*we
 //	@Success		200		{object}	web.CommonSendEmailResponse
 //	@Router			/api/v1/common/send-email [post]
 func (c *Common) SendEmail(ctx context.Context, req *web.CommonSendEmailRequest) (*web.CommonSendEmailResponse, error) {
-	// Determine the channel based on request
-	channel := entity.EmailVerifyChannel
-	if req.Channel != "" {
-		channel = req.Channel
-	}
+	emailAddr := strings.ToLower(strings.TrimSpace(req.Email))
+	channel := entity.NormalizeEmailChannel(req.Channel)
 
 	// Send verification code using EmailService
-	code, err := c.EmailService.Send(ctx, channel, req.Email)
+	code, err := c.EmailService.Send(ctx, channel, emailAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (c *Common) SendEmail(ctx context.Context, req *web.CommonSendEmailRequest)
 	// Send email
 	if c.EmailClient != nil {
 		err = c.EmailClient.SendMail(&email.Option{
-			To:      []string{req.Email},
+			To:      []string{emailAddr},
 			Subject: "验证码",
 			Body:    body,
 		})
@@ -139,7 +139,7 @@ func (c *Common) SendEmail(ctx context.Context, req *web.CommonSendEmailRequest)
 		}
 	} else {
 		// If email client is not configured, just log the code (for development)
-		logger.Infof("Email verification code for %s: %s", req.Email, code)
+		logger.Infof("Email verification code for %s (channel: %s): %s", emailAddr, channel, code)
 	}
 
 	return &web.CommonSendEmailResponse{}, nil
@@ -205,12 +205,16 @@ func (c *Common) AppVersionLatest(ctx context.Context, in *web.CommonAppVersionL
 	}, nil
 }
 
-// ExploreList 探索位列表（仅 is_open=1；支持 positions 逗号筛选）
+// ExploreList 探索位列表（支持 positions / end 筛选）
 func (c *Common) ExploreList(ctx context.Context, in *web.CommonExploreListRequest) (*web.CommonExploreListResponse, error) {
 	if c.AppExploreRepo == nil {
 		return nil, errors.New("AppExploreRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	list, err := c.AppExploreRepo.ListOpen(ctx, in.GetPositions())
+	end := strings.TrimSpace(in.GetEnd())
+	if end == "" {
+		end = "app"
+	}
+	list, err := c.AppExploreRepo.List(ctx, in.GetPositions(), end)
 	if err != nil {
 		return nil, err
 	}
@@ -229,28 +233,28 @@ func (c *Common) ExploreList(ctx context.Context, in *web.CommonExploreListReque
 	return out, nil
 }
 
-// AppModules 功能模块列表
-func (c *Common) AppModules(ctx context.Context, _ *web.CommonAppModulesRequest) (*web.CommonAppModulesResponse, error) {
+// AppModules 功能模块列表（支持 end 筛选开放端）
+func (c *Common) AppModules(ctx context.Context, in *web.CommonAppModulesRequest) (*web.CommonAppModulesResponse, error) {
 	if c.AppModuleRepo == nil {
 		return nil, errors.New("AppModuleRepo 未注入，请执行 go generate 更新 wire_gen.go")
 	}
-	list, err := c.AppModuleRepo.ListAll(ctx)
+	list, err := c.AppModuleRepo.List(ctx, in.GetEnd())
 	if err != nil {
 		return nil, err
 	}
 	out := &web.CommonAppModulesResponse{Items: make([]*web.CommonAppModulesResponse_Item, 0, len(list))}
 	for _, row := range list {
 		out.Items = append(out.Items, &web.CommonAppModulesResponse_Item{
-			Id:     int32(row.Id),
-			Code:   row.Code,
-			Title:  row.Title,
-			IsOpen: int32(row.IsOpen),
+			Id:    int32(row.Id),
+			Code:  row.Code,
+			Title: row.Title,
+			Ends:  row.Ends,
 		})
 	}
 	return out, nil
 }
 
-// NewsList 火箭资讯列表（仅已发布；支持 category_id 筛选与分页）
+// NewsList 火箭资讯列表（仅已发布；支持 category_id 筛选与分页；未登录用户对列表内每条资讯 pv+1，不写 app_news_view）
 func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*web.CommonNewsListResponse, error) {
 	if c.AppNewsRepo == nil {
 		return nil, errors.New("AppNewsRepo 未注入，请执行 go generate 更新 wire_gen.go")
@@ -273,6 +277,18 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 		return nil, err
 	}
 
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	anonymous := uid <= 0
+	if anonymous && len(list) > 0 {
+		ids := make([]int, 0, len(list))
+		for _, row := range list {
+			ids = append(ids, row.Id)
+		}
+		if err := c.AppNewsRepo.IncrPvByIds(ctx, ids); err != nil {
+			logger.Errorf("news-list incr pv err: %s", err.Error())
+		}
+	}
+
 	out := &web.CommonNewsListResponse{
 		Items: make([]*web.CommonNewsListResponse_Item, 0, len(list)),
 		Total: int32(total),
@@ -283,6 +299,10 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 		},
 	}
 	for _, row := range list {
+		pv := row.Pv
+		if anonymous {
+			pv++
+		}
 		item := &web.CommonNewsListResponse_Item{
 			Id:         int32(row.Id),
 			Title:      row.Title,
@@ -290,7 +310,7 @@ func (c *Common) NewsList(ctx context.Context, in *web.CommonNewsListRequest) (*
 			Cover:      row.Cover,
 			Status:     int32(row.Status),
 			CreatedAt:  timeutil.FormatDatetime(row.CreatedAt),
-			Pv:         int32(row.Pv),
+			Pv:         int32(pv),
 			Uv:         int32(row.Uv),
 			Content:    row.Content,
 		}
@@ -498,4 +518,61 @@ func (c *Common) AppDictGet(ctx context.Context, in *web.CommonAppDictGetRequest
 		})
 	}
 	return out, nil
+}
+
+type cometServerInfo struct {
+	StartAt         string `json:"start_at"`
+	ActiveAt        string `json:"active_at"`
+	CurrConnNum     int32  `json:"curr_conn_num"`
+	CurrConnUserNum int32  `json:"curr_conn_user_num"`
+}
+
+// OnlineStats 查询 Comet WebSocket 在线连接/用户数（读 Redis im:server_infos）
+func (c *Common) OnlineStats(ctx context.Context) (map[string]any, error) {
+	if c.Redis == nil {
+		return nil, errorx.New(500, "Redis 未注入")
+	}
+
+	raw, err := c.Redis.HGetAll(ctx, cache.ServerInfoKey).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	now := time.Now()
+	servers := make([]map[string]any, 0, len(raw))
+	var connNum, userNum int32
+	alive := 0
+	for sid, val := range raw {
+		var info cometServerInfo
+		_ = json.Unmarshal([]byte(val), &info)
+		activeAt, parseErr := time.ParseInLocation(time.DateTime, info.ActiveAt, time.Local)
+		aliveNode := parseErr == nil && now.Sub(activeAt) <= time.Duration(cache.ServerInfoAliveSec)*time.Second
+		servers = append(servers, map[string]any{
+			"server_id":          sid,
+			"start_at":           info.StartAt,
+			"active_at":          info.ActiveAt,
+			"curr_conn_num":      info.CurrConnNum,
+			"curr_conn_user_num": info.CurrConnUserNum,
+			"alive":              aliveNode,
+		})
+		if aliveNode {
+			alive++
+			connNum += info.CurrConnNum
+			userNum += info.CurrConnUserNum
+		}
+	}
+
+	hint := ""
+	if len(raw) == 0 {
+		hint = "im:server_infos 为空：未启动 lumenim comet，或 comet 与 API 不是同一 Redis/db。请看 comet 日志是否有 heartbeat HSET failed"
+	}
+
+	return map[string]any{
+		"server_count": len(raw),
+		"alive_count":  alive,
+		"conn_num":     connNum,
+		"user_num":     userNum,
+		"servers":      servers,
+		"hint":         hint,
+	}, nil
 }

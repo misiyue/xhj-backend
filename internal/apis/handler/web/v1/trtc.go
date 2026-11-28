@@ -11,6 +11,8 @@ import (
 	"github.com/tencentyun/tls-sig-api-v2-golang/tencentyun"
 )
 
+// Trtc is retained for legacy deployments. The new CallKit integration does
+// not register this handler or expose the UserSig route.
 type Trtc struct {
 	Config *config.Config
 }
@@ -31,7 +33,7 @@ type TrtcSignatureResponse struct {
 //	@Tags			TRTC
 //	@Accept			json
 //	@Produce		json
-//	@Success		200		{object}	TrtcSignatureResponse
+//	@Success		200	{object}	TrtcSignatureResponse
 //	@Router			/api/v1/trtc/user-sig [get]
 func (h *Trtc) GetSignature(ctx *gin.Context) (any, error) {
 	session, err := middleware.FormContext[entity.WebClaims](ctx.Request.Context())
@@ -50,8 +52,6 @@ func (h *Trtc) GetSignature(ctx *gin.Context) (any, error) {
 
 	sdkAppId := h.Config.Trtc.SdkAppId
 	secretKey := h.Config.Trtc.SecretKey
-
-	// Convert userId to string as TRTC expects string user ID
 	sig, err := tencentyun.GenUserSig(sdkAppId, secretKey, strconv.Itoa(int(userId)), 86400*7)
 	if err != nil {
 		return nil, errorx.New(500, "生成签名失败")

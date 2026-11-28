@@ -108,6 +108,11 @@ func (m *Message) Records(ctx context.Context, in *web.MessageRecordsRequest) (*
 	// 补充红包消息的状态信息
 	items := m.enrichRedEnvelopeStatus(ctx, uid, int(in.TalkMode), records, readerMap)
 
+	// 打开群聊拉取首屏消息时清零 at_me（前端未必会调 session-clear-unread-num）
+	if in.TalkMode == entity.ChatGroupMode && in.Cursor == 0 {
+		clearGroupAtMeMentions(ctx, m.MentionStorage, m.PushMessage, uid, int(in.ReceiverId))
+	}
+
 	return &web.MessageRecordsResponse{
 		Items:  items,
 		Cursor: int32(cursor),
@@ -140,9 +145,9 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 		}
 	}
 
+	// 默认不含 Mixed(12)：子段已按真实 msg_type 冗余入库，按类型筛选走索引即可
 	msgTypes := []int{
 		entity.ChatMsgTypeText,
-		entity.ChatMsgTypeMixed,
 		entity.ChatMsgTypeCode,
 		entity.ChatMsgTypeImage,
 		entity.ChatMsgTypeVideo,
@@ -153,20 +158,32 @@ func (m *Message) HistoryRecords(ctx context.Context, in *web.MessageHistoryReco
 		entity.ChatMsgTypeVote,
 		entity.ChatMsgTypeRedEnvelope,
 		entity.ChatMsgTypeTransfer,
+		entity.ChatMsgTypeCmd,
+		entity.ChatMsgTypeMixed,
 	}
 
 	if slices.Contains(msgTypes, int(in.MsgType)) {
 		msgTypes = []int{int(in.MsgType)}
+	} else {
+		// 未指定类型时去掉 Mixed，避免与子段重复
+		filtered := make([]int, 0, len(msgTypes)-1)
+		for _, t := range msgTypes {
+			if t != entity.ChatMsgTypeMixed {
+				filtered = append(filtered, t)
+			}
+		}
+		msgTypes = filtered
 	}
 
 	records, err := m.TalkRecordsService.FindAllTalkRecords(ctx, &service.FindAllTalkRecordsOpt{
-		TalkType:   int(in.TalkMode),
-		MsgType:    msgTypes,
-		UserId:     uid,
-		ReceiverId: int(in.ReceiverId),
-		Keyword:    in.Keyword, // 新增：按内容关键字模糊搜索
-		Cursor:     int64(in.Cursor),
-		Limit:      int(in.Limit),
+		TalkType:      int(in.TalkMode),
+		MsgType:       msgTypes,
+		UserId:        uid,
+		ReceiverId:    int(in.ReceiverId),
+		Keyword:       in.Keyword,
+		Cursor:        int64(in.Cursor),
+		Limit:         int(in.Limit),
+		IncludeHidden: true,
 	})
 
 	if err != nil {
@@ -589,6 +606,23 @@ func (m *Message) ClearMentions(ctx context.Context, in *ClearMentionRequest) (*
 
 	if err != nil {
 		return nil, err
+	}
+
+	// 推送最新 count，便于会话列表 at_me_user_count 同步
+	if m.PushMessage != nil && m.MentionStorage != nil {
+		count := int64(0)
+		if len(in.MsgIds) > 0 {
+			count, _ = m.MentionStorage.GetMentionCount(ctx, uid, in.GroupId)
+		}
+		_ = m.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
+			Event: entity.SubEventImMessageMention,
+			Payload: jsonutil.Encode(entity.SubEventImMessageMentionPayload{
+				UserId:  uid,
+				GroupId: in.GroupId,
+				MsgIds:  []string{},
+				Count:   int(count),
+			}),
+		})
 	}
 
 	return &ClearMentionResponse{}, nil

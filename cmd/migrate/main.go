@@ -370,31 +370,36 @@ type NewUser struct {
 func (NewUser) TableName() string { return "users" }
 
 type NewContact struct {
-	Id        int       `gorm:"column:id;primaryKey;autoIncrement"`
-	UserId    int       `gorm:"column:user_id"`
-	FriendId  int       `gorm:"column:friend_id"`
-	Remark    string    `gorm:"column:remark;type:varchar(64)"`
-	Status    int       `gorm:"column:status"`
-	GroupId   int       `gorm:"column:group_id"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	Id        int       `gorm:"column:id;primaryKey;autoIncrement;type:bigint(20)"`
+	UserId    int       `gorm:"column:user_id;type:bigint(20)"`
+	FriendId  int       `gorm:"column:friend_id;type:bigint(20)"`
+	Remark    string    `gorm:"column:remark;type:varchar(128)"`
+	Status    int       `gorm:"column:status;type:tinyint(4)"`
+	GroupId   int       `gorm:"column:group_id;type:bigint(20);default:0"`
+	IsBlack   int       `gorm:"column:is_black;type:tinyint(4);default:0"`
+	CreatedAt time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP"`
+	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`
 }
 
 func (NewContact) TableName() string { return "contact" }
 
 type NewGroup struct {
-	Id        int       `gorm:"column:id;primaryKey;autoIncrement"`
-	Type      int       `gorm:"column:type"`
-	CreatorId int       `gorm:"column:creator_id"`
-	Name      string    `gorm:"column:name;type:varchar(64)"`
-	Profile   string    `gorm:"column:profile;type:varchar(512)"`
-	IsDismiss int       `gorm:"column:is_dismiss"`
-	Avatar    string    `gorm:"column:avatar;type:varchar(255)"`
-	MaxNum    int       `gorm:"column:max_num"`
-	IsOvert   int       `gorm:"column:is_overt"`
-	IsMute    int       `gorm:"column:is_mute"`
-	CreatedAt time.Time `gorm:"column:created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at"`
+	Id            int       `gorm:"column:id;primaryKey;autoIncrement;type:bigint(20)"`
+	Type          int       `gorm:"column:type;type:tinyint(4)"`
+	CreatorId     int       `gorm:"column:creator_id;type:bigint(20)"`
+	Name          string    `gorm:"column:name;type:varchar(255)"`
+	Profile       string    `gorm:"column:profile;type:varchar(255)"`
+	IsDismiss     int       `gorm:"column:is_dismiss;type:tinyint(4)"`
+	Avatar        string    `gorm:"column:avatar;type:varchar(255)"`
+	MaxNum        int       `gorm:"column:max_num;type:int(11)"`
+	IsOvert       int       `gorm:"column:is_overt;type:tinyint(4)"`
+	IsMute        int       `gorm:"column:is_mute;type:tinyint(4)"`
+	IsAllowInvite int       `gorm:"column:is_allow_invite;type:tinyint(4);default:1"`
+	ForceStatus   int       `gorm:"column:force_status;type:tinyint(4);default:0"`
+	IsSecret      int       `gorm:"column:is_secret;type:tinyint(4);default:0"`
+	SecretCode    string    `gorm:"column:secret_code;type:varchar(8)"`
+	CreatedAt     time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP"`
+	UpdatedAt     time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`
 }
 
 func (NewGroup) TableName() string { return "group" }
@@ -453,10 +458,12 @@ func (NewTalkUserMessage) TableName() string { return "talk_user_message" }
 type NewTalkGroupMessage struct {
 	Id        int64     `gorm:"column:id;primaryKey;autoIncrement"`
 	MsgId     string    `gorm:"column:msg_id;type:varchar(64)"`
+	OrgMsgId  string    `gorm:"column:org_msg_id;type:varchar(64);default:''"`
 	MsgType   int       `gorm:"column:msg_type"`
 	GroupId   int       `gorm:"column:group_id"`
 	FromId    int       `gorm:"column:from_id"`
 	IsRevoked int       `gorm:"column:is_revoked"`
+	IsDeleted int       `gorm:"column:is_deleted;default:2"`
 	Extra     string    `gorm:"column:extra;type:text"`
 	Quote     string    `gorm:"column:quote;type:text"`
 	SendTime  time.Time `gorm:"column:send_time"`
@@ -1001,22 +1008,23 @@ func migrateGroups(sqliteDB, mysqlDB *gorm.DB) (int, error) {
 
 	count := 0
 	for _, old := range oldGroups {
-		isDismiss := 1
+		// 与 model.Yes=1 / model.No=2 一致：[1:是;2:否]
+		isDismiss := 2 // 否：未解散
 		if old.Status == 0 || old.DeleteTime > 0 {
-			isDismiss = 2
+			isDismiss = 1 // 是：已解散
 		}
 
-		isOvert := 1
+		isOvert := 2 // 否：非公开
 		if old.IsPublic == 1 {
-			isOvert = 2
+			isOvert = 1 // 是：公开
 		}
 
-		isMute := 1
+		isMute := 2 // 否：未全员禁言
 		if old.Setting != "" && old.Setting != "null" {
 			var s map[string]interface{}
 			if err := json.Unmarshal([]byte(old.Setting), &s); err == nil {
 				if fmt.Sprintf("%v", s["nospeak"]) == "1" {
-					isMute = 2
+					isMute = 1 // 是：全员禁言（群主/管理员仍可发言）
 				}
 			}
 		}
@@ -1062,14 +1070,15 @@ func migrateGroupMembers(sqliteDB, mysqlDB *gorm.DB) (int, error) {
 			leader = 3
 		}
 
-		isQuit := 1
+		// 与 model.Yes=1 / model.No=2 一致：[1:是;2:否]
+		isQuit := 2 // 否：在群
 		if old.Status == 0 || old.DeleteTime > 0 {
-			isQuit = 2
+			isQuit = 1 // 是：已退群
 		}
 
-		isMute := 1
+		isMute := 2 // 否：未禁言
 		if old.NoSpeakTime > 0 && old.NoSpeakTime > time.Now().Unix() {
-			isMute = 2
+			isMute = 1 // 是：成员禁言
 		}
 
 		joinTime := time.Unix(old.CreateTime, 0)
@@ -1202,7 +1211,7 @@ func migrateMessages(sqliteDB, mysqlDB *gorm.DB) (int, error) {
 			_ = getOrCreateSession(2, msg.FromUser, msg.ToUser, sendTime)
 			m := NewTalkGroupMessage{
 				MsgId: msgId, MsgType: msgType, GroupId: msg.ToUser,
-				FromId: msg.FromUser, IsRevoked: isRevoked,
+				FromId: msg.FromUser, IsRevoked: isRevoked, IsDeleted: 2,
 				Extra: extra, Quote: "", SendTime: sendTime, CreatedAt: sendTime,
 			}
 			if err := mysqlDB.Create(&m).Error; err != nil {

@@ -137,10 +137,58 @@ service Group {
     };
   }
 
+  // 群内是否允许成员互加好友（群主/管理员）
+  rpc AllowInvite(GroupAllowInviteRequest) returns (GroupAllowInviteResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/allowInvite"
+      body: "*"
+    };
+  }
+
   // 群公开修改接口
   rpc Overt(GroupOvertRequest) returns (GroupOvertResponse) {
     option (google.api.http) = {
       post: "/api/v1/group/overt"
+      body: "*"
+    };
+  }
+
+  // 开启/关闭进群密码（群主/管理员）
+  rpc Secret(GroupSecretRequest) returns (GroupSecretResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/secret"
+      body: "*"
+    };
+  }
+
+  // 密码入群（群外用户）
+  rpc SecretEnter(GroupSecretEnterRequest) returns (GroupSecretEnterResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/secret-enter"
+      body: "*"
+    };
+  }
+
+  // 群马甲用户列表（group_faker 关联的 user_faker 资料）
+  rpc Fakers(GroupFakersRequest) returns (GroupFakersResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/fakers"
+      body: "*"
+    };
+  }
+
+  // 群置顶推广列表（group_totop，按 sort 倒序）
+  rpc Totops(GroupTotopsRequest) returns (GroupTotopsResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/totops"
+      body: "*"
+    };
+  }
+
+  // 群投放申请（仅群创建人）
+  rpc AdApply(GroupAdApplyRequest) returns (GroupAdApplyResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/group/ad-apply"
       body: "*"
     };
   }
@@ -158,6 +206,8 @@ message GroupListResponse{
     string profile = 4 [(google.api.field_behavior) = REQUIRED];
     int32 leader = 5 [(google.api.field_behavior) = REQUIRED];
     int32 creator_id = 7 [(google.api.field_behavior) = REQUIRED];
+    // 是否开启进群密码：0 否 1 是
+    int32 is_secret = 8;
   }
 
   repeated Item items = 1 [(google.api.field_behavior) = REQUIRED];
@@ -192,6 +242,15 @@ message GroupDetailResponse{
   int32 is_mute = 9 [(google.api.field_behavior) = REQUIRED];
   int32 is_overt = 10 [(google.api.field_behavior) = REQUIRED];
   Notice notice = 11;
+  // 是否允许群内互加好友：1 允许 2 不允许
+  int32 is_allow_invite = 12;
+  // 是否开启进群密码：0 否 1 是
+  int32 is_secret = 13;
+  // 入群密码（仅群主/管理员返回）
+  string secret_code = 14;
+
+  // 是否群成员：0 否 1 是
+  int32 is_member = 15;
 
   message Notice{
     string content = 1;
@@ -217,6 +276,8 @@ message GroupMemberListResponse{
     int32 is_mute = 6 [(google.api.field_behavior) = REQUIRED];
     string remark = 7 [(google.api.field_behavior) = REQUIRED];
     string motto = 8 [(google.api.field_behavior) = REQUIRED];
+    // 是否马甲用户：0 否 1 是
+    int32 is_faker = 9;
   }
 
   repeated Item items = 1 [(google.api.field_behavior) = REQUIRED];
@@ -357,6 +418,16 @@ message GroupMuteRequest{
 // 群禁言接口响应参数
 message GroupMuteResponse{}
 
+// 群内互加好友开关请求
+message GroupAllowInviteRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  // 1:不允许 2:允许
+  int32 action = 2 [(buf.validate.field).int32 = {in: [1, 2]}];
+}
+
+// 群内互加好友开关响应
+message GroupAllowInviteResponse {}
+
 // 群公开修改接口请求参数
 message GroupOvertRequest{
   int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
@@ -366,3 +437,58 @@ message GroupOvertRequest{
 
 // 群公开修改接口响应参数
 message GroupOvertResponse{}
+
+message GroupSecretRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  // 0:关闭 1:开启
+  int32 is_secret = 2 [(buf.validate.field).int32 = {in:[0, 1]}];
+  string secret_code = 3 [(buf.validate.field).string = {max_len: 8}];
+}
+
+message GroupSecretResponse {}
+
+message GroupSecretEnterRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  string secret_code = 2;
+}
+
+message GroupSecretEnterResponse {}
+
+// 群马甲用户列表请求
+message GroupFakersRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+// 群马甲用户列表响应
+message GroupFakersResponse {
+  message Item {
+    int32 user_id = 1;
+    string username = 2;
+    string nickname = 3;
+    string avatar = 4;
+  }
+  repeated Item items = 1;
+}
+
+// 群置顶推广列表
+message GroupTotopsRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+message GroupTotopsResponse {
+  message Item {
+    int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+    string cover = 2;
+    string intro = 3;
+    string btn = 4;
+    string url = 5;
+  }
+  repeated Item items = 1;
+}
+
+message GroupAdApplyRequest {
+  int32 group_id = 1 [(buf.validate.field).int32.gte = 1];
+  string intro = 2 [(buf.validate.field).string = {max_len: 255}];
+}
+
+message GroupAdApplyResponse {}

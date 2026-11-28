@@ -144,9 +144,22 @@ func (s *Session) SessionCreate(ctx context.Context, in *web.TalkSessionCreateRe
 //	@Security		Bearer
 func (s *Session) SessionDelete(ctx context.Context, in *web.TalkSessionDeleteRequest) (*web.TalkSessionDeleteResponse, error) {
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	talkMode := int(in.TalkMode)
+	receiverId := int(in.ReceiverId)
 
-	if err := s.TalkSessionService.Delete(ctx, uid, int(in.TalkMode), int(in.ReceiverId)); err != nil {
+	if err := s.TalkSessionService.Delete(ctx, uid, talkMode, receiverId); err != nil {
 		return nil, err
+	}
+
+	// 会话已删：联动清理 Redis，避免 unread / last_message / mention 成为幽灵数据
+	if s.UnreadStorage != nil {
+		s.UnreadStorage.Reset(ctx, uid, talkMode, receiverId)
+	}
+	if s.MessageStorage != nil {
+		_ = s.MessageStorage.Delete(ctx, talkMode, uid, receiverId)
+	}
+	if talkMode == entity.ChatGroupMode && receiverId > 0 {
+		clearGroupAtMeMentions(ctx, s.MentionStorage, s.PushMessage, uid, receiverId)
 	}
 
 	return &web.TalkSessionDeleteResponse{}, nil
@@ -253,11 +266,17 @@ func (s *Session) SessionDetail(ctx context.Context, in *web.TalkSessionDetailRe
 		return nil, err
 	}
 
+	isBlack := int32(0)
+	if int(in.TalkMode) == entity.ChatPrivateMode && s.ContactRepo != nil {
+		isBlack = int32(s.ContactRepo.GetIsBlack(ctx, uid, int(in.ReceiverId)))
+	}
+
 	return &web.TalkSessionDetailResponse{
 		IsTop:      int32(detail.IsTop),
 		IsDisturb:  int32(detail.IsDisturb),
 		RetainDays: int32(detail.RetainDays),
 		SessionId:  int32(linkSessionID(detail.Id, detail.SessionId)),
+		IsBlack:    isBlack,
 	}, nil
 }
 
@@ -275,11 +294,12 @@ func linkSessionId(detail *model.TalkSession) int {
 	return linkSessionID(detail.Id, detail.SessionId)
 }
 
-// SessionSetRetainDays 设置私聊消息保留天数（按 session_id 同步己方与对方）
+// SessionSetRetainDays 设置消息保留天数（私聊按 session_id 同步双方；群聊仅更新当前用户）
 func (s *Session) SessionSetRetainDays(ctx context.Context, in *web.TalkSessionSetRetainDaysRequest) (*web.TalkSessionSetRetainDaysResponse, error) {
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
 	retainDays, err := s.TalkSessionService.SetRetainDays(ctx, &service.TalkSessionSetRetainDaysOpt{
 		UserId:        uid,
+		TalkMode:      int(in.GetTalkMode()),
 		LinkSessionId: int(in.GetSessionId()),
 		RetainDays:    int(in.GetRetainDays()),
 	})
@@ -324,8 +344,9 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 		}
 	}
 
-	// 获取好友备注
+	// 获取好友备注、拉黑状态
 	remarks, _ := s.ContactRepo.Remarks(ctx, uid, friends)
+	blackMap := s.ContactRepo.IsBlackMap(ctx, uid, friends)
 
 	items := make([]*web.TalkSessionItem, 0)
 	for _, item := range data {
@@ -355,6 +376,7 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 			value.Name = item.Nickname
 			value.Avatar = item.Avatar
 			value.Remark = remarks[item.ReceiverId]
+			value.IsBlack = int32(blackMap[item.ReceiverId])
 		} else {
 			value.Name = item.GroupName
 			value.Avatar = item.GroupAvatar
@@ -385,11 +407,19 @@ func (s *Session) SessionList(ctx context.Context, req *web.TalkSessionListReque
 //	@Security		Bearer
 func (s *Session) SessionClearUnreadNum(ctx context.Context, in *web.TalkSessionClearUnreadNumRequest) (*web.TalkSessionClearUnreadNumResponse, error) {
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
-	s.UnreadStorage.Reset(ctx, uid, int(in.TalkMode), int(in.ReceiverId))
+	talkMode := int(in.TalkMode)
+	receiverId := int(in.ReceiverId)
+
+	s.UnreadStorage.Reset(ctx, uid, talkMode, receiverId)
+
+	// 群聊查看后清零 at_me_user_count（mention key = im:mention:uid:groupId）
+	if talkMode == entity.ChatGroupMode && receiverId > 0 {
+		clearGroupAtMeMentions(ctx, s.MentionStorage, s.PushMessage, uid, receiverId)
+	}
 
 	if s.TalkService != nil {
-		if err := s.TalkService.ClearSessionRead(ctx, uid, int(in.TalkMode), int(in.ReceiverId)); err != nil {
-			logger.Errorf("clear session read err: user_id=%d talk_mode=%d receiver_id=%d %s", uid, in.TalkMode, in.ReceiverId, err.Error())
+		if err := s.TalkService.ClearSessionRead(ctx, uid, talkMode, receiverId); err != nil {
+			logger.Errorf("clear session read err: user_id=%d talk_mode=%d receiver_id=%d %s", uid, talkMode, receiverId, err.Error())
 		}
 	}
 
@@ -397,10 +427,11 @@ func (s *Session) SessionClearUnreadNum(ctx context.Context, in *web.TalkSession
 		_ = s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 			Event: entity.SubEventImSessionUnreadCleared,
 			Payload: jsonutil.Encode(entity.SubEventImSessionUnreadClearedPayload{
-				UserId:     uid,
-				TalkMode:   int(in.TalkMode),
-				ReceiverId: int(in.ReceiverId),
-				UnreadNum:  0,
+				UserId:        uid,
+				TalkMode:      talkMode,
+				ReceiverId:    receiverId,
+				UnreadNum:     0,
+				AtMeUserCount: 0, // 群聊时前端可据此同步清零会话列表 at_me 角标
 			}),
 		})
 	}

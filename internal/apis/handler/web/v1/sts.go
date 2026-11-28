@@ -37,7 +37,7 @@ type GetUploadPresignedUrlRequest struct {
 
 // GetUploadPresignedUrlResponse 获取上传预签名URL响应参数
 type GetUploadPresignedUrlResponse struct {
-	Platform     string `json:"platform"`      // 存储平台 (cos, oss)
+	Platform     string `json:"platform"`      // 存储平台 (cos, oss, aws)
 	PresignedUrl string `json:"presigned_url"` // 预签名PUT URL
 	ObjectUrl    string `json:"object_url"`    // 上传完成后的文件访问URL
 	Key          string `json:"key"`           // 对象路径
@@ -161,10 +161,10 @@ func (s *STS) GetCosSTSCredentials(ctx *gin.Context) (*web.GetCosSTSResponse, er
 	}, nil
 }
 
-// GetUploadPresignedUrl 获取上传预签名URL（统一接口，支持COS和OSS）
+// GetUploadPresignedUrl 获取上传预签名URL（统一接口，支持 COS / OSS / Amazon S3）
 //
 //	@Summary		获取上传预签名URL
-//	@Description	根据当前配置的存储驱动生成预签名上传URL，支持COS和OSS
+//	@Description	根据当前配置的存储驱动生成预签名上传URL，支持COS、OSS、Amazon S3(aws)
 //	@Tags			上传
 //	@Accept			json
 //	@Produce		json
@@ -192,9 +192,47 @@ func (s *STS) GetUploadPresignedUrl(ctx *gin.Context) (*GetUploadPresignedUrlRes
 		return s.getOssPresignedUrl(objectKey, duration, contentType)
 	case filesystem.CosDriver:
 		return s.getCosPresignedUrl(objectKey, duration, contentType)
+	case filesystem.AwsDriver:
+		return s.getAwsPresignedUrl(objectKey, duration, contentType)
 	default:
 		return nil, errorx.New(400, "当前存储驱动不支持预签名上传: "+driver)
 	}
+}
+
+// getAwsPresignedUrl 生成 Amazon S3 预签名 PUT URL
+func (s *STS) getAwsPresignedUrl(objectKey string, duration time.Duration, contentType string) (*GetUploadPresignedUrlResponse, error) {
+	awsConfig := s.Config.Filesystem.Aws
+	if strings.TrimSpace(awsConfig.SecretId) == "" || strings.TrimSpace(awsConfig.SecretKey) == "" {
+		return nil, errorx.New(500, "Amazon S3 未配置 secret_id/secret_key")
+	}
+	if strings.TrimSpace(awsConfig.BucketPublic) == "" {
+		return nil, errorx.New(500, "Amazon S3 未配置 bucket_public")
+	}
+	if strings.TrimSpace(awsConfig.Region) == "" {
+		return nil, errorx.New(500, "Amazon S3 未配置 region")
+	}
+
+	awsFs := filesystem.NewAwsFilesystem(awsConfig)
+	bucket := awsConfig.BucketPublic
+	presignedURL, err := awsFs.GeneratePresignedPutURL(bucket, objectKey, duration, contentType)
+	if err != nil {
+		return nil, errorx.New(500, "生成S3预签名URL失败: "+err.Error())
+	}
+
+	objectURL := awsFs.GetAwsObjectURL(bucket, objectKey)
+	now := time.Now().Unix()
+
+	logger.Infof("[S3] 生成预签名URL成功, key: %s, url: %s", objectKey, objectURL)
+
+	return &GetUploadPresignedUrlResponse{
+		Platform:     "aws",
+		PresignedUrl: presignedURL,
+		ObjectUrl:    objectURL,
+		Key:          objectKey,
+		Bucket:       bucket,
+		StartTime:    now,
+		ExpiredTime:  now + int64(duration.Seconds()),
+	}, nil
 }
 
 // getOssPresignedUrl 生成阿里云OSS预签名PUT URL

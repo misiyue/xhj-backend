@@ -9,27 +9,44 @@ const (
 
 	GroupTypeNormal     = 1
 	GroupTypeEnterprise = 2
+
+	// ForceStatus 强制状态
+	GroupForceStatusNone = 0 // 无
+	GroupForceStatusMute = 1 // 强制禁言：所有人（含群主/管理员）不可发言
+
+	// 进群密码开关：0-否，1-是
+	GroupIsSecretNo  = 0
+	GroupIsSecretYes = 1
 )
 
 type Group struct {
-	Id        int       `gorm:"column:id;primary_key;AUTO_INCREMENT" json:"id"`                                       // 群ID
-	Type      int       `gorm:"column:type;" json:"type"`                                                             // 群类型[1:普通群;2:企业群;]
-	CreatorId int       `gorm:"column:creator_id;" json:"creator_id"`                                                 // 创建者ID(群主ID)
-	Name      string    `gorm:"column:name;" json:"name"`                                                             // 群名称
-	Profile   string    `gorm:"column:profile;" json:"profile"`                                                       // 群介绍
-	IsDismiss int       `gorm:"column:is_dismiss;index:idx_group_overt_dismiss_created,priority:2" json:"is_dismiss"` // 是否已解散[1:否;2:是;]
-	Avatar    string    `gorm:"column:avatar;" json:"avatar"`                                                         // 群头像
-	MaxNum    int       `gorm:"column:max_num;" json:"max_num"`                                                       // 最大群成员数量
-	IsOvert   int       `gorm:"column:is_overt;index:idx_group_overt_dismiss_created,priority:1" json:"is_overt"`     // 是否公开可见[1:否;2:是;]
-	IsMute    int       `gorm:"column:is_mute;" json:"is_mute"`                                                       // 是否全员禁言 [1:否;2:是;] 提示:不包含群主或管理员
+	Id        int    `gorm:"column:id;primary_key;AUTO_INCREMENT;type:bigint(20)" json:"id"`                         // 群ID
+	Type      int    `gorm:"column:type;type:tinyint(4)" json:"type"`                                                 // 群类型[1:普通群;2:企业群;]
+	CreatorId int    `gorm:"column:creator_id;type:bigint(20)" json:"creator_id"`                                     // 创建者ID(群主ID)
+	Name      string `gorm:"column:name;type:varchar(255)" json:"name"`                                               // 群名称
+	Profile   string `gorm:"column:profile;type:varchar(255)" json:"profile"`                                         // 群介绍
+	IsDismiss int    `gorm:"column:is_dismiss;type:tinyint(4);index:idx_group_overt_dismiss_created,priority:2" json:"is_dismiss"` // 是否已解散[1:是;2:否;]
+	Avatar    string `gorm:"column:avatar;type:varchar(255)" json:"avatar"`                                           // 群头像
+	MaxNum    int    `gorm:"column:max_num;type:int(11)" json:"max_num"`                                              // 最大群成员数量
+	IsOvert   int    `gorm:"column:is_overt;type:tinyint(4);index:idx_group_overt_dismiss_created,priority:1" json:"is_overt"`     // 是否公开可见[1:是;2:否;]
+	IsMute    int    `gorm:"column:is_mute;type:tinyint(4)" json:"is_mute"`                                           // 全员禁言[1:是;2:否;]：仅限制普通成员，群主/管理员可发言
 	// 群内是否允许成员互加好友 [1:允许;2:不允许;] 与接口 GroupDetailResponse.is_allow_invite 一致
-	IsAllowInvite int       `gorm:"column:is_allow_invite;" json:"is_allow_invite"`
-	CreatedAt     time.Time `gorm:"column:created_at;index:idx_group_overt_dismiss_created,priority:3" json:"created_at"` // 创建时间
-	UpdatedAt time.Time `gorm:"column:updated_at;" json:"updated_at"`                                                 // 更新时间
+	IsAllowInvite int `gorm:"column:is_allow_invite;type:tinyint(4);default:1" json:"is_allow_invite"`
+	// 强制禁言：0-无，1-所有人不可发言（含群主/管理员）；与 is_mute 全员禁言区分
+	ForceStatus int    `gorm:"column:force_status;type:tinyint(4);default:0" json:"force_status"`
+	IsSecret    int    `gorm:"column:is_secret;type:tinyint(4);default:0" json:"is_secret"`     // 开启进群密码：0-否，1-是
+	SecretCode  string `gorm:"column:secret_code;type:varchar(8)" json:"secret_code"`          // 入群密码
+	CreatedAt   time.Time `gorm:"column:created_at;type:datetime;default:CURRENT_TIMESTAMP;index:idx_group_overt_dismiss_created,priority:3" json:"created_at"` // 创建时间
+	UpdatedAt   time.Time `gorm:"column:updated_at;type:datetime;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" json:"updated_at"`                     // 更新时间
 }
 
 func (Group) TableName() string {
 	return "group"
+}
+
+// SecretEnabled 是否开启进群密码
+func (g *Group) SecretEnabled() bool {
+	return g != nil && g.IsSecret == GroupIsSecretYes
 }
 
 type GroupItem struct {
@@ -40,4 +57,5 @@ type GroupItem struct {
 	Leader    int    `json:"leader"`
 	IsDisturb int    `json:"is_disturb"`
 	CreatorId int    `json:"creator_id"`
+	IsSecret  int    `json:"is_secret"`
 }

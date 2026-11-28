@@ -7,6 +7,7 @@ import (
 	"github.com/gzydong/go-chat/api/pb/web/v1"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
 	"github.com/gzydong/go-chat/internal/repository/cache"
+	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
 	message2 "github.com/gzydong/go-chat/internal/service/message"
 	"github.com/samber/lo"
@@ -172,7 +173,7 @@ func (c *Contact) Detail(ctx context.Context, in *web.ContactDetailRequest) (*we
 	}
 
 	resp.Relation = 1
-	if err == nil && contact.Status == 1 && c.ContactRepo.IsFriend(ctx, uid, user.Id, true) {
+	if err == nil && contact != nil && contact.Status == 1 && c.ContactRepo.IsFriend(ctx, uid, user.Id, true) {
 		resp.Relation = 2
 		resp.ContactGroupId = int32(contact.GroupId)
 		resp.ContactRemark = contact.Remark
@@ -198,22 +199,24 @@ func (c *Contact) Detail(ctx context.Context, in *web.ContactDetailRequest) (*we
 //	@Security		Bearer
 func (c *Contact) Search(ctx context.Context, in *web.ContactSearchRequest) (*web.ContactSearchResponse, error) {
 	// 添加好友时使用严格匹配：只按用户名 / 邮箱 / 手机号做等值查询，避免输入“2”时匹配到一堆包含 2 的邮箱/昵称
+	// 未找到时 repo 返回 Id=0 的完整结构，此处原样返回给前端（user_id=0）
 	user, err := c.UsersRepo.SearchByExactIdentifier(ctx, in.Mobile)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, entity.ErrUserNotExist
-		}
-
 		return nil, err
+	}
+	if user == nil {
+		user = &model.Users{}
 	}
 
 	return &web.ContactSearchResponse{
 		UserId:   int32(user.Id),
 		Mobile:   lo.FromPtr[string](user.Mobile),
 		Nickname: user.Nickname,
+		Username: user.Username,
 		Avatar:   user.Avatar,
 		Gender:   int32(user.Gender),
 		Motto:    user.Motto,
+		Email:    user.Email,
 	}, nil
 }
 
@@ -260,4 +263,76 @@ func (c *Contact) OnlineStatus(ctx context.Context, in *web.ContactOnlineStatusR
 	}
 
 	return resp, nil
+}
+
+// Block 拉黑联系人
+//
+//	@Summary		拉黑联系人
+//	@Description	单向拉黑；对方仍可发消息并落库到其视角，本方不接收推送/未读
+//	@Tags			联系人
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactBlockRequest	true	"拉黑请求"
+//	@Success		200		{object}	web.ContactBlockResponse
+//	@Router			/api/v1/contact/block [post]
+//	@Security		Bearer
+func (c *Contact) Block(ctx context.Context, in *web.ContactBlockRequest) (*web.ContactBlockResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if err := c.ContactService.Block(ctx, uid, int(in.UserId)); err != nil {
+		return nil, err
+	}
+	return &web.ContactBlockResponse{}, nil
+}
+
+// Unblock 解除拉黑
+//
+//	@Summary		解除拉黑
+//	@Description	取消对联系人的拉黑
+//	@Tags			联系人
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactUnblockRequest	true	"解除拉黑请求"
+//	@Success		200		{object}	web.ContactUnblockResponse
+//	@Router			/api/v1/contact/unblock [post]
+//	@Security		Bearer
+func (c *Contact) Unblock(ctx context.Context, in *web.ContactUnblockRequest) (*web.ContactUnblockResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	if err := c.ContactService.Unblock(ctx, uid, int(in.UserId)); err != nil {
+		return nil, err
+	}
+	return &web.ContactUnblockResponse{}, nil
+}
+
+// BlockList 黑名单列表
+//
+//	@Summary		黑名单列表
+//	@Description	分页查询当前用户已拉黑的联系人
+//	@Tags			联系人
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		web.ContactBlockListRequest	true	"黑名单列表请求"
+//	@Success		200		{object}	web.ContactBlockListResponse
+//	@Router			/api/v1/contact/block-list [post]
+//	@Security		Bearer
+func (c *Contact) BlockList(ctx context.Context, in *web.ContactBlockListRequest) (*web.ContactBlockListResponse, error) {
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	list, total, err := c.ContactService.BlockList(ctx, uid, int(in.GetPage()), int(in.GetPageSize()))
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*web.ContactBlockListResponse_Item, 0, len(list))
+	for _, item := range list {
+		items = append(items, &web.ContactBlockListResponse_Item{
+			UserId:   int32(item.Id),
+			Nickname: item.Nickname,
+			Avatar:   item.Avatar,
+			Remark:   item.Remark,
+		})
+	}
+
+	return &web.ContactBlockListResponse{
+		Items: items,
+		Total: int32(total),
+	}, nil
 }

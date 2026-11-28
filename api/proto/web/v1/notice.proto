@@ -76,7 +76,10 @@ message NoticeClearUnreadRequest {}
 message NoticeClearUnreadResponse {}
 
 message NoticeArticleGetRequest {
-  int32 id = 1 [(buf.validate.field).int32.gte = 1];
+  // 文章 ID；未传 code 时必填
+  int32 id = 1;
+  // 唯一编码；有值时优先按 code 查询
+  string code = 2;
 }
 
 message NoticeArticleGetResponse {

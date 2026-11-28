@@ -32,6 +32,9 @@ type Group struct {
 	GroupRepo          *repo.Group
 	GroupMemberRepo    *repo.GroupMember
 	GroupNoticeRepo    *repo.GroupNotice
+	GroupFakerRepo     *repo.GroupFaker
+	GroupTotopRepo     *repo.GroupTotop
+	GroupAdApplyRepo   *repo.GroupAdApply
 	TalkSessionRepo    *repo.TalkSession
 	GroupService       service.IGroupService
 	GroupMemberService service.IGroupMemberService
@@ -72,6 +75,7 @@ func (g Group) List(ctx context.Context, in *web.GroupListRequest) (*web.GroupLi
 			Profile:   item.Profile,
 			Leader:    int32(item.Leader),
 			CreatorId: int32(item.CreatorId),
+			IsSecret:  int32(item.IsSecret),
 		})
 	}
 
@@ -145,6 +149,10 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 	if isAllowInvite == 0 {
 		isAllowInvite = 1 // 库中无该列或旧数据时默认允许互加
 	}
+	isMember := 0
+	if g.GroupMemberRepo.IsMember(ctx, int(in.GroupId), uid, false) {
+		isMember = 1
+	}
 	resp := &web.GroupDetailResponse{
 		GroupId:       int32(groupInfo.Id),
 		GroupName:     groupInfo.Name,
@@ -156,6 +164,8 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 		IsMute:        int32(groupInfo.IsMute),
 		IsOvert:       int32(groupInfo.IsOvert),
 		IsAllowInvite: isAllowInvite,
+		IsSecret:      int32(groupInfo.IsSecret),
+		IsMember:      int32(isMember),
 		VisitCard:     g.GroupMemberRepo.GetMemberRemark(ctx, int(in.GroupId), uid),
 		Notice: &web.GroupDetailResponse_Notice{
 			Content:        "",
@@ -163,6 +173,9 @@ func (g Group) Detail(ctx context.Context, in *web.GroupDetailRequest) (*web.Gro
 			UpdatedAt:      "",
 			ModifyUserName: "",
 		},
+	}
+	if g.GroupMemberRepo.IsLeader(ctx, int(in.GroupId), uid) {
+		resp.SecretCode = groupInfo.SecretCode
 	}
 
 	notice, err := g.GroupNoticeRepo.GetLatestNotice(ctx, int(in.GroupId))
@@ -213,9 +226,30 @@ func (g Group) MemberList(ctx context.Context, in *web.GroupMemberListRequest) (
 	}
 
 	list := g.GroupMemberRepo.GetMembers(ctx, int(in.GroupId))
+	groupID := int(in.GroupId)
 
-	items := make([]*web.GroupMemberListResponse_Item, 0)
+	var fakerList []*model.UserFaker
+	fakerUserIDs := make(map[int]struct{})
+	if g.GroupFakerRepo != nil {
+		fakerList, err = g.GroupFakerRepo.ListUserFakersByGroupID(ctx, groupID)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range fakerList {
+			if row.UserId > 0 {
+				fakerUserIDs[row.UserId] = struct{}{}
+			}
+		}
+	}
+
+	memberUserIDs := make(map[int]struct{}, len(list))
+	items := make([]*web.GroupMemberListResponse_Item, 0, len(list)+len(fakerList))
 	for _, item := range list {
+		memberUserIDs[item.UserId] = struct{}{}
+		isFaker := int32(0)
+		if _, ok := fakerUserIDs[item.UserId]; ok {
+			isFaker = 1
+		}
 		items = append(items, &web.GroupMemberListResponse_Item{
 			UserId:   int32(item.UserId),
 			Nickname: item.Nickname,
@@ -225,6 +259,22 @@ func (g Group) MemberList(ctx context.Context, in *web.GroupMemberListRequest) (
 			IsMute:   int32(item.IsMute),
 			Remark:   item.UserCard,
 			Motto:    item.Motto,
+			IsFaker:  isFaker,
+		})
+	}
+
+	for _, row := range fakerList {
+		if row.UserId <= 0 {
+			continue
+		}
+		if _, ok := memberUserIDs[row.UserId]; ok {
+			continue
+		}
+		items = append(items, &web.GroupMemberListResponse_Item{
+			UserId:   int32(row.UserId),
+			Nickname: row.Nickname,
+			Avatar:   row.Avatar,
+			IsFaker:  1,
 		})
 	}
 
@@ -881,4 +931,41 @@ func (g Group) Overt(ctx context.Context, in *web.GroupOvertRequest) (*web.Group
 	}
 
 	return &web.GroupOvertResponse{}, nil
+}
+
+// Fakers 群马甲用户列表（group_faker 关联的 user_faker 资料）
+func (g Group) Fakers(ctx context.Context, in *web.GroupFakersRequest) (*web.GroupFakersResponse, error) {
+	if g.GroupFakerRepo == nil {
+		return nil, errors.New("GroupFakerRepo 未注入，请执行 go generate 更新 wire_gen.go")
+	}
+
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx)
+	groupID := int(in.GetGroupId())
+
+	group, err := g.GroupRepo.FindById(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if group != nil && group.IsDismiss == model.Yes {
+		return &web.GroupFakersResponse{Items: []*web.GroupFakersResponse_Item{}}, nil
+	}
+	if !g.GroupMemberRepo.IsMember(ctx, groupID, uid, false) {
+		return nil, entity.ErrPermissionDenied
+	}
+
+	list, err := g.GroupFakerRepo.ListUserFakersByGroupID(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]*web.GroupFakersResponse_Item, 0, len(list))
+	for _, row := range list {
+		items = append(items, &web.GroupFakersResponse_Item{
+			UserId:   int32(row.UserId),
+			Username: row.Username,
+			Nickname: row.Nickname,
+			Avatar:   row.Avatar,
+		})
+	}
+	return &web.GroupFakersResponse{Items: items}, nil
 }

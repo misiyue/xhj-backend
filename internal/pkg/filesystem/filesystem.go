@@ -95,15 +95,18 @@ type MinioSystemConfig struct {
 	Endpoint      string `json:"endpoint" yaml:"endpoint"`
 }
 
-// AwsSystemConfig Aws S3 配置信息
+// AwsSystemConfig Amazon S3 配置信息
 type AwsSystemConfig struct {
 	SSL           bool   `json:"ssl" yaml:"ssl"`
-	Region        string `json:"region" yaml:"region"`
-	SecretId      string `json:"secret_id" yaml:"secret_id"`
-	SecretKey     string `json:"secret_key" yaml:"secret_key"`
+	Region        string `json:"region" yaml:"region"`                             // e.g. ap-northeast-1 / us-east-1
+	SecretId      string `json:"secret_id" yaml:"secret_id"`                       // AWS Access Key ID
+	SecretKey     string `json:"secret_key" yaml:"secret_key"`                     // AWS Secret Access Key
 	BucketPublic  string `json:"bucket_public" yaml:"bucket_public"`
 	BucketPrivate string `json:"bucket_private" yaml:"bucket_private"`
-	Endpoint      string `json:"endpoint" yaml:"endpoint"`
+	Endpoint      string `json:"endpoint" yaml:"endpoint"`                         // 可选；标准 AWS 留空；兼容 MinIO/自定义网关时填写
+	UsePathStyle  bool   `json:"use_path_style" yaml:"use_path_style"`             // 标准 AWS 建议 false；自定义 endpoint 常需 true
+	S3Domain      string `json:"s3_domain" yaml:"s3_domain"`                       // 可选自定义访问域名（CDN/CloudFront）
+	S3DomainSSL   bool   `json:"s3_domain_ssl_enabled" yaml:"s3_domain_ssl_enabled"`
 }
 
 // CosSystemConfig 腾讯云 COS 配置信息

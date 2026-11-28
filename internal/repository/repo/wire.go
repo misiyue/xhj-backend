@@ -12,6 +12,8 @@ var ProviderSet = wire.NewSet(
 	NewUsers,
 	NewGroup,
 	NewGroupApply,
+	NewGroupAdApply,
+	NewBannerAdApply,
 	NewTalkRecordGroup,
 	NewTalkRecordFriend,
 	NewGroupNotice,
@@ -58,4 +60,8 @@ var ProviderSet = wire.NewSet(
 	NewNoticeLetter,
 	NewNoticeTemplate,
 	NewNoticeArticle,
+	NewGroupFaker,
+	NewUserCmd,
+	NewUserReport,
+	NewGroupTotop,
 )

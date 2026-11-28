@@ -52,6 +52,7 @@ const (
 	ChatMsgTypeRTCCall     = 14 // 音视频通话
 	ChatMsgTypeRedEnvelope = 15 // 红包消息
 	ChatMsgTypeTransfer    = 16 // 转账消息
+	ChatMsgTypeCmd         = 17 // 指令卡片消息
 
 	ChatMsgSysText                   = 1000 // 系统文本消息
 	ChatMsgSysGroupCreate            = 1101 // 创建群聊消息
@@ -81,9 +82,11 @@ var ChatMsgTypeMapping = map[int]string{
 	ChatMsgTypeVote:                  "[投票消息]",
 	ChatMsgTypeCode:                  "[代码消息]",
 	ChatMsgTypeMixed:                 "[图文消息]",
+	ChatMsgTypeGroupNotice:           "[群公告]",
 	ChatMsgTypeRTCCall:               "[通话记录]",
 	ChatMsgTypeRedEnvelope:           "[红包]",
 	ChatMsgTypeTransfer:              "[转账]",
+	ChatMsgTypeCmd:                   "[指令卡片消息]",
 	ChatMsgSysText:                   "[系统消息]",
 	ChatMsgSysGroupCreate:            "[创建群消息]",
 	ChatMsgSysGroupMemberJoin:        "[加入群消息]",

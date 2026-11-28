@@ -22,10 +22,11 @@ func (h *Handler) onConsumeSessionUnreadCleared(ctx context.Context, body []byte
 	}
 
 	data := Message(entity.PushEventImSessionUnreadCleared, entity.ImSessionUnreadClearedPayload{
-		UserId:     in.UserId,
-		TalkMode:   in.TalkMode,
-		ReceiverId: in.ReceiverId,
-		UnreadNum:  in.UnreadNum,
+		UserId:        in.UserId,
+		TalkMode:      in.TalkMode,
+		ReceiverId:    in.ReceiverId,
+		UnreadNum:     in.UnreadNum,
+		AtMeUserCount: in.AtMeUserCount,
 	})
 
 	for _, session := range sessions {

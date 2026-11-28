@@ -64,6 +64,30 @@ service Contact {
       body: "*"
     };
   }
+
+  // 拉黑联系人
+  rpc Block(ContactBlockRequest) returns (ContactBlockResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contact/block"
+      body: "*"
+    };
+  }
+
+  // 解除拉黑
+  rpc Unblock(ContactUnblockRequest) returns (ContactUnblockResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contact/unblock"
+      body: "*"
+    };
+  }
+
+  // 黑名单列表
+  rpc BlockList(ContactBlockListRequest) returns (ContactBlockListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/contact/block-list"
+      body: "*"
+    };
+  }
 }
 
 // 联系人列表接口请求参数
@@ -139,9 +163,11 @@ message ContactSearchResponse{
   int32 user_id = 1  [(google.api.field_behavior) = REQUIRED];
   string mobile = 2  [(google.api.field_behavior) = REQUIRED];
   string nickname = 3  [(google.api.field_behavior) = REQUIRED];
+  string username = 4  [(google.api.field_behavior) = REQUIRED];
   string avatar = 5  [(google.api.field_behavior) = REQUIRED];
   int32 gender = 6  [(google.api.field_behavior) = REQUIRED];
   string motto = 7  [(google.api.field_behavior) = REQUIRED];
+  string email = 8  [(google.api.field_behavior) = REQUIRED];
 }
 
 // 修改联系人分组接口请求参数
@@ -162,4 +188,38 @@ message ContactOnlineStatusRequest{
 message ContactOnlineStatusResponse{
   // 在线状态 [N:离线;Y:在线;]
   string online_status = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// 拉黑联系人请求
+message ContactBlockRequest{
+  int32 user_id = 1 [(buf.validate.field).int32.gte = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+message ContactBlockResponse{}
+
+// 解除拉黑请求
+message ContactUnblockRequest{
+  int32 user_id = 1 [(buf.validate.field).int32.gte = 1, (google.api.field_behavior) = REQUIRED];
+}
+
+message ContactUnblockResponse{}
+
+// 黑名单列表请求
+message ContactBlockListRequest{
+  // 页码，从 1 开始；未传或 0 时服务端按 1 处理
+  int32 page = 1 [(buf.validate.field).int32.gte = 0];
+  // 每页条数；未传或 0 时默认 20，最大 100
+  int32 page_size = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+}
+
+// 黑名单列表响应
+message ContactBlockListResponse{
+  message Item{
+    int32 user_id = 1 [(google.api.field_behavior) = REQUIRED];
+    string nickname = 2 [(google.api.field_behavior) = REQUIRED];
+    string avatar = 3 [(google.api.field_behavior) = REQUIRED];
+    string remark = 4 [(google.api.field_behavior) = REQUIRED];
+  }
+  repeated Item items = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 total = 2 [(google.api.field_behavior) = REQUIRED];
 }

@@ -110,6 +110,7 @@ func RegisterWebRoute(conf *config.Config, router *gin.Engine, handler *web.Hand
 	web2.RegisterMessageHandler(api, resp, handler.V1.TalkMessage)
 	patchTalkMessageDeps(handler.V1)
 	patchCommonDeps(handler.V1, handler.UserRepo)
+	patchPublishDeps(handler.V1)
 
 	// Invite 需要 *repo.Users：子 Handler 若未在 wire_gen 里注入 UsersRepo 会为空指针。
 	// 顶层 web.Handler.UserRepo 与之一致，此处补齐引用，避免 /api/v1/invite/friends 空指针 panic。
@@ -126,8 +127,20 @@ func RegisterWebRoute(conf *config.Config, router *gin.Engine, handler *web.Hand
 		}
 	}
 
-	web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
-	web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
+	if handler.V1.Invite != nil {
+		web2.RegisterInviteHandler(api, resp, handler.V1.Invite)
+	}
+	if handler.V1.Notice != nil {
+		web2.RegisterNoticeHandler(api, resp, handler.V1.Notice)
+	}
+	if handler.V1.Banner == nil && handler.UserRepo != nil {
+		handler.V1.Banner = &v1.Banner{BannerAdApplyRepo: repo.NewBannerAdApply(handler.UserRepo.Db)}
+	} else if handler.V1.Banner != nil && handler.V1.Banner.BannerAdApplyRepo == nil && handler.UserRepo != nil {
+		handler.V1.Banner.BannerAdApplyRepo = repo.NewBannerAdApply(handler.UserRepo.Db)
+	}
+	if handler.V1.Banner != nil {
+		web2.RegisterBannerHandler(api, resp, handler.V1.Banner)
+	}
 
 	registerCustomApiRouter(resp, router, api, handler)
 }
@@ -137,6 +150,10 @@ func patchMarzbanDeps(conf *config.Config, handler *web.Handler) {
 	if handler == nil || handler.V1 == nil {
 		return
 	}
+	var db *gorm.DB
+	if handler.UserRepo != nil {
+		db = handler.UserRepo.Db
+	}
 	if handler.V1.Marzban == nil {
 		handler.V1.Marzban = &v1.Marzban{}
 	}
@@ -144,7 +161,11 @@ func patchMarzbanDeps(conf *config.Config, handler *web.Handler) {
 		handler.V1.Marzban.MarzbanService = &service.MarzbanService{
 			Config:     conf,
 			HTTPClient: &http.Client{Timeout: 10 * time.Second},
+			DB:         db,
 		}
+	}
+	if marzbanService, ok := handler.V1.Marzban.MarzbanService.(*service.MarzbanService); ok && marzbanService.DB == nil {
+		marzbanService.DB = db
 	}
 }
 
@@ -271,6 +292,34 @@ func patchCommonDeps(v1 *web.V1, userRepo *repo.Users) {
 	}
 }
 
+func patchPublishDeps(v1 *web.V1) {
+	if v1 == nil || v1.Message == nil {
+		return
+	}
+	if v1.Yunxin != nil && v1.Message.Yunxin == nil {
+		v1.Message.Yunxin = v1.Yunxin
+	}
+	pushMessage := bootstrapPushMessage(v1, v1.TalkMessage)
+	if pushMessage != nil && v1.Message.PushMessage == nil {
+		v1.Message.PushMessage = pushMessage
+	}
+	if v1.User != nil && v1.User.UsersRepo != nil && v1.Message.UsersRepo == nil {
+		v1.Message.UsersRepo = v1.User.UsersRepo
+	}
+	if v1.Talk != nil && v1.Talk.UsersRepo != nil && v1.Message.UsersRepo == nil {
+		v1.Message.UsersRepo = v1.Talk.UsersRepo
+	}
+	if v1.Message.TalkSessionRepo == nil {
+		var db *gorm.DB
+		if v1.User != nil && v1.User.UsersRepo != nil {
+			db = bootstrapGormDB(v1.User.UsersRepo, v1.Common)
+		}
+		if db != nil {
+			v1.Message.TalkSessionRepo = repo.NewTalkSession(db)
+		}
+	}
+}
+
 func bootstrapGormDB(userRepo *repo.Users, c *v1.Common) *gorm.DB {
 	if userRepo != nil && userRepo.Db != nil {
 		return userRepo.Db
@@ -282,6 +331,12 @@ func bootstrapGormDB(userRepo *repo.Users, c *v1.Common) *gorm.DB {
 }
 
 func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRoutes, handler *web.Handler) {
+	router.POST("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.Checkin(c)
+	}))
+	router.GET("/api/v1/marzban/check-in", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Marzban.CheckinStatus(c)
+	}))
 	api.POST("/api/v1/marzban/user", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.Marzban.CreateUser(c)
 	}))
@@ -302,6 +357,10 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 	router.GET("/api/v1/merchant/order/hmpay-notify", func(c *gin.Context) {
 		handler.V1.User.MerchantOrderHmpayNotify(c)
 	})
+
+	api.GET("/api/v1/common/online-stats", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Common.OnlineStats(c.Request.Context())
+	}))
 
 	router.GET("/api/v1/common/app-version", resp.Do(func(c *gin.Context) (any, error) {
 		in := &web2.CommonAppVersionLatestRequest{
@@ -358,6 +417,11 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 		return handler.V1.Message.Send(c)
 	}))
 
+	api.GET("/api/v1/yunxin/credentials", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		return handler.V1.Yunxin.Credentials(c)
+	}))
+	// Legacy compatibility only. The current Android/iOS call flow uses
+	// /yunxin/credentials and never requests a TRTC UserSig.
 	api.GET("/api/v1/trtc/user-sig", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.Trtc.GetSignature(c)
 	}))
@@ -529,5 +593,14 @@ func registerCustomApiRouter(resp *Interceptor, router *gin.Engine, api gin.IRou
 
 	api.POST("/api/v1/message/mentions/all", HandlerFunc(resp, func(c *gin.Context) (any, error) {
 		return handler.V1.TalkMessage.GetAllMentions(c.Request.Context())
+	}))
+
+	// 用户举报
+	api.POST("/api/v1/user/report", HandlerFunc(resp, func(c *gin.Context) (any, error) {
+		var in v1.UserReportRequest
+		if err := c.ShouldBindJSON(&in); err != nil {
+			return nil, err
+		}
+		return handler.V1.User.Report(c.Request.Context(), &in)
 	}))
 }

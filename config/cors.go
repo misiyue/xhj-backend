@@ -22,6 +22,9 @@ func (c *Cors) GetWebsocketOrigins() string {
 }
 
 func (c *Cors) GetHeaders() string {
+	if c.Headers == "" {
+		return "Content-Type,Cache-Control,User-Agent,Keep-Alive,DNT,AccessToken,Authorization,Accept-Language"
+	}
 	return c.Headers
 }
 

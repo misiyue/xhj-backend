@@ -40,6 +40,16 @@ type MarzbanUserResponse struct {
 	Message               string  `json:"message"`
 }
 
+type MarzbanCheckinStatusResponse struct {
+	CheckedIn   bool   `json:"checked_in"`
+	RewardHours int    `json:"reward_hours"`
+	NextResetAt string `json:"next_reset_at"`
+}
+
+type MarzbanCheckinRequest struct {
+	ID int `json:"id" binding:"required,gt=0"`
+}
+
 // CreateUser 按传入的系统用户ID幂等创建 Marzban 用户。
 //
 //	@Summary		创建 Marzban 用户
@@ -93,6 +103,61 @@ func (m *Marzban) GetUser(ctx *gin.Context) (*MarzbanUserResponse, error) {
 	}
 	return marzbanUserResponse(user), nil
 }
+
+// Checkin rewards the requested Marzban account with six hours.
+//
+//	@Summary		Marzban 签到
+//	@Description	无需登录；按传入的系统用户ID签到，距上次成功签到满6小时可再次签到，每次增加6小时
+//	@Tags			Marzban
+//	@Accept			json
+//	@Produce		json
+//	@Param			request	body		MarzbanCheckinRequest	true	"签到请求"
+//	@Success		200		{object}	MarzbanUserResponse
+//	@Router			/api/v1/marzban/check-in [post]
+func (m *Marzban) Checkin(ctx *gin.Context) (*MarzbanUserResponse, error) {
+	var req MarzbanCheckinRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		return nil, errorx.New(400, "用户ID为必填项且必须大于0")
+	}
+	user, err := m.MarzbanService.Checkin(ctx.Request.Context(), req.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrMarzbanAlreadyCheckedIn):
+			return nil, errorx.New(429, err.Error())
+		case errors.Is(err, service.ErrMarzbanUserNotFound):
+			return nil, errorx.New(404, err.Error())
+		case errors.Is(err, service.ErrMarzbanUnlimitedExpire):
+			return nil, errorx.New(400, err.Error())
+		default:
+			return nil, err
+		}
+	}
+	response := marzbanUserResponse(user)
+	response.Message = "签到成功，已增加6小时"
+	return response, nil
+}
+
+// CheckinStatus reports whether the requested user is in the six-hour cooldown.
+//
+//	@Summary	Marzban 签到状态
+//	@Description	无需登录；checked_in表示当前仍在6小时冷却期，next_reset_at为下次可签到时间
+//	@Tags		Marzban
+//	@Produce	json
+//	@Param		id	query		int	true	"本系统用户ID"
+//	@Success	200	{object}	MarzbanCheckinStatusResponse
+//	@Router		/api/v1/marzban/check-in [get]
+func (m *Marzban) CheckinStatus(ctx *gin.Context) (*MarzbanCheckinStatusResponse, error) {
+	id, err := strconv.Atoi(ctx.Query("id"))
+	if err != nil || id <= 0 {
+		return nil, errorx.New(400, "用户ID为必填项且必须大于0")
+	}
+	checkedIn, nextResetAt, err := m.MarzbanService.CheckinStatus(ctx.Request.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	return &MarzbanCheckinStatusResponse{CheckedIn: checkedIn, RewardHours: 6, NextResetAt: nextResetAt}, nil
+}
+
 func marzbanUserResponse(user *service.MarzbanUserInfo) *MarzbanUserResponse {
 	message := "查询成功"
 	if user.Created {

@@ -55,6 +55,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	appNewsCategory := repo.NewAppNewsCategory(db)
 	appNewsView := repo.NewAppNewsView(db)
 	appNewsViewStorage := cache.NewAppNewsViewStorage(client)
+	yunxinTokenStorage := cache.NewYunxinTokenStorage(client)
 	smsStorage := cache.NewSmsStorage(client)
 	smsService := &service.SmsService{
 		Storage: smsStorage,
@@ -87,6 +88,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		UserService:         userService,
 		EmailClient:         emailClient,
 		TemplateService:     templateService,
+		Redis:               client,
 	}
 	registerLimiter := cache.NewRegisterLimiter(client)
 	jwtTokenStorage := cache.NewJwtTokenStorage(client)
@@ -113,6 +115,10 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	iAesUtil := provider.NewAesUtil(c)
 	captchaStorage := cache.NewCaptchaStorage(client)
 	captcha := provider.NewBase64Captcha(captchaStorage)
+	inviteCodeRepo := repo.NewInviteCode(db)
+	inviteCodeService := &service.InviteCodeService{
+		InviteCodeRepo: inviteCodeRepo,
+	}
 	auth := &v1.Auth{
 		Config:              c,
 		Redis:               client,
@@ -122,6 +128,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		RobotRepo:           robot,
 		OAuthUsersRepo:      oAuthUsers,
 		UsersRepo:           users,
+		InviteCodeService:   inviteCodeService,
 		SmsService:          smsService,
 		EmailService:        emailService,
 		UserService:         userService,
@@ -145,6 +152,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	noticeTemplate := repo.NewNoticeTemplate(db, client)
 	noticeLetter := repo.NewNoticeLetter(db)
 	noticeArticle := repo.NewNoticeArticle(db)
+	userCmd := repo.NewUserCmd(db)
 	sysNotice := &logic.SysNotice{
 		Redis:              client,
 		NoticeLetterRepo:   noticeLetter,
@@ -177,6 +185,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		NoticeTemplateRepo:  noticeTemplate,
 		SysNotice:           sysNotice,
 		NoticeLetterRepo:    noticeLetter,
+		UserCmdRepo:         userCmd,
 		OrganizeRepo:        organize,
 		UserService:         userService,
 		SmsService:          smsService,
@@ -196,6 +205,10 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	repoContact := repo.NewContact(db, contactRemark, relation)
 	repoGroup := repo.NewGroup(db)
 	groupMember := repo.NewGroupMember(db, relation)
+	userReport := repo.NewUserReport(db)
+	v1User.ContactRepo = repoContact
+	v1User.GroupMemberRepo = groupMember
+	v1User.UserReportRepo = userReport
 	talkService := &service.TalkService{
 		Source:          source,
 		GroupMemberRepo: groupMember,
@@ -268,6 +281,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		GroupMemberRepo:      groupMember,
 		TalkRecordFriendRepo: talkUserMessage,
 		TalkRecordGroupRepo:  talkGroupMessage,
+		PushMessage:          pushMessage,
 		TalkRecordsService:   talkRecordService,
 		GroupMemberService:   groupMemberService,
 		MentionStorage:       mentionStorage,
@@ -300,6 +314,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		Config:     c,
 		Filesystem: iFilesystem,
 	}
+	yunxin := v1.NewYunxin(c, users, yunxinTokenStorage)
 	trtc := v1.NewTrtc(c)
 	groupNotice := repo.NewGroupNotice(db)
 	contactService := &service.ContactService{
@@ -314,6 +329,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		TalkRecordsVoteRepo: groupVote,
 		TalkSessionRepo:     talkSession,
 		UsersRepo:           users,
+		ContactRepo:         repoContact,
 		Filesystem:          iFilesystem,
 		UnreadStorage:       unreadStorage,
 		MessageStorage:      messageStorage,
@@ -324,6 +340,9 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		UserClient:          userClient,
 		NoticeTemplateRepo:  noticeTemplate,
 	}
+	groupFaker := repo.NewGroupFaker(db)
+	groupTotop := repo.NewGroupTotop(db)
+	groupAdApply := repo.NewGroupAdApply(db)
 	groupGroup := &group.Group{
 		RedisLock:          redisLock,
 		Repo:               source,
@@ -331,6 +350,9 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		GroupRepo:          repoGroup,
 		GroupMemberRepo:    groupMember,
 		GroupNoticeRepo:    groupNotice,
+		GroupFakerRepo:     groupFaker,
+		GroupTotopRepo:     groupTotop,
+		GroupAdApplyRepo:   groupAdApply,
 		TalkSessionRepo:    talkSession,
 		GroupService:       groupService,
 		GroupMemberService: groupMemberService,
@@ -453,8 +475,12 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		ArticleTagService: articleTagService,
 	}
 	publish := &talk.Publish{
-		AuthService:    authService,
-		MessageService: messageService,
+		AuthService:     authService,
+		MessageService:  messageService,
+		Yunxin:          yunxin,
+		PushMessage:     pushMessage,
+		UsersRepo:       users,
+		TalkSessionRepo: talkSession,
 	}
 	invite := &v1.Invite{
 		UsersRepo: users,
@@ -474,6 +500,10 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 	}
 	wallet := &v1.Wallet{
 		WalletService: walletService,
+	}
+	bannerAdApply := repo.NewBannerAdApply(db)
+	bannerHandler := &v1.Banner{
+		BannerAdApplyRepo: bannerAdApply,
 	}
 	groupRobot := repo.NewGroupRobot(db)
 	groupRobotService := &service.GroupRobotService{
@@ -495,6 +525,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		Emoticon:     v1Emoticon,
 		Upload:       upload,
 		STS:          sts,
+		Yunxin:       yunxin,
 		Trtc:         trtc,
 		Group:        groupGroup,
 		GroupNotice:  notice,
@@ -513,6 +544,7 @@ func NewHttpInjector(c *config.Config) *apis.Provider {
 		KYC:          kyc,
 		Wallet:       wallet,
 		GroupRobot:   v1GroupRobot,
+		Banner:       bannerHandler,
 	}
 	webHandler := &web.Handler{
 		V1:       webV1,
@@ -632,6 +664,7 @@ func NewCometInjector(c *config.Config) *comet.Provider {
 		TalkRecordsVoteRepo: groupVote,
 		TalkSessionRepo:     talkSession,
 		UsersRepo:           users,
+		ContactRepo:         repoContact,
 		Filesystem:          iFilesystem,
 		UnreadStorage:       unreadStorage,
 		MessageStorage:      messageStorage,
@@ -662,6 +695,7 @@ func NewCometInjector(c *config.Config) *comet.Provider {
 	}
 	heartbeat := &comet.Heartbeat{
 		ServerStorage: serverStorage,
+		UserClient:    userClient,
 		Redis:         client,
 	}
 	userJwtAuthorize := provider.NewWebUserJwtAuthorize(c)
@@ -708,12 +742,14 @@ func NewCronInjector(c *config.Config) *mission.CronProvider {
 		MerchantOrderRepo: merchantOrder,
 	}
 	talkUserMessage := repo.NewTalkRecordFriend(db)
+	talkGroupMessage := repo.NewTalkRecordGroup(db)
 	talkSession := repo.NewTalkSession(db)
 	messageStorage := cache.NewMessageStorage(client)
 	expireTalkUserMessage := &cron.ExpireTalkUserMessage{
-		TalkUserMessageRepo: talkUserMessage,
-		TalkSessionRepo:     talkSession,
-		MessageStorage:      messageStorage,
+		TalkUserMessageRepo:  talkUserMessage,
+		TalkGroupMessageRepo: talkGroupMessage,
+		TalkSessionRepo:      talkSession,
+		MessageStorage:       messageStorage,
 	}
 	crontab := &cron.Crontab{
 		ClearArticle:          clearArticle,
@@ -765,6 +801,8 @@ func NewQueueInjector(c *config.Config) *mission.QueueProvider {
 	}
 	userClient := cache.NewUserClient(client)
 	noticeTemplate := repo.NewNoticeTemplate(db, client)
+	contactRemark := cache.NewContactRemark(client)
+	repoContact := repo.NewContact(db, contactRemark, relation)
 	messageService := &message.Service{
 		Source:              source,
 		GroupMemberRepo:     groupMember,
@@ -772,6 +810,7 @@ func NewQueueInjector(c *config.Config) *mission.QueueProvider {
 		TalkRecordsVoteRepo: groupVote,
 		TalkSessionRepo:     talkSession,
 		UsersRepo:           users,
+		ContactRepo:         repoContact,
 		Filesystem:          iFilesystem,
 		UnreadStorage:       unreadStorage,
 		MessageStorage:      messageStorage,

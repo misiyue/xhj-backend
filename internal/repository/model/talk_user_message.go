@@ -19,7 +19,7 @@ type TalkUserMessage struct {
 	UserId     int       `gorm:"column:user_id;" json:"user_id"`                        // 消息所属用户ID
 	ReceiverId int       `gorm:"column:receiver_id;" json:"receiver_id"`                // 对方用户ID
 	FromId     int       `gorm:"column:from_id;" json:"from_id"`                        // 消息发送者ID
-	IsRevoked  int       `gorm:"column:is_revoked;" json:"is_revoked"`                  // 是否撤回[1:否;2:是;]
+	IsRevoked  int       `gorm:"column:is_revoked;" json:"is_revoked"`                  // 是否撤回[0:隐藏子段;1:是;2:否]
 	IsDeleted  int       `gorm:"column:is_deleted;" json:"is_deleted"`                  // 是否删除[-1:定时删除;1:用户删除;2:否/可见]
 	IsRead     int       `gorm:"column:is_read;default:0" json:"is_read"`               // 是否已读：0-否，1-是
 	Extra      string    `gorm:"column:extra;type:text" json:"extra"`                   // 消息扩展字段

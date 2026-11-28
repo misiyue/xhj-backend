@@ -40,6 +40,7 @@ type Auth struct {
 	RobotRepo           *repo.Robot
 	OAuthUsersRepo      *repo.OAuthUsers
 	UsersRepo           *repo.Users
+	InviteCodeService   service.IInviteCodeService
 	SmsService          service.ISmsService
 	EmailService        service.IEmailService
 	UserService         service.IUserService
@@ -172,23 +173,24 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		return nil, errorx.New(400, "手机号格式不对")
 	}
 
-	// 邀请码：必填时不能为空；若填写且有效则解析邀请人 user_id 写入 users.invite_user_id
+	// 邀请码：填写后必须能解析到邀请人，写入 users.invite_user_id（不再静默忽略）
 	var inviteUserId int
-	if a.Config.App.RequireInviteCode && in.InviteCode == "" {
+	var tableInviteCode string
+	inviteCode := strings.TrimSpace(in.GetInviteCode())
+	if a.Config.App.RequireInviteCode && inviteCode == "" {
 		return nil, errorx.New(400, "邀请码不能为空")
 	}
-	if in.InviteCode != "" {
-		code := strings.TrimSpace(strings.ToLower(in.InviteCode))
-		inviter, err := a.UsersRepo.FindByInviteCode(ctx, code)
+	if inviteCode != "" {
+		uid, usedTableCode, err := a.resolveRegisterInviter(ctx, inviteCode)
 		if err != nil {
 			return nil, err
 		}
-		if inviter == nil || inviter.IsUnavailable() {
-			if a.Config.App.RequireInviteCode {
-				return nil, errorx.New(400, "邀请码无效")
-			}
-		} else {
-			inviteUserId = inviter.Id
+		if uid <= 0 {
+			return nil, errorx.New(400, "邀请码无效")
+		}
+		inviteUserId = uid
+		if usedTableCode {
+			tableInviteCode = inviteCode
 		}
 	}
 
@@ -270,7 +272,7 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		Platform:     in.Platform,
 		InviteUserId: inviteUserId,
 		DeviceCode:   deviceCode,
-		// Username 没有前端字段时，内部会自动用 mobile/email/nickname 生成
+		// Username 由服务端按自增 user_id 自动生成（xhj + 字母/-_+=），忽略客户端传入
 	})
 
 	if err != nil {
@@ -293,6 +295,12 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		a.EmailService.Delete(ctx, entity.EmailRegisterChannel, in.Email)
 	}
 
+	if tableInviteCode != "" && a.InviteCodeService != nil {
+		if useErr := a.InviteCodeService.UseInviteCode(ctx, tableInviteCode, user.Id); useErr != nil {
+			logger.Errorf("register use invite_code table failed: user_id=%d code=%s err=%s", user.Id, tableInviteCode, useErr.Error())
+		}
+	}
+
 	authorize, err := a.authorize(user.Id)
 	if err != nil {
 		return nil, err
@@ -303,6 +311,30 @@ func (a *Auth) Register(ctx context.Context, in *web.AuthRegisterRequest) (*web.
 		AccessToken: authorize.AccessToken,
 		ExpiresIn:   authorize.ExpiresIn,
 	}, nil
+}
+
+// resolveRegisterInviter 解析注册邀请码对应的邀请人 users.id。
+// 先查 users.invite_code（当前邀请码），再回落 invite_code 表（历史 INV 码）。
+func (a *Auth) resolveRegisterInviter(ctx context.Context, code string) (inviterID int, usedTable bool, err error) {
+	if a.UsersRepo != nil {
+		inviter, findErr := a.UsersRepo.FindByInviteCode(ctx, code)
+		if findErr != nil {
+			return 0, false, findErr
+		}
+		if inviter != nil && inviter.Id > 0 && !inviter.IsUnavailable() {
+			return inviter.Id, false, nil
+		}
+	}
+	if a.InviteCodeService != nil {
+		ok, uid, resolveErr := a.InviteCodeService.ResolveInviter(ctx, code)
+		if resolveErr != nil {
+			return 0, false, resolveErr
+		}
+		if ok && uid > 0 {
+			return uid, true, nil
+		}
+	}
+	return 0, false, nil
 }
 
 // Forget 找回密码

@@ -43,7 +43,8 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 	// 如果当前用户之前对该群的会话做过「删除会话」，此处重新发消息时需要自动恢复：
 	// 将 talk_session 中 user_id=发送者、receiver_id=群ID、talk_mode=2 的记录的 is_delete 从 1 改回 2。
 	if s.TalkSessionRepo != nil {
-		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.FromId, option.ReceiverId, entity.ChatGroupMode); err == nil && sess.Id > 0 {
+		// FindByWhere 未命中时返回 (nil, nil)，必须先判 sess != nil
+		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.FromId, option.ReceiverId, entity.ChatGroupMode); err == nil && sess != nil && sess.Id > 0 {
 			if sess.IsDelete == model.Yes {
 				_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
 					"is_delete":  model.No,
@@ -66,6 +67,7 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 		Quote:     quoteJsonText,
 		Extra:     option.Extra,
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		SendTime:  time.Now(),
 	}
 
@@ -73,15 +75,7 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 		return err
 	}
 
-	memberIds := s.GroupMemberRepo.GetMemberIds(ctx, item.GroupId)
-	for _, uid := range memberIds {
-		if uid != item.FromId {
-			s.tryOneSignalUserChat(ctx, uid, entity.ChatGroupMode, item.GroupId)
-		}
-	}
-
-	// 通过 PushMessage 将消息投递到 ImTopicChat 主题，
-	// comet / 长连接服务会订阅该主题，并把消息推送给在线客户端
+	// 关键路径：先推实时消息，尽快返回；未读 / @ / OneSignal / 会话预览异步处理
 	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventImMessage,
 		Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
@@ -93,21 +87,50 @@ func (s *Service) CreateGroupMessage(ctx context.Context, option CreateGroupMess
 		logger.Errorf("CreateGroupMessage publish message error:%s", err.Error())
 	}
 
-	pipe := s.Source.Redis().Pipeline()
-	for _, uid := range memberIds {
-		if uid != item.FromId {
-			s.UnreadStorage.PipeIncr(ctx, pipe, uid, entity.ChatGroupMode, item.GroupId)
+	msgPreview := s.getTextMessage(item.MsgType, option.Extra)
+	msgTime := item.CreatedAt.Format(time.DateTime)
+	extra := option.Extra
+	groupID := item.GroupId
+	fromID := item.FromId
+	itemCopy := *item
+
+	s.goAfterSend("group_post_send", func(asyncCtx context.Context) {
+		memberIds := s.GroupMemberRepo.GetMemberIds(asyncCtx, groupID)
+
+		// 未读分批写入
+		const unreadPipeBatch = 300
+		pipe := s.Source.Redis().Pipeline()
+		n := 0
+		for _, uid := range memberIds {
+			if uid == fromID {
+				continue
+			}
+			s.UnreadStorage.PipeIncr(asyncCtx, pipe, uid, entity.ChatGroupMode, groupID)
+			n++
+			if n >= unreadPipeBatch {
+				_, _ = pipe.Exec(asyncCtx)
+				pipe = s.Source.Redis().Pipeline()
+				n = 0
+			}
 		}
-	}
-	_, _ = pipe.Exec(ctx)
+		if n > 0 {
+			_, _ = pipe.Exec(asyncCtx)
+		}
 
-	// 处理 @ 提及通知：将被 @ 用户写入 MentionStorage，并额外推送一条 @ 通知事件
-	s.processMentions(ctx, item, option.Extra, memberIds)
+		// @ 提及
+		s.processMentions(asyncCtx, &itemCopy, extra, memberIds)
 
-	// 更新最后一条消息
-	_ = s.MessageStorage.Set(ctx, entity.ChatGroupMode, item.FromId, item.GroupId, &cache.LastCacheMessage{
-		Content:  s.getTextMessage(item.MsgType, option.Extra),
-		Datetime: item.CreatedAt.Format(time.DateTime),
+		// 离线推送（原同步串行瓶颈）
+		for _, uid := range memberIds {
+			if uid != fromID {
+				s.tryOneSignalUserChat(asyncCtx, uid, entity.ChatGroupMode, groupID)
+			}
+		}
+
+		_ = s.MessageStorage.Set(asyncCtx, entity.ChatGroupMode, fromID, groupID, &cache.LastCacheMessage{
+			Content:  msgPreview,
+			Datetime: msgTime,
+		})
 	})
 
 	return nil
@@ -176,22 +199,20 @@ func (s *Service) processMentions(ctx context.Context, item *model.TalkGroupMess
 		return
 	}
 
-	// 为每个被@的用户添加mention记录并推送通知
+	// 先批量写入 mention，再逐人推送通知（减少逐条往返）
 	for _, uid := range usersToNotify {
-		// 添加到mention缓存
 		if err := s.MentionStorage.AddMention(ctx, uid, item.GroupId, item.MsgId); err != nil {
 			logger.Errorf("AddMention error for user %d: %s", uid, err.Error())
-			continue
 		}
+	}
 
-		// 获取该用户的所有未读mention消息ID
+	for _, uid := range usersToNotify {
 		msgIds, err := s.MentionStorage.GetMentions(ctx, uid, item.GroupId)
 		if err != nil {
 			logger.Errorf("GetMentions error for user %d: %s", uid, err.Error())
 			continue
 		}
 
-		// 推送mention通知
 		err = s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 			Event: entity.SubEventImMessageMention,
 			Payload: jsonutil.Encode(entity.SubEventImMessageMentionPayload{
@@ -221,4 +242,58 @@ func (s *Service) CreateGroupSysMessage(ctx context.Context, option CreateGroupS
 			Content: option.Content,
 		}),
 	})
+}
+
+// CreateGroupRetainDaysSetMessage 向群内写入一条保留天数系统提示（msg_type=1201），
+// from_id 记为设置者；列表查询仅对该用户返回该类消息，WebSocket 也只推给该用户。
+func (s *Service) CreateGroupRetainDaysSetMessage(ctx context.Context, userId, groupId, retainDays int) error {
+	if userId <= 0 || groupId <= 0 {
+		return nil
+	}
+
+	if s.TalkSessionRepo != nil {
+		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", userId, groupId, entity.ChatGroupMode); err == nil && sess != nil && sess.Id > 0 {
+			if sess.IsDelete == model.Yes {
+				_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
+					"is_delete":  model.No,
+					"updated_at": time.Now(),
+				}, "id = ?", sess.Id)
+			}
+		}
+	}
+
+	extra := jsonutil.Encode(map[string]int{"retain_days": retainDays})
+	item := &model.TalkGroupMessage{
+		MsgId:     strutil.NewMsgId(),
+		MsgType:   entity.ChatMsgSysRetainDaysSet,
+		GroupId:   groupId,
+		FromId:    userId, // 归属用户；列表侧按 from_id 过滤 1201
+		Quote:     "{}",
+		Extra:     extra,
+		IsRevoked: model.No,
+		IsDeleted: model.No,
+		SendTime:  time.Now(),
+	}
+	if err := s.Source.Db().WithContext(ctx).Create(item).Error; err != nil {
+		return err
+	}
+
+	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
+		Event: entity.SubEventImMessage,
+		Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
+			TalkMode:      entity.ChatGroupMode,
+			Message:       jsonutil.Encode(item),
+			TargetUserIds: []int{userId},
+		}),
+	})
+	if err != nil {
+		logger.Errorf("CreateGroupRetainDaysSetMessage push error:%s", err.Error())
+	}
+
+	_ = s.MessageStorage.Set(ctx, entity.ChatGroupMode, userId, groupId, &cache.LastCacheMessage{
+		Content:  s.getTextMessage(item.MsgType, extra),
+		Datetime: item.CreatedAt.Format(time.DateTime),
+	})
+
+	return nil
 }

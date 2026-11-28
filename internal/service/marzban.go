@@ -16,25 +16,36 @@ import (
 	"time"
 
 	"github.com/gzydong/go-chat/config"
+	"github.com/gzydong/go-chat/internal/repository/model"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const marzbanTokenTTL = 10 * time.Minute
+const marzbanCheckinReward = 6 * time.Hour
+const marzbanCheckinInterval = 6 * time.Hour
 
 var ErrMarzbanUserNotFound = errors.New("Marzban 用户不存在")
+var ErrMarzbanAlreadyCheckedIn = errors.New("距离上次签到未满6小时，请稍后再试")
+var ErrMarzbanUnlimitedExpire = errors.New("无限期账号无需签到")
 var marzbanUsernamePattern = regexp.MustCompile(`^[A-Za-z0-9_.@-]+$`)
 
 type IMarzbanService interface {
 	CreateByID(ctx context.Context, id int, dataLimit int64, expireDays int) (*MarzbanUserInfo, error)
 	GetByID(ctx context.Context, id int) (*MarzbanUserInfo, error)
+	Checkin(ctx context.Context, id int) (*MarzbanUserInfo, error)
+	CheckinStatus(ctx context.Context, id int) (bool, string, error)
 }
 
 type MarzbanService struct {
 	Config     *config.Config
 	HTTPClient *http.Client
+	DB         *gorm.DB
 
-	tokenMu        sync.Mutex `wire:"-"`
-	accessToken    string     `wire:"-"`
-	tokenExpiresAt time.Time  `wire:"-"`
+	tokenMu        sync.Mutex       `wire:"-"`
+	accessToken    string           `wire:"-"`
+	tokenExpiresAt time.Time        `wire:"-"`
+	checkinClock   func() time.Time `wire:"-"`
 }
 
 type MarzbanUserInfo struct {
@@ -162,6 +173,147 @@ func (s *MarzbanService) GetByID(ctx context.Context, id int) (*MarzbanUserInfo,
 		return nil, fmt.Errorf("查询 Marzban 用户失败，状态码：%d", status)
 	}
 	return s.toUserInfo(id, user, false), nil
+}
+
+// Checkin extends the Marzban expiry after the previous reward's six-hour cooldown.
+func (s *MarzbanService) Checkin(ctx context.Context, id int) (*MarzbanUserInfo, error) {
+	if id <= 0 {
+		return nil, errors.New("用户ID无效")
+	}
+	if s.DB == nil {
+		return nil, errors.New("签到数据库未配置")
+	}
+	var result *MarzbanUserInfo
+	err := s.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		nextCheckinAt, err := s.nextCheckinAt(tx, id)
+		if err != nil {
+			return err
+		}
+		now := s.checkinNow()
+		state := model.MarzbanCheckinState{UserID: id, NextCheckinAt: nextCheckinAt, UpdatedAt: now}
+		created := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(&state)
+		if created.Error != nil {
+			return created.Error
+		}
+		// The conditional UPDATE locks the user row until this transaction completes.
+		// A concurrent request waits, then checks the committed cooldown again.
+		claimed := tx.Model(&model.MarzbanCheckinState{}).
+			Where("user_id = ? AND next_checkin_at <= ?", id, now.Unix()).
+			Updates(map[string]any{
+				"next_checkin_at": now.Add(marzbanCheckinInterval).Unix(),
+				"updated_at":      now,
+			})
+		if claimed.Error != nil {
+			return claimed.Error
+		}
+		if claimed.RowsAffected == 0 {
+			return ErrMarzbanAlreadyCheckedIn
+		}
+		username, err := s.username(id)
+		if err != nil {
+			return err
+		}
+		user, status, err := s.getUser(ctx, username)
+		if err != nil {
+			return err
+		}
+		if status == http.StatusNotFound {
+			return ErrMarzbanUserNotFound
+		}
+		if status != http.StatusOK {
+			return fmt.Errorf("查询 Marzban 用户失败，状态码：%d", status)
+		}
+		if user.Expire == 0 {
+			return ErrMarzbanUnlimitedExpire
+		}
+		base := user.Expire
+		if base < now.Unix() {
+			base = now.Unix()
+		}
+		expire := base + int64(marzbanCheckinReward/time.Second)
+		var updated marzbanUserResponse
+		status, err = s.request(ctx, http.MethodPut, "/api/user/"+url.PathEscape(username), map[string]any{"expire": expire}, &updated, false)
+		if err != nil {
+			return err
+		}
+		if status != http.StatusOK {
+			return fmt.Errorf("更新 Marzban 到期时间失败，状态码：%d", status)
+		}
+		if updated.Expire != expire {
+			return errors.New("Marzban 返回的到期时间与签到奖励不一致")
+		}
+		completedAt := s.checkinNow()
+		if err := tx.Model(&model.MarzbanCheckinState{}).Where("user_id = ?", id).
+			Updates(map[string]any{
+				"next_checkin_at": completedAt.Add(marzbanCheckinInterval).Unix(),
+				"updated_at":      completedAt,
+			}).Error; err != nil {
+			return err
+		}
+		// Keep the existing daily unique index and update that day's latest reward.
+		// The separate user state permits multiple rewards on the same date.
+		record := model.MarzbanCheckin{
+			UserID:      id,
+			CheckinDate: completedAt.In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02"),
+			Expire:      expire,
+			CreatedAt:   completedAt,
+		}
+		if err := tx.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "checkin_date"}},
+			DoUpdates: clause.AssignmentColumns([]string{"expire", "created_at"}),
+		}).Create(&record).Error; err != nil {
+			return err
+		}
+		result = s.toUserInfo(id, &updated, false)
+		return nil
+	})
+	return result, err
+}
+
+func (s *MarzbanService) CheckinStatus(ctx context.Context, id int) (bool, string, error) {
+	if id <= 0 {
+		return false, "", errors.New("用户ID无效")
+	}
+	if s.DB == nil {
+		return false, "", errors.New("签到数据库未配置")
+	}
+	nextCheckinAt, err := s.nextCheckinAt(s.DB.WithContext(ctx), id)
+	if err != nil {
+		return false, "", err
+	}
+	if nextCheckinAt == 0 {
+		return false, "", nil
+	}
+	next := time.Unix(nextCheckinAt, 0).In(time.FixedZone("Asia/Shanghai", 8*3600)).Format(time.RFC3339)
+	return s.checkinNow().Unix() < nextCheckinAt, next, nil
+}
+
+// nextCheckinAt falls back to existing reward history when upgrading daily users.
+func (s *MarzbanService) nextCheckinAt(db *gorm.DB, id int) (int64, error) {
+	var state model.MarzbanCheckinState
+	err := db.Where("user_id = ?", id).Take(&state).Error
+	if err == nil {
+		return state.NextCheckinAt, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, err
+	}
+	var latest model.MarzbanCheckin
+	err = db.Where("user_id = ?", id).Order("created_at DESC").Take(&latest).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return latest.CreatedAt.Add(marzbanCheckinInterval).Unix(), nil
+}
+
+func (s *MarzbanService) checkinNow() time.Time {
+	if s.checkinClock != nil {
+		return s.checkinClock()
+	}
+	return time.Now()
 }
 
 func (s *MarzbanService) getUser(ctx context.Context, username string) (*marzbanUserResponse, int, error) {

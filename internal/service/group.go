@@ -71,6 +71,7 @@ func (g *GroupService) Create(ctx context.Context, opt *GroupCreateOpt) (int, er
 		IsOvert:       model.No,
 		IsMute:        model.No,
 		IsAllowInvite: 1, // 与 GroupDetailResponse：1 允许群内互加
+		ForceStatus:   model.GroupForceStatusNone,
 	}
 
 	err = g.Source.Db().Transaction(func(tx *gorm.DB) error {
@@ -120,6 +121,7 @@ func (g *GroupService) Create(ctx context.Context, opt *GroupCreateOpt) (int, er
 			GroupId:   group.Id,
 			FromId:    0,
 			IsRevoked: model.No,
+			IsDeleted: model.No,
 			Extra: jsonutil.Encode(model.TalkRecordExtraGroupCreate{
 				OwnerId:   user.Id,
 				OwnerName: user.Nickname,
@@ -232,6 +234,7 @@ func (g *GroupService) Secede(ctx context.Context, groupId int, uid int) error {
 		GroupId:   groupId,
 		FromId:    0,
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		Extra: jsonutil.Encode(&model.TalkRecordExtraGroupMemberQuit{
 			OwnerId:   user.Id,
 			OwnerName: user.Nickname,
@@ -369,6 +372,7 @@ func (g *GroupService) Invite(ctx context.Context, opt *GroupInviteOpt) error {
 		GroupId:   opt.GroupId,
 		FromId:    0, // 系统消息
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		Extra:     "",
 		Quote:     "{}",
 		SendTime:  time.Now(),
@@ -481,6 +485,7 @@ func (g *GroupService) RemoveMember(ctx context.Context, opt *GroupRemoveMembers
 		GroupId:   opt.GroupId,
 		FromId:    0,
 		IsRevoked: model.No,
+		IsDeleted: model.No,
 		Extra: jsonutil.Encode(&model.TalkRecordExtraGroupMemberKicked{
 			OwnerId:   memberMaps[opt.UserId].Id,
 			OwnerName: memberMaps[opt.UserId].Nickname,
@@ -539,7 +544,7 @@ func (g *GroupService) List(ctx context.Context, userId int) ([]*model.GroupItem
 	db := g.Source.Db().WithContext(ctx)
 
 	tx := db.Model(&model.GroupMember{})
-	tx.Select("`group`.id,`group`.name as group_name,`group`.avatar,`group`.profile,group_member.leader,`group`.creator_id")
+	tx.Select("`group`.id,`group`.name as group_name,`group`.avatar,`group`.profile,group_member.leader,`group`.creator_id,IFNULL(`group`.is_secret,0) as is_secret")
 	tx.Joins("left join `group` on `group`.id = group_member.group_id")
 	tx.Where("group_member.user_id = ? and group_member.is_quit = ?", userId, model.No)
 	tx.Order("group_member.created_at desc")

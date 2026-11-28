@@ -1,6 +1,8 @@
 package mission
 
 import (
+	"fmt"
+
 	"github.com/gzydong/go-chat/config"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/repository/model"
@@ -18,7 +20,7 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 	defer logger.Infof("数据库初始化完成")
 
 	// 使用 GORM AutoMigrate 自动创建或更新数据库表结构
-	// 
+	//
 	// 此迁移包括所有应用程序表：
 	// 1. 原 lumenim.sql 中的 28 张表（admin, users, contact*, group*, article*, talk*, emoticon*, organize*, robot, file_upload）
 	// 2. 系统表（sys_*, group_robot*, invite_code, oauth_user, wallet_user, red_envelope, sequence）
@@ -28,58 +30,60 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		// 用户相关
 		&model.Users{},
 		&model.Admin{},
-		
+
 		// 联系人相关
 		&model.Contact{},
 		&model.ContactApply{},
 		&model.ContactGroup{},
-		
+
 		// 群组相关
 		&model.Group{},
 		&model.GroupApply{},
+		&model.GroupAdApply{},
+		&model.BannerAdApply{},
 		&model.GroupMember{},
 		&model.GroupNotice{},
 		&model.GroupVote{},
 		&model.GroupVoteAnswer{},
-		
+
 		// 文章相关
 		&model.Article{},
 		&model.ArticleAnnex{},
 		&model.ArticleClass{},
 		&model.ArticleTag{},
 		&model.ArticleHistory{},
-		
+
 		// 消息相关
 		&model.TalkSession{},
 		&model.TalkUserMessage{},
 		&model.TalkGroupMessage{},
 		&model.TalkGroupMessageDel{},
 		&model.TalkGroupMsgReader{},
-		
+
 		// 表情包相关
 		&model.Emoticon{},
 		&model.EmoticonItem{},
 		&model.UsersEmoticon{},
-		
+
 		// 组织架构相关
 		&model.Organize{},
 		&model.OrganizeDept{},
 		&model.OrganizePost{},
-		
+
 		// 机器人相关
 		&model.Robot{},
 		&model.GroupRobot{},
 		&model.GroupRobotMessage{},
-		
+
 		// 文件上传相关
 		&model.FileUpload{},
-		
+
 		// 系统管理相关
 		&model.SysMenu{},
 		&model.SysRole{},
 		&model.SysResource{},
 		&model.SysAdminTotp{},
-		
+
 		// 其他
 		&model.InviteCode{},
 		&model.OAuthUser{},
@@ -92,6 +96,8 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.AppNews{},
 		&model.AppNewsCategory{},
 		&model.AppNewsView{},
+		&model.MarzbanCheckin{},
+		&model.MarzbanCheckinState{},
 
 		// 商户 C2C
 		&model.Merchant{},
@@ -109,11 +115,126 @@ func Migrate(_ *cli.Context, app *MigrateProvider) error {
 		&model.NoticeLetter{},
 		&model.NoticeTemplate{},
 		&model.NoticeArticle{},
+		&model.UserFaker{},
+		&model.GroupFaker{},
+		&model.UserCmd{},
+		&model.UserReport{},
+		&model.GroupTotop{},
 	)
-	
+
 	if err != nil {
 		logger.Errorf("数据库表结构迁移失败 Err: %v", err)
 		return err
+	}
+
+	// app_version / app_explore / app_module：确保时间列具备数据库级 DEFAULT
+	for _, table := range []string{"app_version", "app_explore", "app_module"} {
+		if !app.DB.Migrator().HasTable(table) {
+			continue
+		}
+		_ = app.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `created_at` = NOW() WHERE `created_at` IS NULL", table)).Error
+		_ = app.DB.Exec(fmt.Sprintf("UPDATE `%s` SET `updated_at` = NOW() WHERE `updated_at` IS NULL", table)).Error
+		if err := app.DB.Exec(fmt.Sprintf(
+			"ALTER TABLE `%s` "+
+				"MODIFY COLUMN `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', "+
+				"MODIFY COLUMN `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'",
+			table,
+		)).Error; err != nil {
+			logger.Warnf("ensure datetime defaults on %s: %v", table, err)
+		}
+	}
+
+	// user_report：补齐时间列默认值
+	if app.DB.Migrator().HasTable("user_report") {
+		if err := app.DB.Exec(
+			"ALTER TABLE `user_report` " +
+				"MODIFY COLUMN `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', " +
+				"MODIFY COLUMN `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'",
+		).Error; err != nil {
+			logger.Warnf("ensure user_report datetime defaults: %v", err)
+		}
+	}
+
+	// contact：对齐字段属性（含 is_black、时间列默认值）
+	if app.DB.Migrator().HasTable("contact") {
+		if !app.DB.Migrator().HasColumn(&model.Contact{}, "is_black") {
+			if err := app.DB.Exec(
+				"ALTER TABLE `contact` ADD COLUMN `is_black` tinyint(4) NULL DEFAULT 0 COMMENT '是否拉黑：0-否，1-是' AFTER `group_id`",
+			).Error; err != nil {
+				logger.Warnf("add contact.is_black: %v", err)
+			}
+		}
+		if err := app.DB.Exec(
+			"ALTER TABLE `contact` " +
+				"MODIFY COLUMN `user_id` bigint(20) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `friend_id` bigint(20) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `remark` varchar(128) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `status` tinyint(4) NULL DEFAULT NULL, " +
+				"MODIFY COLUMN `group_id` bigint(20) NULL DEFAULT 0, " +
+				"MODIFY COLUMN `is_black` tinyint(4) NULL DEFAULT 0 COMMENT '是否拉黑：0-否，1-是', " +
+				"MODIFY COLUMN `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP, " +
+				"MODIFY COLUMN `updated_at` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP",
+		).Error; err != nil {
+			logger.Warnf("ensure contact column attributes: %v", err)
+		}
+	}
+
+	// group：补齐 force_status / is_allow_invite / 时间列属性（AutoMigrate 对已存在列默认值不一定生效）
+	if app.DB.Migrator().HasTable("group") {
+		if !app.DB.Migrator().HasColumn(&model.Group{}, "force_status") {
+			if err := app.DB.Exec(
+				"ALTER TABLE `group` ADD COLUMN `force_status` tinyint(4) NULL DEFAULT 0 COMMENT '强制禁言：0无 1所有人不可发言(含群主/管理员)'",
+			).Error; err != nil {
+				logger.Warnf("add group.force_status: %v", err)
+			}
+		}
+		if !app.DB.Migrator().HasColumn(&model.Group{}, "is_secret") {
+			if err := app.DB.Exec(
+				"ALTER TABLE `group` ADD COLUMN `is_secret` tinyint(4) NULL DEFAULT 0 COMMENT '开启进群密码：0-否，1-是'",
+			).Error; err != nil {
+				logger.Warnf("add group.is_secret: %v", err)
+			}
+		}
+		if !app.DB.Migrator().HasColumn(&model.Group{}, "secret_code") {
+			if err := app.DB.Exec(
+				"ALTER TABLE `group` ADD COLUMN `secret_code` varchar(8) NULL COMMENT '入群密码'",
+			).Error; err != nil {
+				logger.Warnf("add group.secret_code: %v", err)
+			}
+		}
+		if err := app.DB.Exec(
+			"ALTER TABLE `group` " +
+				"MODIFY COLUMN `is_allow_invite` tinyint(4) NULL DEFAULT 1 COMMENT '群内是否允许成员互加好友', " +
+				"MODIFY COLUMN `force_status` tinyint(4) NULL DEFAULT 0 COMMENT '强制禁言：0无 1所有人不可发言(含群主/管理员)', " +
+				"MODIFY COLUMN `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间', " +
+				"MODIFY COLUMN `updated_at` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'",
+		).Error; err != nil {
+			logger.Warnf("ensure group column defaults: %v", err)
+		}
+	}
+
+	if app.DB.Migrator().HasTable("users") && !app.DB.Migrator().HasColumn(&model.Users{}, "level") {
+		if err := app.DB.Exec(
+			"ALTER TABLE `users` ADD COLUMN `level` tinyint(4) NULL DEFAULT 0 COMMENT '等级：0-V0，1-PRO' AFTER `invite_code`",
+		).Error; err != nil {
+			logger.Warnf("add users.level: %v", err)
+		}
+	}
+
+	if app.DB.Migrator().HasTable("users") && !app.DB.Migrator().HasColumn(&model.Users{}, "level_pro_at") {
+		if err := app.DB.Exec(
+			"ALTER TABLE `users` ADD COLUMN `level_pro_at` datetime NULL COMMENT '升级pro会员时间' AFTER `level`",
+		).Error; err != nil {
+			logger.Warnf("add users.level_pro_at: %v", err)
+		}
+	}
+
+	if app.DB.Migrator().HasTable("banner_ad_apply") && !app.DB.Migrator().HasColumn(&model.BannerAdApply{}, "url") {
+		if err := app.DB.Exec(
+			"ALTER TABLE `banner_ad_apply` ADD COLUMN `url` varchar(255) NULL DEFAULT NULL COMMENT '跳转链接' AFTER `banner`",
+		).Error; err != nil {
+			logger.Warnf("add banner_ad_apply.url: %v", err)
+		}
 	}
 
 	logger.Infof("数据库表结构迁移成功")

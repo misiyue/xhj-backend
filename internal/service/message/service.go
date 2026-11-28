@@ -40,6 +40,8 @@ type IGroupMessage interface {
 	CreateGroupMessage(ctx context.Context, option CreateGroupMessageOption) error
 	// CreateGroupSysMessage 创建群系统消息
 	CreateGroupSysMessage(ctx context.Context, option CreateGroupSysMessageOption) error
+	// CreateGroupRetainDaysSetMessage 设置群聊 retain_days 后仅通知该用户（列表按 from_id 过滤 1201）
+	CreateGroupRetainDaysSetMessage(ctx context.Context, userId, groupId, retainDays int) error
 }
 
 type IMessage interface {
@@ -73,12 +75,12 @@ type IMessage interface {
 	CreateMixedMessage(ctx context.Context, option CreateMixedMessage) error
 	// CreateRTCCallMessage 音视频通话消息
 	CreateRTCCallMessage(ctx context.Context, option CreateRTCCallMessage) error
-	// SendRTCCallInvite 发起音视频通话邀请（仅 OneSignal VoIP 推送，不落库、不推 WebSocket）
-	SendRTCCallInvite(ctx context.Context, option SendRTCCallInvite) error
 	// CreateRedEnvelopeMessage 红包消息
 	CreateRedEnvelopeMessage(ctx context.Context, option CreateRedEnvelopeMessage) error
 	// CreateTransferMessage 转账消息
 	CreateTransferMessage(ctx context.Context, option CreateTransferMessage) error
+	// CreateCmdMessage 指令卡片消息
+	CreateCmdMessage(ctx context.Context, option CreateCmdMessage) error
 }
 
 type IService interface {
@@ -94,6 +96,7 @@ type Service struct {
 	TalkRecordsVoteRepo *repo.GroupVote
 	TalkSessionRepo     *repo.TalkSession
 	UsersRepo           *repo.Users
+	ContactRepo         *repo.Contact
 	Filesystem          filesystem.IFilesystem
 	UnreadStorage       *cache.UnreadStorage
 	MessageStorage      *cache.MessageStorage
@@ -469,24 +472,40 @@ func (s *Service) CreateBusinessCardMessage(ctx context.Context, option CreateBu
 }
 
 func (s *Service) CreateMixedMessage(ctx context.Context, option CreateMixedMessage) error {
-	items := make([]*model.TalkRecordExtraMixedItem, 0)
-	for _, item := range option.MessageList {
+	normalized, err := normalizeMixedMessageList(option.MessageList)
+	if err != nil {
+		return err
+	}
+	items := make([]*model.TalkRecordExtraMixedItem, 0, len(normalized))
+	for _, item := range normalized {
 		items = append(items, &model.TalkRecordExtraMixedItem{
 			Type:    item.Type,
 			Content: item.Content,
+			Link:    item.Link,
 		})
 	}
 
-	return s.CreateMessage(ctx, CreateMessageOption{
-		MsgId:      option.MsgId,
+	msgId := option.MsgId
+	if msgId == "" {
+		msgId = strutil.NewMsgId()
+	}
+
+	if err := s.CreateMessage(ctx, CreateMessageOption{
+		MsgId:      msgId,
 		TalkMode:   option.TalkMode,
 		FromId:     option.FromId,
 		ReceiverId: option.ReceiverId,
+		QuoteId:    option.QuoteId,
 		MsgType:    entity.ChatMsgTypeMixed,
 		Extra: jsonutil.Encode(model.TalkRecordExtraMixed{
 			Items: items,
 		}),
-	})
+	}); err != nil {
+		return err
+	}
+
+	// 子段冗余入库（is_revoked=0），供 history-records 按 msg_type 索引查询，不推送、不占会话
+	return s.createMixedSegmentRows(ctx, option.TalkMode, option.FromId, option.ReceiverId, msgId, normalized)
 }
 
 func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCallMessage) error {
@@ -500,19 +519,9 @@ func (s *Service) CreateRTCCallMessage(ctx context.Context, option CreateRTCCall
 			Type:     option.Type,
 			Status:   option.Status,
 			Duration: option.Duration,
+			CallId:   option.CallId,
 		}),
 	})
-}
-
-func (s *Service) SendRTCCallInvite(ctx context.Context, option SendRTCCallInvite) error {
-	if option.TalkMode != entity.ChatPrivateMode {
-		return errors.New("rtc_invite 仅支持私聊")
-	}
-	if option.FromId <= 0 || option.ReceiverId <= 0 {
-		return errors.New("无效的发送者或接收者")
-	}
-	TryOneSignalRTCInvitePush(ctx, s.UsersRepo, s.TalkSessionRepo, option.FromId, option.ReceiverId)
-	return nil
 }
 
 func (s *Service) CreateRedEnvelopeMessage(ctx context.Context, option CreateRedEnvelopeMessage) error {
@@ -547,6 +556,29 @@ func (s *Service) CreateTransferMessage(ctx context.Context, option CreateTransf
 	})
 }
 
+func (s *Service) CreateCmdMessage(ctx context.Context, option CreateCmdMessage) error {
+	btns := make([]model.TalkRecordExtraCmdBtn, 0, len(option.Btns))
+	for _, b := range option.Btns {
+		btns = append(btns, model.TalkRecordExtraCmdBtn{
+			Text: b.Text,
+			Url:  b.Url,
+		})
+	}
+	return s.CreateMessage(ctx, CreateMessageOption{
+		MsgId:      option.MsgId,
+		TalkMode:   option.TalkMode,
+		FromId:     option.FromId,
+		ReceiverId: option.ReceiverId,
+		QuoteId:    option.QuoteId,
+		MsgType:    entity.ChatMsgTypeCmd,
+		Extra: jsonutil.Encode(model.TalkRecordExtraCmd{
+			File:  option.File,
+			Intro: option.Intro,
+			Btns:  btns,
+		}),
+	})
+}
+
 func (s *Service) CreateLoginMessage(ctx context.Context, option CreateLoginMessageOption) error {
 	robot, err := s.RobotRepo.GetLoginRobot(ctx)
 	if err != nil {
@@ -572,4 +604,3 @@ func (s *Service) CreateLoginMessage(ctx context.Context, option CreateLoginMess
 func (s *Service) getTextMessage(msgType int, extra string) string {
 	return PreviewText(msgType, extra)
 }
-

@@ -21,4 +21,5 @@ var ProviderSet = wire.NewSet(
 	NewMentionStorage,
 	NewRegisterLimiter,
 	NewAppNewsViewStorage,
+	NewYunxinTokenStorage,
 )

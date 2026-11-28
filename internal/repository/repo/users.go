@@ -60,6 +60,15 @@ func (u *Users) FindByUsername(ctx context.Context, username string) (*model.Use
 	return u.Repo.FindByWhere(ctx, "username = ?", username)
 }
 
+// IsUsernameExist 登录名是否已存在
+func (u *Users) IsUsernameExist(ctx context.Context, username string) bool {
+	if username == "" {
+		return false
+	}
+	user, err := u.FindByUsername(ctx, username)
+	return err == nil && user != nil && user.Id > 0
+}
+
 // FindByUsernameOrEmail 按 username 或 email 精确匹配（优先 username）
 func (u *Users) FindByUsernameOrEmail(ctx context.Context, account string) (*model.Users, error) {
 	user, err := u.Repo.FindByWhere(ctx, "username = ?", account)
@@ -74,19 +83,19 @@ func (u *Users) SearchByKeyword(ctx context.Context, keyword string) (*model.Use
 	active := "status = ?"
 	// 先尝试精确匹配用户名
 	user, err := u.Repo.FindByWhere(ctx, "username = ? AND "+active, keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 再尝试精确匹配邮箱
 	user, err = u.Repo.FindByWhere(ctx, "email = ? AND "+active, keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 再尝试精确匹配手机号
 	user, err = u.Repo.FindByWhere(ctx, "mobile = ? AND "+active, keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err == nil && user != nil && user.Id > 0 {
 		return user, nil
 	}
 
@@ -104,21 +113,37 @@ func (u *Users) SearchByKeyword(ctx context.Context, keyword string) (*model.Use
 
 // SearchByExactIdentifier 通过精确账号搜索用户（添加好友用，只做完全匹配）
 // 规则：先按 username，再按 email，再按 mobile，全部是精确等值匹配，不做模糊 LIKE。排除停用/已注销。
+// 未找到时仍返回完整 Users 结构（id/user_id 为 0），不返回 nil。
 func (u *Users) SearchByExactIdentifier(ctx context.Context, keyword string) (*model.Users, error) {
+	empty := &model.Users{}
+
 	// 精确用户名
 	user, err := u.Repo.FindByWhere(ctx, "username = ? AND status = ?", keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err != nil {
+		return nil, err
+	}
+	if user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 精确邮箱
 	user, err = u.Repo.FindByWhere(ctx, "email = ? AND status = ?", keyword, model.UsersStatusNormal)
-	if err == nil && user != nil {
+	if err != nil {
+		return nil, err
+	}
+	if user != nil && user.Id > 0 {
 		return user, nil
 	}
 
 	// 精确手机号
-	return u.Repo.FindByWhere(ctx, "mobile = ? AND status = ?", keyword, model.UsersStatusNormal)
+	user, err = u.Repo.FindByWhere(ctx, "mobile = ? AND status = ?", keyword, model.UsersStatusNormal)
+	if err != nil {
+		return nil, err
+	}
+	if user != nil && user.Id > 0 {
+		return user, nil
+	}
+	return empty, nil
 }
 
 // PaginationByInviteUserId 分页查询被我邀请注册的用户（users.invite_user_id = inviterId），按 id 倒序
@@ -137,13 +162,13 @@ func (u *Users) CountByInviteUserId(ctx context.Context, inviterId int) (int64, 
 	return n, err
 }
 
-// FindByInviteCode 按 users.invite_code 查邀请人
+// FindByInviteCode 按 users.invite_code 查邀请人（大小写不敏感）
 func (u *Users) FindByInviteCode(ctx context.Context, code string) (*model.Users, error) {
-	code = strings.TrimSpace(strings.ToLower(code))
+	code = strings.TrimSpace(code)
 	if code == "" {
 		return nil, nil
 	}
-	return u.Repo.FindByWhere(ctx, "invite_code = ?", code)
+	return u.Repo.FindByWhere(ctx, "LOWER(invite_code) = LOWER(?)", code)
 }
 
 // EnsureInviteCode 返回用户邀请码；为空则生成并写入（唯一）

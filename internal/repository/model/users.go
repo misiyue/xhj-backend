@@ -11,6 +11,9 @@ const (
 
 	UsersSubscribeNo  = 0
 	UsersSubscribeYes = 1
+
+	UsersLevelV0  = 0 // V0
+	UsersLevelPro = 1 // PRO
 )
 
 const UserInviteCodeLen = 6
@@ -54,7 +57,9 @@ type Users struct {
 	InviteUserId int       `gorm:"column:invite_user_id;default:0" json:"invite_user_id"`             // 邀请人 users.id
 	InviteCode   string    `gorm:"column:invite_code;type:varchar(6);uniqueIndex" json:"invite_code"` // 邀请码（6位，不含 0/1/l/o）
 	DeviceCode   string    `gorm:"column:device_code;type:varchar(128)" json:"device_code"`           // 客户端设备码
-	CreatedAt    time.Time `gorm:"column:created_at;" json:"created_at"`                              // 注册时间
+	Level        int        `gorm:"column:level;type:tinyint(4);default:0" json:"level"`               // 等级：0-V0，1-PRO
+	LevelProAt   *time.Time `gorm:"column:level_pro_at;type:datetime" json:"level_pro_at"`            // 升级 PRO 会员时间
+	CreatedAt    time.Time  `gorm:"column:created_at;" json:"created_at"`                             // 注册时间
 	UpdatedAt    time.Time `gorm:"column:updated_at;" json:"updated_at"`                              // 更新时间
 }
 

@@ -68,3 +68,14 @@ func TestText_TransferMessage(t *testing.T) {
 	result := PreviewText(entity.ChatMsgTypeTransfer, "")
 	assert.Equal(t, "[转账]", result)
 }
+
+func TestText_GroupNoticeMessage(t *testing.T) {
+	extra := `{"owner_id":1,"owner_name":"张三","title":"更新了群公告","content":"本周五下午开会"}`
+	result := PreviewText(entity.ChatMsgTypeGroupNotice, extra)
+	assert.Equal(t, "[群公告]本周五下午开会", result)
+}
+
+func TestText_GroupNoticeMessageEmpty(t *testing.T) {
+	result := PreviewText(entity.ChatMsgTypeGroupNotice, `{"content":""}`)
+	assert.Equal(t, "[群公告]", result)
+}

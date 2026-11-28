@@ -2,14 +2,21 @@ package talk
 
 import (
 	"context"
-	"html"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
+	"github.com/gzydong/go-chat/external/push"
+	webv1 "github.com/gzydong/go-chat/internal/apis/handler/web/v1"
 	"github.com/gzydong/go-chat/internal/entity"
+	"github.com/gzydong/go-chat/internal/logic"
 	"github.com/gzydong/go-chat/internal/pkg/core/errorx"
 	"github.com/gzydong/go-chat/internal/pkg/core/middleware"
+	"github.com/gzydong/go-chat/internal/pkg/jsonutil"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
+	"github.com/gzydong/go-chat/internal/repository/model"
+	"github.com/gzydong/go-chat/internal/repository/repo"
 	"github.com/gzydong/go-chat/internal/service"
 	"github.com/gzydong/go-chat/internal/service/message"
 )
@@ -26,8 +33,12 @@ var mapping map[string]func(ctx *gin.Context) error
 //  3. 根据消息类型将请求分发到不同的 onSendXXX 方法
 //  4. onSendXXX 再调用 MessageService，把消息真正写入数据库、更新未读、推送到长连接
 type Publish struct {
-	AuthService    service.IAuthService
-	MessageService message.IService
+	AuthService     service.IAuthService
+	MessageService  message.IService
+	Yunxin          *webv1.Yunxin
+	PushMessage     *logic.PushMessage
+	UsersRepo       *repo.Users
+	TalkSessionRepo *repo.TalkSession
 }
 
 type BaseMessageRequest struct {
@@ -108,7 +119,7 @@ func (c *Publish) onSendText(ctx *gin.Context) error {
 		TalkMode:   in.TalkMode,
 		FromId:     uid,
 		ReceiverId: in.ReceiverId,
-		Content:    html.EscapeString(in.Body.Content),
+		Content:    in.Body.Content,
 		QuoteId:    in.QuoteId,
 		Mentions:   in.Body.Mentions,
 	})
@@ -429,7 +440,8 @@ type onMixedMessageMessage struct {
 		Items []struct {
 			Type    int    `json:"type" binding:"required"`
 			Content string `json:"content" binding:"required"`
-		} `json:"items" binding:"required"`
+			Link    string `json:"link"`
+		} `json:"items" binding:"required,min=1"`
 	} `json:"body" binding:"required"`
 }
 
@@ -445,6 +457,7 @@ func (c *Publish) onMixedMessage(ctx *gin.Context) error {
 		items = append(items, message.CreateMixedMessageItem{
 			Type:    item.Type,
 			Content: item.Content,
+			Link:    item.Link,
 		})
 	}
 
@@ -467,10 +480,120 @@ func (c *Publish) onMixedMessage(ctx *gin.Context) error {
 type onSendRTCCallMessage struct {
 	BaseMessageRequest
 	Body struct {
-		Type     int `json:"type" binding:"required"`   // 1:语音 2:视频
-		Status   int `json:"status" binding:"required"` // 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
-		Duration int `json:"duration"`                  // 通话时长
+		Type     int    `json:"type" binding:"required"`            // 1:语音 2:视频
+		Status   int    `json:"status" binding:"required"`          // 1:已取消 2:未接听 3:已拒绝 4:已接通/已结束
+		Duration int    `json:"duration"`                           // 通话时长
+		CallId   string `json:"call_id" binding:"required,max=128"` // 云信 CallKit 通话 ID
 	} `json:"body" binding:"required"`
+}
+
+type onSendCallInviteMessage struct {
+	BaseMessageRequest
+	Body struct {
+		Type   int    `json:"type" binding:"required"`            // 1:语音 2:视频
+		CallId string `json:"call_id" binding:"required,max=128"` // 云信 CallKit 通话 ID
+	} `json:"body" binding:"required"`
+}
+
+// 通话邀请（不写聊天记录；预创建云信账号并推送 im.call.invite + OneSignal VoIP）
+func (c *Publish) onSendCallInvite(ctx *gin.Context) error {
+	in := &onSendCallInviteMessage{}
+	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
+		return errorx.New(400, err.Error())
+	}
+	if in.TalkMode != entity.ChatPrivateMode {
+		return errorx.New(400, "通话邀请仅支持私聊")
+	}
+	if in.Body.Type != 1 && in.Body.Type != 2 {
+		return errorx.New(400, "无效的通话类型")
+	}
+
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
+	reqCtx := ctx.Request.Context()
+
+	if c.Yunxin != nil {
+		if err := c.Yunxin.EnsureUserAccount(reqCtx, uid); err != nil {
+			return err
+		}
+		if err := c.Yunxin.EnsureUserAccount(reqCtx, in.ReceiverId); err != nil {
+			return err
+		}
+	}
+
+	fromName, fromAvatar := c.loadCallerProfile(reqCtx, uid)
+	roomID := 0
+	if id, err := strconv.Atoi(strings.TrimSpace(in.Body.CallId)); err == nil {
+		roomID = id
+	}
+
+	if c.PushMessage != nil {
+		_ = c.PushMessage.Push(reqCtx, entity.ImTopicChat, &entity.SubscribeMessage{
+			Event: entity.SubEventImCallInvite,
+			Payload: jsonutil.Encode(entity.SubEventImCallPayload{
+				FromId:         uid,
+				ToId:           in.ReceiverId,
+				RoomId:         roomID,
+				CallType:       in.Body.Type,
+				FromUserName:   fromName,
+				FromUserAvatar: fromAvatar,
+			}),
+		})
+	}
+
+	c.tryOneSignalCallInviteVoIP(reqCtx, in.ReceiverId, uid, in.Body.Type, fromName, fromAvatar)
+
+	return nil
+}
+
+func (c *Publish) loadCallerProfile(ctx context.Context, userID int) (name, avatar string) {
+	name = "用户"
+	if c.UsersRepo == nil || userID <= 0 {
+		return name, avatar
+	}
+	user, err := c.UsersRepo.FindByIdWithCache(ctx, userID)
+	if err != nil {
+		logger.Errorf("call_invite caller load err: user_id=%d %s", userID, err.Error())
+		return name, avatar
+	}
+	if user == nil {
+		return name, avatar
+	}
+	if strings.TrimSpace(user.Nickname) != "" {
+		name = strings.TrimSpace(user.Nickname)
+	}
+	avatar = strings.TrimSpace(user.Avatar)
+	return name, avatar
+}
+
+func (c *Publish) tryOneSignalCallInviteVoIP(ctx context.Context, receiverID, senderID, callType int, fromName, fromAvatar string) {
+	if receiverID <= 0 || senderID <= 0 {
+		return
+	}
+	if c.UsersRepo == nil {
+		return
+	}
+	receiver, err := c.UsersRepo.FindByIdWithCache(ctx, receiverID)
+	if err != nil {
+		logger.Errorf("call_invite receiver load err: user_id=%d %s", receiverID, err.Error())
+		return
+	}
+	if receiver == nil || receiver.IsSubscribe != model.UsersSubscribeYes {
+		return
+	}
+	if c.TalkSessionRepo != nil &&
+		c.TalkSessionRepo.IsDisturb(ctx, receiverID, senderID, entity.ChatPrivateMode) {
+		return
+	}
+	if err := push.SendRTCInviteVoIPToUser(receiverID, push.VoIPCallData{
+		Event:          "rtc_invite",
+		FromUserId:     senderID,
+		ToUserId:       receiverID,
+		CallType:       callType,
+		FromUserName:   fromName,
+		FromUserAvatar: fromAvatar,
+	}); err != nil {
+		logger.Errorf("call_invite voip push err: receiver_id=%d %s", receiverID, err.Error())
+	}
 }
 
 // 音视频通话消息（写入聊天记录并推送 WebSocket，不发送 OneSignal VoIP）
@@ -478,6 +601,15 @@ func (c *Publish) onSendRTCCall(ctx *gin.Context) error {
 	in := &onSendRTCCallMessage{}
 	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
 		return errorx.New(400, err.Error())
+	}
+	if in.TalkMode != entity.ChatPrivateMode {
+		return errorx.New(400, "音视频通话仅支持私聊")
+	}
+	if in.Body.Type != 1 && in.Body.Type != 2 {
+		return errorx.New(400, "无效的通话类型")
+	}
+	if in.Body.Status < 1 || in.Body.Status > 4 || in.Body.Duration < 0 {
+		return errorx.New(400, "无效的通话状态")
 	}
 
 	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
@@ -489,32 +621,9 @@ func (c *Publish) onSendRTCCall(ctx *gin.Context) error {
 		Type:       in.Body.Type,
 		Status:     in.Body.Status,
 		Duration:   in.Body.Duration,
+		CallId:     in.Body.CallId,
 	})
 
-	if err != nil {
-		return ctx.Error(err)
-	}
-
-	return nil
-}
-
-// 音视频通话邀请（仅 OneSignal VoIP 推送，不落库、不推 WebSocket）
-func (c *Publish) onSendRTCInvite(ctx *gin.Context) error {
-	in := &BaseMessageRequest{}
-	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
-		return errorx.New(400, err.Error())
-	}
-
-	if in.TalkMode != entity.ChatPrivateMode {
-		return errorx.New(400, "rtc_invite 仅支持私聊")
-	}
-
-	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
-	err := c.MessageService.SendRTCCallInvite(ctx.Request.Context(), message.SendRTCCallInvite{
-		TalkMode:   in.TalkMode,
-		FromId:     uid,
-		ReceiverId: in.ReceiverId,
-	})
 	if err != nil {
 		return ctx.Error(err)
 	}
@@ -569,6 +678,18 @@ type onSendTransferMessage struct {
 	} `json:"body" binding:"required"`
 }
 
+type onSendCmdMessage struct {
+	BaseMessageRequest
+	Body struct {
+		File  string `json:"file"`
+		Intro string `json:"intro"`
+		Btns  []struct {
+			Text string `json:"text" binding:"required"`
+			Url  string `json:"url" binding:"required"`
+		} `json:"btns" binding:"required"`
+	} `json:"body" binding:"required"`
+}
+
 // 转账消息
 func (c *Publish) onSendTransfer(ctx *gin.Context) error {
 	in := &onSendTransferMessage{}
@@ -594,6 +715,38 @@ func (c *Publish) onSendTransfer(ctx *gin.Context) error {
 	return nil
 }
 
+// 指令卡片消息
+func (c *Publish) onSendCmd(ctx *gin.Context) error {
+	in := &onSendCmdMessage{}
+	if err := ctx.ShouldBindBodyWith(in, binding.JSON); err != nil {
+		return errorx.New(400, err.Error())
+	}
+
+	btns := make([]message.CreateCmdMessageBtn, 0, len(in.Body.Btns))
+	for _, b := range in.Body.Btns {
+		btns = append(btns, message.CreateCmdMessageBtn{
+			Text: strings.TrimSpace(b.Text),
+			Url:  strings.TrimSpace(b.Url),
+		})
+	}
+
+	uid := middleware.FormContextAuthId[entity.WebClaims](ctx.Request.Context())
+	err := c.MessageService.CreateCmdMessage(ctx.Request.Context(), message.CreateCmdMessage{
+		MsgId:      in.MsgId,
+		TalkMode:   in.TalkMode,
+		FromId:     uid,
+		ReceiverId: in.ReceiverId,
+		QuoteId:    in.QuoteId,
+		File:       strings.TrimSpace(in.Body.File),
+		Intro:      strings.TrimSpace(in.Body.Intro),
+		Btns:       btns,
+	})
+	if err != nil {
+		return ctx.Error(err)
+	}
+	return nil
+}
+
 func (c *Publish) transfer(ctx *gin.Context, typeValue string) error {
 	if mapping == nil {
 		mapping = make(map[string]func(ctx *gin.Context) error)
@@ -609,9 +762,10 @@ func (c *Publish) transfer(ctx *gin.Context, typeValue string) error {
 		mapping["forward"] = c.onSendForward
 		mapping["mixed"] = c.onMixedMessage
 		mapping["rtc"] = c.onSendRTCCall
-		mapping["rtc_invite"] = c.onSendRTCInvite
+		mapping["call_invite"] = c.onSendCallInvite
 		mapping["red_envelope"] = c.onSendRedEnvelope
 		mapping["transfer"] = c.onSendTransfer
+		mapping["cmd"] = c.onSendCmd
 	}
 
 	if call, ok := mapping[typeValue]; ok {
@@ -620,4 +774,3 @@ func (c *Publish) transfer(ctx *gin.Context, typeValue string) error {
 
 	return nil
 }
-

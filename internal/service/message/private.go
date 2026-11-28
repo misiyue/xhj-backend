@@ -43,45 +43,22 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 		quoteJsonText = jsonutil.Encode(queue)
 	}
 
-	// 获取会话的 session_id（双向私聊都使用同一个 session_id，
-	// 用于在会话列表中将同一对用户的消息归到同一个会话下面）
-	sessionId := 0
-	if s.TalkSessionRepo != nil {
-		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.FromId, option.ReceiverId, 1); err == nil && sess.Id > 0 {
-			// 如果之前该会话被标记为删除（is_delete = 1），此处发送新消息时自动恢复为未删除，
-			// 这样 /talk/session-list 下次查询就会重新显示这条会话，而不是一直被过滤掉。
-			if sess.IsDelete == model.Yes {
-				_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
-					"is_delete":  model.No,
-					"updated_at": time.Now(),
-				}, "id = ?", sess.Id)
-				sess.IsDelete = model.No
-			}
+	// 接收方是否拉黑了发送方：被拉黑方可发且落库到自己视角(user_id=from)，拉黑方不接收
+	blockedByReceiver := s.ContactRepo != nil && s.ContactRepo.IsBlocked(ctx, option.ReceiverId, option.FromId)
 
-			sessionId = sess.SessionId
-			if sessionId == 0 {
-				sessionId = sess.Id
-			}
-		}
-		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", option.ReceiverId, option.FromId, 1); err == nil && sess.Id > 0 {
-			// 如果之前该会话被标记为删除（is_delete = 1），此处发送新消息时自动恢复为未删除，
-			// 这样 /talk/session-list 下次查询就会重新显示这条会话，而不是一直被过滤掉。
-			if sess.IsDelete == model.Yes {
-				_, _ = s.TalkSessionRepo.UpdateByWhere(ctx, map[string]any{
-					"is_delete":  model.No,
-					"updated_at": time.Now(),
-				}, "id = ?", sess.Id)
-				sess.IsDelete = model.No
-			}
-		}
+	// 确保双方会话存在，并写入统一的 session_id（避免对方拉历史/会话列表漏消息）
+	sessionId := s.resolvePrivateLinkSessionId(ctx, option.FromId, option.ReceiverId, !blockedByReceiver)
+
+	// 正常消息 user_id=0 双方可见；被拉黑时 user_id=发送方，仅发送方查询可见
+	ownerUserId := 0
+	if blockedByReceiver {
+		ownerUserId = option.FromId
 	}
 
-	// 优化：只插入一条消息记录
 	message := &model.TalkUserMessage{
-		// 发送消息时携带了消息则直接使用
 		MsgId:      lo.Ternary(option.MsgId == "", strutil.NewMsgId(), option.MsgId),
 		MsgType:    option.MsgType,
-		UserId:     0, // 弃用 UserId 字段
+		UserId:     ownerUserId,
 		ReceiverId: option.ReceiverId,
 		FromId:     option.FromId,
 		SessionId:  sessionId,
@@ -89,28 +66,19 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 		Quote:      quoteJsonText,
 		OrgMsgId:   orgMsgId,
 		SendTime:   now,
-		IsRevoked: model.No,
-		IsDeleted: model.No,
+		IsRevoked:  model.No,
+		IsDeleted:  model.No,
 	}
 
 	if err := s.Db().WithContext(ctx).Create(message).Error; err != nil {
 		return err
 	}
 
-	if option.MsgType != entity.ChatMsgTypeRTCCall {
-		s.tryOneSignalUserChat(ctx, option.ReceiverId, entity.ChatPrivateMode, option.FromId)
-	}
-
-	// 推送消息给双方用户
+	// 推送：始终推送给发送方；未被拉黑时再推接收方（关键路径：Redis 推送 + 未读）
 	pipe := s.Source.Redis().Pipeline()
 
-	// 为推送构造用户所属的消息副本，避免依赖已弃用的 UserId 字段
 	senderMessage := *message
 	senderMessage.UserId = option.FromId
-	receiverMessage := *message
-	receiverMessage.UserId = option.ReceiverId
-
-	// 推送给发送方
 	senderContent := &entity.SubscribeMessage{
 		Event: entity.SubEventImMessage,
 		Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
@@ -120,34 +88,43 @@ func (s *Service) CreatePrivateMessage(ctx context.Context, option CreatePrivate
 	}
 	pipe.Publish(ctx, entity.ImTopicChat, jsonutil.Encode(senderContent))
 
-	// 推送给接收方
-	receiverContent := &entity.SubscribeMessage{
-		Event: entity.SubEventImMessage,
-		Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
-			TalkMode: entity.ChatPrivateMode,
-			Message:  jsonutil.Encode(receiverMessage),
-		}),
+	needOneSignal := false
+	if !blockedByReceiver {
+		if option.MsgType != entity.ChatMsgTypeRTCCall {
+			needOneSignal = true
+		}
+
+		receiverMessage := *message
+		receiverMessage.UserId = option.ReceiverId
+		receiverContent := &entity.SubscribeMessage{
+			Event: entity.SubEventImMessage,
+			Payload: jsonutil.Encode(entity.SubEventImMessagePayload{
+				TalkMode: entity.ChatPrivateMode,
+				Message:  jsonutil.Encode(receiverMessage),
+			}),
+		}
+		pipe.Publish(ctx, entity.ImTopicChat, jsonutil.Encode(receiverContent))
+		s.UnreadStorage.PipeIncr(ctx, pipe, option.ReceiverId, entity.ChatPrivateMode, option.FromId)
+
+		// 双方共用 last_message 缓存；仅正常送达时更新，避免拉黑方会话预览被刷新
+		msgContent := s.getTextMessage(message.MsgType, option.Extra)
+		msgTime := message.CreatedAt.Format(time.DateTime)
+		_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, option.FromId, option.ReceiverId, &cache.LastCacheMessage{
+			Content:  msgContent,
+			Datetime: msgTime,
+		})
 	}
-	pipe.Publish(ctx, entity.ImTopicChat, jsonutil.Encode(receiverContent))
-
-	// 增加接收方未读计数
-	s.UnreadStorage.PipeIncr(ctx, pipe, option.ReceiverId, entity.ChatPrivateMode, option.FromId)
-
-	// 更新双方的最后一条消息缓存
-	msgContent := s.getTextMessage(message.MsgType, option.Extra)
-	msgTime := message.CreatedAt.Format(time.DateTime)
-
-	_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, option.FromId, option.ReceiverId, &cache.LastCacheMessage{
-		Content:  msgContent,
-		Datetime: msgTime,
-	})
-
-	_ = s.MessageStorage.Set(ctx, entity.ChatPrivateMode, option.ReceiverId, option.FromId, &cache.LastCacheMessage{
-		Content:  msgContent,
-		Datetime: msgTime,
-	})
 
 	_, _ = pipe.Exec(ctx)
+
+	// OneSignal 外部 HTTP 异步，不阻塞发消息接口
+	if needOneSignal {
+		toUID := option.ReceiverId
+		fromUID := option.FromId
+		s.goAfterSend("private_onesignal", func(asyncCtx context.Context) {
+			s.tryOneSignalUserChat(asyncCtx, toUID, entity.ChatPrivateMode, fromUID)
+		})
+	}
 
 	return nil
 }
@@ -169,14 +146,13 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 		data.SendTime = time.Now()
 	}
 
-	// 如果没有 session_id，尝试从 talk_session 获取
-	if data.SessionId == 0 && s.TalkSessionRepo != nil {
-		if sess, err := s.TalkSessionRepo.FindByWhere(ctx, "user_id = ? and receiver_id = ? and talk_mode = ?", data.UserId, data.ReceiverId, 1); err == nil && sess.Id > 0 {
-			data.SessionId = sess.SessionId
-			if data.SessionId == 0 {
-				data.SessionId = sess.Id
-			}
+	// 如果没有 session_id，解析/创建双方共享 session_id，避免对方拉历史漏消息
+	if data.SessionId == 0 {
+		fromId := data.FromId
+		if fromId <= 0 {
+			fromId = data.UserId
 		}
+		data.SessionId = s.resolvePrivateLinkSessionId(ctx, fromId, data.ReceiverId, true)
 	}
 
 	data.IsRevoked = model.No
@@ -185,8 +161,6 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 	if err := s.Db().WithContext(ctx).Create(data).Error; err != nil {
 		return err
 	}
-
-	s.tryOneSignalUserChat(ctx, data.ReceiverId, entity.ChatPrivateMode, data.FromId)
 
 	err := s.PushMessage.Push(ctx, entity.ImTopicChat, &entity.SubscribeMessage{
 		Event: entity.SubEventImMessage,
@@ -207,21 +181,25 @@ func (s *Service) CreateToUserPrivateMessage(ctx context.Context, data *model.Ta
 		Datetime: data.CreatedAt.Format(time.DateTime),
 	})
 
+	toUID := data.ReceiverId
+	fromUID := data.FromId
+	s.goAfterSend("private_to_user_onesignal", func(asyncCtx context.Context) {
+		s.tryOneSignalUserChat(asyncCtx, toUID, entity.ChatPrivateMode, fromUID)
+	})
+
 	return nil
 }
 
 func (s *Service) CreatePrivateSysMessage(ctx context.Context, option CreatePrivateSysMessageOption) error {
-	return s.CreateToUserPrivateMessage(ctx, &model.TalkUserMessage{
-		MsgId:      strutil.NewMsgId(),
+	// 走 CreatePrivateMessage：user_id=0 双方可见、双向推送并更新会话预览；
+	// 旧实现 user_id=FromId 导致对方拉历史看不到「已成为好友」等系统提示，会话列表却显示 [系统消息]。
+	return s.CreatePrivateMessage(ctx, CreatePrivateMessageOption{
 		MsgType:    entity.ChatMsgSysText,
-		UserId:     option.FromId,
+		FromId:     option.FromId,
 		ReceiverId: option.ReceiverId,
-		FromId:     0,
 		Extra: jsonutil.Encode(model.TalkRecordExtraText{
 			Content: option.Content,
 		}),
-		Quote:    "{}",
-		SendTime: time.Now(),
 	})
 }
 

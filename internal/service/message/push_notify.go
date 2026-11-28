@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gzydong/go-chat/external/push"
-	"github.com/gzydong/go-chat/internal/entity"
 	"github.com/gzydong/go-chat/internal/pkg/logger"
 	"github.com/gzydong/go-chat/internal/repository/model"
 	"github.com/gzydong/go-chat/internal/repository/repo"
@@ -76,87 +75,4 @@ func applyNoticeTemplateVars(s string, vars map[string]string) string {
 // tryOneSignalUserChat 普通私聊/群聊离线推送（userChat 模板）
 func (s *Service) tryOneSignalUserChat(ctx context.Context, userID, talkMode, receiverID int) {
 	TryOneSignalChatPush(ctx, s.UsersRepo, s.NoticeTemplateRepo, s.TalkSessionRepo, userID, talkMode, receiverID, model.NoticeTemplateFlagUserChat)
-}
-
-// TryOneSignalRTCInvitePush rtc_invite 向对方（receiver_id）发送 OneSignal VoIP 推送。
-func TryOneSignalRTCInvitePush(
-	ctx context.Context,
-	usersRepo *repo.Users,
-	talkSessionRepo *repo.TalkSession,
-	fromUserId, receiverId int,
-) {
-	if fromUserId <= 0 || receiverId <= 0 || usersRepo == nil {
-		return
-	}
-	if push.GetClient() == nil {
-		return
-	}
-
-	targetUser, err := usersRepo.FindByIdWithCache(ctx, receiverId)
-	if err != nil || targetUser == nil || targetUser.IsSubscribe != model.UsersSubscribeYes {
-		return
-	}
-	if talkSessionRepo != nil &&
-		talkSessionRepo.IsDisturb(ctx, receiverId, fromUserId, entity.ChatPrivateMode) {
-		return
-	}
-
-	fromUser, err := usersRepo.FindByIdWithCache(ctx, fromUserId)
-	if err != nil || fromUser == nil {
-		return
-	}
-
-	if err := push.SendRTCInviteVoIPToUser(receiverId, push.VoIPCallData{
-		Event:          entity.PushEventImCallInvite,
-		FromUserId:     fromUserId,
-		ToUserId:       receiverId,
-		FromUserName:   fromUser.Nickname,
-		FromUserAvatar: fromUser.Avatar,
-	}); err != nil {
-		logger.Errorf("onesignal rtc_invite push err: from_id=%d receiver_id=%d %s", fromUserId, receiverId, err.Error())
-	}
-}
-
-// TryOneSignalVoIPCallPush 发起音视频通话时向对方发送 OneSignal VoIP 推送。
-func TryOneSignalVoIPCallPush(
-	ctx context.Context,
-	usersRepo *repo.Users,
-	talkSessionRepo *repo.TalkSession,
-	fromUserId, toUserId, callType int,
-) {
-	if fromUserId <= 0 || toUserId <= 0 || usersRepo == nil {
-		return
-	}
-	if push.GetClient() == nil {
-		return
-	}
-
-	targetUser, err := usersRepo.FindByIdWithCache(ctx, toUserId)
-	if err != nil || targetUser == nil || targetUser.IsSubscribe != model.UsersSubscribeYes {
-		return
-	}
-	if talkSessionRepo != nil &&
-		talkSessionRepo.IsDisturb(ctx, toUserId, fromUserId, entity.ChatPrivateMode) {
-		return
-	}
-
-	fromUser, err := usersRepo.FindByIdWithCache(ctx, fromUserId)
-	if err != nil || fromUser == nil {
-		return
-	}
-
-	if err := push.SendVoIPToUser(toUserId, push.VoIPCallData{
-		Event:          entity.PushEventImCallInvite,
-		FromUserId:     fromUserId,
-		ToUserId:       toUserId,
-		CallType:       callType,
-		FromUserName:   fromUser.Nickname,
-		FromUserAvatar: fromUser.Avatar,
-	}); err != nil {
-		logger.Errorf("onesignal voip call push err: from_id=%d to_id=%d %s", fromUserId, toUserId, err.Error())
-	}
-}
-
-func (s *Service) tryOneSignalVoIPCall(ctx context.Context, fromUserId, toUserId, callType int) {
-	TryOneSignalVoIPCallPush(ctx, s.UsersRepo, s.TalkSessionRepo, fromUserId, toUserId, callType)
 }

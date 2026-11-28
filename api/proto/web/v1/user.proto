@@ -81,6 +81,30 @@ service User {
     };
   }
 
+  // 用户指令列表（分页，按 id 倒序）
+  rpc UserCmdList(UserCmdListRequest) returns (UserCmdListResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/cmd/list"
+      body: "*"
+    };
+  }
+
+  // 用户指令保存（id=0 新增，id>0 编辑）
+  rpc UserCmdSave(UserCmdSaveRequest) returns (UserCmdSaveResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/cmd/save"
+      body: "*"
+    };
+  }
+
+  // 删除用户指令（仅本人）
+  rpc UserCmdDel(UserCmdDelRequest) returns (UserCmdDelResponse) {
+    option (google.api.http) = {
+      post: "/api/v1/user/cmd/del"
+      body: "*"
+    };
+  }
+
   // 商户入驻申请
   rpc MerchantApply(MerchantApplyRequest) returns (MerchantApplyResponse) {
     option (google.api.http) = {
@@ -327,6 +351,8 @@ message UserDetailResponse{
   string un_update_at = 16;
   // 是否可修改 username：0-否，1-是（3 个月可改一次）
   int32 un_update_enable = 17 [(google.api.field_behavior) = REQUIRED];
+  // 等级：0-V0，1-PRO
+  int32 level = 18 [(google.api.field_behavior) = REQUIRED];
 }
 
 // 用户配置信息请求参数
@@ -402,7 +428,10 @@ message UserMobileUpdateResponse{}
 message UserEmailUpdateRequest{
   string email = 1 [(buf.validate.field).string.min_len = 1];
   string password = 2 [(buf.validate.field).string.min_len = 1];
-  string code = 3 [(buf.validate.field).string.len = 6];
+  // 验证码（与 email_code 二选一，兼容旧字段名 code）
+  string code = 3;
+  // 验证码（前端常用字段名，与 username-update 的 email_code 一致）
+  string email_code = 4;
 }
 
 // 用户邮箱更新接口响应参数
@@ -896,3 +925,46 @@ message UserUnreadSummaryResponse {
     json_name = "total_unread"
   ];
 }
+
+// ---------- 用户指令 user_cmd ----------
+
+message UserCmdItem {
+  int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+  int32 user_id = 2;
+  string title = 3;
+  string intro = 4;
+  string file = 5;
+  // 按钮 JSON 数组字符串
+  string btns = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message UserCmdListRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message UserCmdListResponse {
+  repeated UserCmdItem items = 1;
+  int32 total = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UserCmdSaveRequest {
+  // 0 为新增，大于 0 为编辑
+  int32 id = 1 [(buf.validate.field).int32.gte = 0];
+  string title = 2 [(buf.validate.field).string.max_len = 255];
+  string intro = 3 [(buf.validate.field).string.max_len = 255];
+  string file = 4 [(buf.validate.field).string.max_len = 255];
+  string btns = 5;
+}
+
+message UserCmdSaveResponse {
+  int32 id = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+message UserCmdDelRequest {
+  int32 id = 1 [(buf.validate.field).int32.gt = 0];
+}
+
+message UserCmdDelResponse {}
